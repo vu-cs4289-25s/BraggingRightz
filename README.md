@@ -38,8 +38,19 @@ react-native run-android // react-native run-ios
 This React Native Firebase starter is built with Firebase Web SDK, which makes it compatible with both Expo CLI and React Native CLI.
 
 ***
-# To run locally
+# Local development
 
+## To run locally
+1. Clone repo and go into directory
+2. Install dependencies
+
+    `npm install`
+
+3. Run application on Expo Go
+
+    `npx expo start`
+
+## Errors I ran into
 ### Fix `npm install` error
 1. **Uninstall the existing version:**
 
