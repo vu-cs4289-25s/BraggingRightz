@@ -6,13 +6,13 @@ This is a React Native Firebase Starter Project with login, registration, persis
 
 This React Native Firebase starter contains a few key features that all apps backed by Fireabase support:
 
-* Registration with E-mail & Password
-* Login with E-mail and Password
-* Handling persisted login credentials
-* Navigation (react-native-navigation)
-* Writing to Firestore Database
-* Reading from Firestore Database
-* Creating Firestore indices (for performance)
+- Registration with E-mail & Password
+- Login with E-mail and Password
+- Handling persisted login credentials
+- Navigation (react-native-navigation)
+- Writing to Firestore Database
+- Reading from Firestore Database
+- Creating Firestore indices (for performance)
 
 ## Getting Started (with Expo)
 
@@ -37,32 +37,36 @@ react-native run-android // react-native run-ios
 
 This React Native Firebase starter is built with Firebase Web SDK, which makes it compatible with both Expo CLI and React Native CLI.
 
-***
+---
+
 # Local development
 
 ## To run locally
+
 1. Clone repo and go into directory
 2. Install dependencies
 
-    `npm install`
+   `npm install`
 
 3. Run application on Expo Go
 
-    `npx expo start`
+   `npx expo start`
 
 ## Errors I ran into
+
 ### Fix `npm install` error
+
 1. **Uninstall the existing version:**
 
-    `npm uninstall react-native-screens`
+   `npm uninstall react-native-screens`
 
 2. **Install the latest version:**
 
-    `npm install react-native-screens@latest`
+   `npm install react-native-screens@latest`
 
 3. **Try installing everything again:**
 
-    `npm install`
+   `npm install`
 
 ### Fix "Project is incompatible" on Expo Go
 
@@ -70,8 +74,8 @@ https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/
 
 1. **Upgrade the Expo SDK**
 
-    `npx expo install expo@latest`
+   `npx expo install expo@latest`
 
 2. **Upgrade dependencies**
 
-    `npx expo install --fix`
+   `npx expo install --fix`

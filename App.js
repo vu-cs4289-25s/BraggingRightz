@@ -8,12 +8,16 @@ import { LoginScreen, HomeScreen, RegistrationScreen } from './src/screens';
 import LoadScreen from './src/screens/LoadScreen/LoadScreen';
 
 import { decode, encode } from 'base-64';
-if (!global.btoa) { global.btoa = encode }
-if (!global.atob) { global.atob = decode }
+if (!global.btoa) {
+  global.btoa = encode;
+}
+if (!global.atob) {
+  global.atob = decode;
+}
 
 const Stack = createStackNavigator();
-const auth = getAuth(); 
-const db = getFirestore(); 
+const auth = getAuth();
+const db = getFirestore();
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -69,10 +73,10 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        { user ? (
+        {user ? (
           <Stack.Screen name="Home">
-            {props => <HomeScreen {...props} extraData={user} />}
-            </Stack.Screen>
+            {(props) => <HomeScreen {...props} extraData={user} />}
+          </Stack.Screen>
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
@@ -83,4 +87,3 @@ export default function App() {
     </NavigationContainer>
   );
 }
-
