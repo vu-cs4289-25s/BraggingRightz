@@ -89,6 +89,12 @@ This React Native Firebase starter is built with Firebase Web SDK, which makes i
     d. In you firebase project, go into **Firestore database** on left side of screen
     e. Should be able to see new user information
 
+9. Set up index
+    a. When you try to add entities in the Home screen, you will get an error
+        "[FirebaseError: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bragging-rightz-local/firestore/indexes?create_composite=ClZwcm9qZWN0cy9icmFnZ2luZy1yaWdodHotbG9jYWwvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2VudGl0aWVzL2luZGV4ZXMvXxABGgwKCGF1dGhvcklEEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg]"
+    b. Click on the url in the error message you got
+    c. An index will pop up, all you need to do is click **save**
+
 ## Errors I ran into
 ### Fix `npm install` error
 1. **Uninstall the existing version:**
@@ -119,5 +125,3 @@ https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/
 ## TODO:
 * Fix "Console Error: The action 'NAVIGATE' with payload {...} was not handled by any navigator"
     * Occurs when trying registering new user
-* Make sure entities show up on Home screen
-    * Create an index???
