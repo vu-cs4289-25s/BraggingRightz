@@ -60,40 +60,40 @@ This React Native Firebase starter is built with Firebase Web SDK, which makes i
 4. Go into your new Firebase Project home page
 
 5. Set up Firestore database
-    a. Click on **Build** on the left side of screen
-    b. Select **Firestore database**
-    c. Click on the Firestore Database under Project Shortcuts
-    d. Select **create database**
-    e. Select **start in test mode**
-    f. Then click **create**
+    * Click on **Build** on the left side of screen
+    * Select **Firestore database**
+    * Click on the Firestore Database under Project Shortcuts
+    * Select **create database**
+    * Select **start in test mode**
+    * Then click **create**
 
 6. Set up authentication
-    a. Click on **Build** on the left side of screen
-    b. Click **Authentication**
-    c. Then, **Get Started**
-    d. Click **Email/Password** under native providers
-    e. Enable the first option (email/password)
+    * Click on **Build** on the left side of screen
+    * Click **Authentication**
+    * Then, **Get Started**
+    * Click **Email/Password** under native providers
+    * Enable the first option (email/password)
 
 7. Set up config locally
-    a. Go to **Project Settings** by clicking the gear icon in the top left
-    b. Select Project Settings
-    c. Scroll to the bottom and click on the **</>** icon under the "your apps" section
-    d. Add a name, then click **register app**
-    e. Copy the **firebaseConfig** object
-    f. Go to your src/firebase/config.js file and replace the existing firebaseConfig object with the new one you just copied
+    * Go to **Project Settings** by clicking the gear icon in the top left
+    * Select Project Settings
+    * Scroll to the bottom and click on the **</>** icon under the "your apps" section
+    * Add a name, then click **register app**
+    * Copy the **firebaseConfig** object
+    * Go to your src/firebase/config.js file and replace the existing firebaseConfig object with the new one you just copied
 
 8. To run the project
-    a. `npx expo start`
-    b. Open app on Expo Go
-    c. Try registering as a new user
-    d. In you firebase project, go into **Firestore database** on left side of screen
-    e. Should be able to see new user information
+    * `npx expo start`
+    * Open app on Expo Go
+    * Try registering as a new user
+    * In you firebase project, go into **Firestore database** on left side of screen
+    * Should be able to see new user information
 
 9. Set up index
-    a. When you try to add entities in the Home screen, you will get an error
+    * When you try to add entities in the Home screen, you will get an error
         "[FirebaseError: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/bragging-rightz-local/firestore/indexes?create_composite=ClZwcm9qZWN0cy9icmFnZ2luZy1yaWdodHotbG9jYWwvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL2VudGl0aWVzL2luZGV4ZXMvXxABGgwKCGF1dGhvcklEEAEaDQoJY3JlYXRlZEF0EAIaDAoIX19uYW1lX18QAg]"
-    b. Click on the url in the error message you got
-    c. An index will pop up, all you need to do is click **save**
+    * Click on the url in the error message you got
+    * An index will pop up, all you need to do is click **save**
 
 ## Errors I ran into
 ### Fix `npm install` error
