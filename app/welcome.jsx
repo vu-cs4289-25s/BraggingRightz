@@ -15,33 +15,41 @@ const Welcome = () => {
       <StatusBar style="dark" />
       <View style={styles.container}>
         {/*welcome image*/}
-        <Image style={styles.welcomeImage} resizeMode='contain' source={require('../assets/illustration.png')} />
+        <Image
+          style={styles.welcomeImage}
+          resizeMode="contain"
+          source={require('../assets/illustration.png')}
+        />
 
         {/*title*/}
-        <View style ={{gap: 10}}>
+        <View style={{ gap: 10 }}>
           <Text style={styles.title}>Bragging Rightz!</Text>
           <Text style={styles.punchline}>Bet Big, Brag Bigger</Text>
         </View>
         {/*footer*/}
-        <View style ={styles.footer}>
-          <Button 
+        <View style={styles.footer}>
+          <Button
             title="Getting Started"
-            buttonStyle={{marginHorizontal: wp(3)}}
+            buttonStyle={{ marginHorizontal: wp(3) }}
             onPress={() => navigation.navigate('SignUp')}
-          
           />
           <View style={styles.bottomTextContainer}>
-            <Text style={styles.loginText}>
-              Already have an account?
-            </Text>
+            <Text style={styles.loginText}>Already have an account?</Text>
             <Pressable onPress={() => navigation.navigate('Login')}>
-            <Text style={[styles.loginText, {color: theme.colors.primaryDark, fontWeight: theme.fonts.semibold}]}>
-              Login
+              <Text
+                style={[
+                  styles.loginText,
+                  {
+                    color: theme.colors.primaryDark,
+                    fontWeight: theme.fonts.semibold,
+                  },
+                ]}
+              >
+                Login
               </Text>
             </Pressable>
           </View>
         </View>
-
       </View>
     </ScreenWrapper>
   );
@@ -60,7 +68,7 @@ const styles = StyleSheet.create({
   welcomeImage: {
     width: wp(125),
     height: hp(40),
-    alignSelf: 'center'
+    alignSelf: 'center',
   },
   title: {
     fontSize: hp(4),
@@ -72,7 +80,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: wp(10),
     fontSize: hp(1.7),
-    color: theme.colors.text
+    color: theme.colors.text,
   },
   footer: {
     gap: 30,
@@ -82,11 +90,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 5
+    gap: 5,
   },
   loginText: {
     textAlign: 'center',
     color: theme.colors.text,
     fontSize: hp(1.6),
-  }
+  },
 });
