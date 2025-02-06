@@ -35,8 +35,8 @@ const SignUp = () => {
 
         {/*welcome text*/}
         <View>
-            <Text style={styles.welcomeText}>Let's,</Text>
-            <Text style={styles.welcomeText}>Get Started</Text>
+            <Text style={styles.welcomeText}>Let's</Text>
+            <Text style={styles.welcomeText}>Get Started!</Text>
         </View>
 
         {/*form*/}
@@ -46,13 +46,13 @@ const SignUp = () => {
         </Text>
         <Input 
             icon={<Icon name="user" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your name"
+            placeholder="Enter your full name"
             onChangeText={value=>nameRef.current=value}
         />
         <Input 
-            icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
+            icon={<Icon name="video" size={26} strokeWidth={1.6} />}
             placeholder="Enter your username"
-            onChangeText={value=>birthdayRef.current=value}
+            onChangeText={value=>usernameRef.current=value}
         /> 
         <Input 
             icon={<Icon name="mail" size={26} strokeWidth={1.6} />}

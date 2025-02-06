@@ -34,8 +34,8 @@ const Login = () => {
 
         {/*welcome text*/}
         <View>
-            <Text style={styles.welcomeText}>Hey,</Text>
-            <Text style={styles.welcomeText}>Welcome Back</Text>
+            <Text style={styles.welcomeText}>Hey!</Text>
+            <Text style={styles.welcomeText}>Welcome Back.</Text>
         </View>
 
         {/*form*/}
