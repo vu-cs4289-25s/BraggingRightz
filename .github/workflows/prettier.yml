@@ -1,4 +1,4 @@
-name: Lint and Format
+name: Prettier
 
 on: [push, pull_request]
 
