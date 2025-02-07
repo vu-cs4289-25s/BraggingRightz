@@ -10,6 +10,8 @@ import { wp, hp } from '../helpers/common';
 import Input from '../components/Input';
 import Button from '../components/Button';
 
+import AuthService from '../src/endpoints/auth';
+
 const SignUp = () => {
   const navigation = useNavigation();
   const emailRef = useRef(''); //saves email as reference
@@ -19,11 +21,28 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false); //loading state
 
   const onSubmit = async () => {
-    if (!emailRef.current || !passwordRef.current) {
-      Alert.alert('Sign Up', 'Please fill all fields!');
+    if (!emailRef.current || !passwordRef.current || !nameRef.current || !usernameRef.current) {
+      Alert.alert('Error', 'Please fill all fields!');
       return;
     }
-    //good to go
+
+    setLoading(true);
+    try{
+      const user = await AuthService.register({
+        username: usernameRef.current,
+        password: passwordRef.current,
+        email: emailRef.current,
+        fullName: nameRef.current,
+      });
+      Alert.alert("Registration Successful", `Welcome, ${user.username}! Ready to Brag?`);
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("Registration Failed: ", error.message);
+    } finally {
+      // Do we have a profile page using props?
+      setLoading(false);
+      //navigation.navigate(`Profile/${user.uid}`);
+    }
   };
 
   return (

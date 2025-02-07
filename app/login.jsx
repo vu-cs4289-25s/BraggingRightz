@@ -10,6 +10,8 @@ import { wp, hp } from '../helpers/common';
 import Input from '../components/Input';
 import Button from '../components/Button';
 
+import AuthService from '../src/endpoints/auth.cjs';
+
 const Login = () => {
   const navigation = useNavigation();
   const emailRef = useRef(''); //saves email as reference
@@ -21,7 +23,25 @@ const Login = () => {
       Alert.alert('Login', 'Please fill all fields!');
       return;
     }
-    //good to go
+
+    // Log in user
+    setLoading(true);
+    try{
+      const user = await AuthService.login({
+        username: emailRef.current,
+        password: passwordRef.current,
+      });
+      Alert.alert("Login Successful", `Welcome, ${user.username}! Ready to Brag?`);
+
+    } catch (error) {
+      Alert.alert("Login Failed: ", error.message);
+      navigation.navigate('Login');
+    } finally {
+      setLoading(false);
+      // Do we have a profile page using props?
+      //navigation.navigate(`Profile/${user.uid}`);
+    }
+
   };
 
   return (
