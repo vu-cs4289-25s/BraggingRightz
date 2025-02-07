@@ -31,7 +31,7 @@ const Login = () => {
         username: usernameRef.current,
         password: passwordRef.current,
       });
-      Alert.alert("Login Successful", `Welcome, ${user.username}! Ready to Brag?`);
+      Alert.alert("Login Successful", `Welcome, ${user.username}! Ready to Bet?`);
 
     } catch (error) {
       Alert.alert("Login Failed: ", error.message);
