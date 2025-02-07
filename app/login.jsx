@@ -40,7 +40,6 @@ const Login = () => {
       navigation.navigate('Login');
     } finally {
       setLoading(false);
-      // Do we have a profile page using props?
       //navigation.navigate(`Profile/${user.uid}`);
     }
   };
