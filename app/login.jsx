@@ -14,12 +14,12 @@ import AuthService from '../src/endpoints/auth.cjs';
 
 const Login = () => {
   const navigation = useNavigation();
-  const emailRef = useRef(''); //saves email as reference
+  const usernameRef = useRef(''); //saves username as reference
   const passwordRef = useRef(''); //saves password as reference
   const [loading, setLoading] = useState(false); //loading state
 
   const onSubmit = async () => {
-    if (!emailRef.current || !passwordRef.current) {
+    if (!usernameRef.current || !passwordRef.current) {
       Alert.alert('Login', 'Please fill all fields!');
       return;
     }
@@ -28,7 +28,7 @@ const Login = () => {
     setLoading(true);
     try{
       const user = await AuthService.login({
-        username: emailRef.current,
+        username: usernameRef.current,
         password: passwordRef.current,
       });
       Alert.alert("Login Successful", `Welcome, ${user.username}! Ready to Brag?`);
@@ -63,8 +63,8 @@ const Login = () => {
           </Text>
           <Input
             icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your email"
-            onChangeText={(value) => (emailRef.current = value)}
+            placeholder="Enter your username"
+            onChangeText={(value) => (usernameRef.current = value)}
           />
           <Input
             icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
