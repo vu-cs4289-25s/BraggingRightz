@@ -26,22 +26,23 @@ const Login = () => {
 
     // Log in user
     setLoading(true);
-    try{
+    try {
       const user = await AuthService.login({
         username: usernameRef.current,
         password: passwordRef.current,
       });
-      Alert.alert("Login Successful", `Welcome, ${user.username}! Ready to Bet?`);
-
+      Alert.alert(
+        'Login Successful',
+        `Welcome, ${user.username}! Ready to Bet?`,
+      );
     } catch (error) {
-      Alert.alert("Login Failed: ", error.message);
+      Alert.alert('Login Failed: ', error.message);
       navigation.navigate('Login');
     } finally {
       setLoading(false);
       // Do we have a profile page using props?
       //navigation.navigate(`Profile/${user.uid}`);
     }
-
   };
 
   return (

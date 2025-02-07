@@ -21,23 +21,31 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false); //loading state
 
   const onSubmit = async () => {
-    if (!emailRef.current || !passwordRef.current || !nameRef.current || !usernameRef.current) {
+    if (
+      !emailRef.current ||
+      !passwordRef.current ||
+      !nameRef.current ||
+      !usernameRef.current
+    ) {
       Alert.alert('Error', 'Please fill out all fields!');
       return;
     }
 
     setLoading(true);
-    try{
+    try {
       const user = await AuthService.register({
         username: usernameRef.current,
         password: passwordRef.current,
         email: emailRef.current,
         fullName: nameRef.current,
       });
-      Alert.alert("Registration Successful", `Welcome, ${user.username}! Ready to Bet?`);
+      Alert.alert(
+        'Registration Successful',
+        `Welcome, ${user.username}! Ready to Bet?`,
+      );
     } catch (error) {
       setLoading(false);
-      Alert.alert("Registration Failed: ", error.message);
+      Alert.alert('Registration Failed: ', error.message);
     } finally {
       // Do we have a profile page using props?
       setLoading(false);
