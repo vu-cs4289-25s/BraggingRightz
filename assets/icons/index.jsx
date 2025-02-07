@@ -23,6 +23,8 @@ import Logout from './logout';
 import Image from './Image';
 import Video from './Video';
 import Birthday from './Birthday';
+import Eye from './Eye';
+import EyeClosed from './EyeClosed';
 
 const icons = {
   home: Home,
@@ -47,6 +49,8 @@ const icons = {
   image: Image,
   video: Video,
   birthday: Birthday,
+  eye: Eye,
+  eyeClosed: EyeClosed,
 };
 
 const Icon = ({ name, ...props }) => {

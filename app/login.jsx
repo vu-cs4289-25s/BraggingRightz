@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import React, { useRef, useState } from 'react';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { theme } from '../constants/theme';
@@ -10,21 +10,56 @@ import { wp, hp } from '../helpers/common';
 import Input from '../components/Input';
 import Button from '../components/Button';
 
+import AuthService from '../src/endpoints/auth.cjs';
+
 const Login = () => {
   const navigation = useNavigation();
-  const emailRef = useRef(''); //saves email as reference
+  const usernameRef = useRef(''); //saves username as reference
   const passwordRef = useRef(''); //saves password as reference
   const [loading, setLoading] = useState(false); //loading state
 
   const onSubmit = async () => {
-    if (!emailRef.current || !passwordRef.current) {
+    if (!usernameRef.current || !passwordRef.current) {
       Alert.alert('Login', 'Please fill all fields!');
       return;
     }
-    //good to go
+
+    // Log in user
+    setLoading(true);
+    try {
+      const user = await AuthService.login({
+        username: usernameRef.current,
+        password: passwordRef.current,
+      });
+      Alert.alert(
+        'Login Successful',
+        `Welcome, ${user.username}! Ready to Bet?`,
+        [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Home')
+            }
+          ]
+      );
+    } catch (error) {
+      Alert.alert('Login Failed: ', error.message);
+      navigation.navigate('Login');
+    } finally {
+      setLoading(false);
+      // Do we have a profile page using props?
+      //navigation.navigate(`Profile/${user.uid}`);
+    }
   };
 
   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{flex: 1}}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{flexGrow: 1}}
+      >
     <ScreenWrapper bg="white">
       <StatusBar style="dark" />
       <View style={styles.container}>
@@ -43,8 +78,8 @@ const Login = () => {
           </Text>
           <Input
             icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your email"
-            onChangeText={(value) => (emailRef.current = value)}
+            placeholder="Enter your username"
+            onChangeText={(value) => (usernameRef.current = value)}
           />
           <Input
             icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
@@ -54,7 +89,7 @@ const Login = () => {
           />
           <Text style={styles.forgotPassword}>Forgot Password?</Text>
           {/*button*/}
-          <Button title={'Login'} loading={loading} onPress={onSubmit} />
+          <Button title={'Login'} loading={loading} onPress={onSubmit} /> 
         </View>
 
         {/*footer*/}
@@ -76,6 +111,8 @@ const Login = () => {
         </View>
       </View>
     </ScreenWrapper>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

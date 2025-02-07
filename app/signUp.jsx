@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import React, { useRef, useState } from 'react';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { theme } from '../constants/theme';
@@ -10,23 +10,69 @@ import { wp, hp } from '../helpers/common';
 import Input from '../components/Input';
 import Button from '../components/Button';
 
+import AuthService from '../src/endpoints/auth';
+
 const SignUp = () => {
   const navigation = useNavigation();
   const emailRef = useRef(''); //saves email as reference
   const nameRef = useRef(''); //saves name as reference
-  const usernameRef = useRef(''); //saves bday as reference
+  const usernameRef = useRef(''); //saves username as reference
   const passwordRef = useRef(''); //saves password as reference
   const [loading, setLoading] = useState(false); //loading state
 
   const onSubmit = async () => {
-    if (!emailRef.current || !passwordRef.current) {
-      Alert.alert('Sign Up', 'Please fill all fields!');
+    if (
+      !emailRef.current ||
+      !passwordRef.current ||
+      !nameRef.current ||
+      !usernameRef.current
+    ) {
+      Alert.alert('Error', 'Please fill out all fields!');
       return;
     }
-    //good to go
+
+    if (usernameRef.current.length < 4) {
+      Alert.alert('Error', 'Username must be at least 4 characters long!');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const user = await AuthService.register({
+        username: usernameRef.current,
+        password: passwordRef.current,
+        email: emailRef.current,
+        fullName: nameRef.current,
+      });
+      Alert.alert(
+        'Registration Successful',
+        `Welcome, ${user.username}! Ready to Bet?`,
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Home')
+          }
+        ]
+      );
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Registration Failed: ', error.message);
+    } finally {
+      // Do we have a profile page using props?
+      setLoading(false);
+      //navigation.navigate(`Profile/${user.uid}`);
+    }
   };
 
   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+        >
     <ScreenWrapper bg="white">
       <StatusBar style="dark" />
       <View style={styles.container}>
@@ -65,7 +111,7 @@ const SignUp = () => {
             onChangeText={(value) => (passwordRef.current = value)}
           />
           {/*button*/}
-          <Button title={'Sign up'} loading={loading} onPress={onSubmit} />
+          <Button title={'Sign up'} loading={loading} onPress={onSubmit} /> 
         </View>
 
         {/*footer*/}
@@ -87,6 +133,8 @@ const SignUp = () => {
         </View>
       </View>
     </ScreenWrapper>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
