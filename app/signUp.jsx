@@ -16,13 +16,13 @@ const SignUp = () => {
   const navigation = useNavigation();
   const emailRef = useRef(''); //saves email as reference
   const nameRef = useRef(''); //saves name as reference
-  const usernameRef = useRef(''); //saves bday as reference
+  const usernameRef = useRef(''); //saves username as reference
   const passwordRef = useRef(''); //saves password as reference
   const [loading, setLoading] = useState(false); //loading state
 
   const onSubmit = async () => {
     if (!emailRef.current || !passwordRef.current || !nameRef.current || !usernameRef.current) {
-      Alert.alert('Error', 'Please fill all fields!');
+      Alert.alert('Error', 'Please fill out all fields!');
       return;
     }
 
@@ -34,7 +34,7 @@ const SignUp = () => {
         email: emailRef.current,
         fullName: nameRef.current,
       });
-      Alert.alert("Registration Successful", `Welcome, ${user.username}! Ready to Brag?`);
+      Alert.alert("Registration Successful", `Welcome, ${user.username}! Ready to Bet?`);
     } catch (error) {
       setLoading(false);
       Alert.alert("Registration Failed: ", error.message);
