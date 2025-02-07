@@ -24,9 +24,9 @@ const Input = ({ secureTextEntry, inputRef, containerStyle, ...rest }) => {
       />
       {secureTextEntry && (
         <Pressable onPress={() => setShowPassword(!showPassword)}>
-          <Icon 
-            name={showPassword ? "eyeClosed" : "eye"} 
-            size={20} 
+          <Icon
+            name={showPassword ? 'eyeClosed' : 'eye'}
+            size={20}
             color={theme.colors.textLight}
           />
         </Pressable>
@@ -51,8 +51,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   focusedContainer: {
-    borderColor: theme.colors.primary, 
+    borderColor: theme.colors.primary,
     borderWidth: 1.5,
-    backgroundColor: theme.colors.lightBackground
-  }
+    backgroundColor: theme.colors.lightBackground,
+  },
 });
