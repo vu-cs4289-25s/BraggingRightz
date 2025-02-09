@@ -10,7 +10,7 @@ POST /groups/{group_id}/invite → Invite users (in-app or external)
 
  */
 
-import {
+const {
   collection,
   doc,
   getDoc,
@@ -25,8 +25,8 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} = require('firebase/firestore');
+const { db } = require('../firebase/config');
 
 class GroupService {
   // Get user's groups
@@ -167,4 +167,4 @@ class GroupService {
   }
 }
 
-export const groupService = new GroupService();
+module.exports = new GroupService();
