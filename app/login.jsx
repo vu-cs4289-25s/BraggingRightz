@@ -41,23 +41,12 @@ const Login = () => {
         username: usernameRef.current,
         password: passwordRef.current,
       });
-      Alert.alert(
-        'Login Successful',
-        `Welcome, ${user.username}! Ready to Bet?`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Home'),
-          },
-        ],
-      );
+      navigation.navigate('Home');
     } catch (error) {
       Alert.alert('Login Failed: ', error.message);
       navigation.navigate('Login');
     } finally {
       setLoading(false);
-      // Do we have a profile page using props?
-      //navigation.navigate(`Profile/${user.uid}`);
     }
   };
 
