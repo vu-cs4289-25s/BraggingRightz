@@ -9,8 +9,8 @@ POST /auth/forgot-password → Request a password reset link
 POST /auth/reset-password → Reset password using token
 GET /auth/check-username/{username} → Check if a username is available
 
- */ // services/authService.js
-import {
+ */
+const {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
@@ -18,8 +18,8 @@ import {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
-} from 'firebase/auth';
-import {
+} = require('firebase/auth');
+const {
   doc,
   setDoc,
   getDoc,
@@ -27,10 +27,10 @@ import {
   collection,
   where,
   getDocs,
-} from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+} = require('firebase/firestore');
+const { auth, db } = require('../firebase/config');
 
-export class AuthService {
+class AuthService {
   // Register new user
   async register({ email, username, password, fullName }) {
     try {
@@ -220,4 +220,4 @@ export class AuthService {
   }
 }
 
-export default new AuthService();
+module.exports = new AuthService();

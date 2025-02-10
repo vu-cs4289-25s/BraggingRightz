@@ -11,7 +11,7 @@ we are using firebase for the db
  */
 
 // services/userService.js
-import {
+const {
   doc,
   getDoc,
   updateDoc,
@@ -22,9 +22,9 @@ import {
   orderBy,
   limit,
   getDocs,
-} from 'firebase/firestore';
-import { deleteUser } from 'firebase/auth';
-import { db, auth } from '../firebase/config';
+} = require('firebase/firestore');
+const { deleteUser } = require('firebase/auth');
+const { db, auth } = require('../firebase/config');
 
 class UserService {
   // Get user profile
@@ -255,4 +255,4 @@ class UserService {
   }
 }
 
-export default new UserService();
+module.exports = new UserService();
