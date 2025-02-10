@@ -93,6 +93,36 @@ describe('AuthService', () => {
         }),
       ).rejects.toThrow('Username is already taken');
     });
+
+    it('should throw an error if registration fails', async () => {
+      getDocs.mockResolvedValue({ empty: true }); // Username is available
+      createUserWithEmailAndPassword.mockRejectedValue(
+        new Error('Registration Failed'),
+      );
+
+      await expect(
+        AuthService.register({
+          email: 'test@example.com',
+          username: 'testuser123',
+          password: 'password123',
+        }),
+      ).rejects.toThrow('Registration Failed');
+    });
+
+    it('should throw an error if invalid email', async () => {
+      createUserWithEmailAndPassword.mockRejectedValue({
+        code: 'auth/invalid-email',
+      });
+
+      await expect(
+        AuthService.register({
+          email: 'invalid-email',
+          username: 'testuser',
+          password: 'password123',
+          fullName: 'Test User',
+        }),
+      ).rejects.toThrow('Invalid email address.');
+    });
   });
 
   describe('login', () => {
