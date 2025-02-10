@@ -16,7 +16,7 @@ POST /groups/{group_id}/bets/{bet_id}/reactions → React to a bet
 
  */
 
-import {
+const {
   collection,
   doc,
   getDoc,
@@ -31,8 +31,8 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+} = require('firebase/firestore');
+const { db } = require('../firebase/config');
 
 class BetService {
   // Get all bets in a group
@@ -323,4 +323,4 @@ class BetService {
   }
 }
 
-export const betService = new BetService();
+module.exports = new BetService();
