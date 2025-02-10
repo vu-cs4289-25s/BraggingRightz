@@ -1,3 +1,13 @@
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import React, { useRef, useState } from 'react';
 import ScreenWrapper from '../components/ScreenWrapper';
@@ -34,6 +44,12 @@ const Login = () => {
       Alert.alert(
         'Login Successful',
         `Welcome, ${user.username}! Ready to Bet?`,
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Home'),
+          },
+        ],
       );
     } catch (error) {
       Alert.alert('Login Failed: ', error.message);
@@ -46,57 +62,118 @@ const Login = () => {
   };
 
   return (
-    <ScreenWrapper bg="white">
-      <StatusBar style="dark" />
-      <View style={styles.container}>
-        <BackButton navigation={navigation} />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
+        <ScreenWrapper bg="white">
+          <StatusBar style="dark" />
+          <View style={styles.container}>
+            <BackButton navigation={navigation} />
 
-        {/*welcome text*/}
-        <View>
-          <Text style={styles.welcomeText}>Hey!</Text>
-          <Text style={styles.welcomeText}>Welcome Back.</Text>
-        </View>
+            {/*welcome text*/}
+            <View>
+              <Text style={styles.welcomeText}>Hey!</Text>
+              <Text style={styles.welcomeText}>Welcome Back.</Text>
+            </View>
 
-        {/*form*/}
-        <View style={styles.form}>
-          <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
-            Please login to continue
-          </Text>
-          <Input
-            icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your username"
-            onChangeText={(value) => (usernameRef.current = value)}
-          />
-          <Input
-            icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
-            placeholder="Enter your password"
-            secureTextEntry
-            onChangeText={(value) => (passwordRef.current = value)}
-          />
-          <Text style={styles.forgotPassword}>Forgot Password?</Text>
-          {/*button*/}
-          <Button title={'Login'} loading={loading} onPress={onSubmit} />
-        </View>
+            {/*form*/}
+            <View style={styles.form}>
+              <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
+                Please login to continue
+              </Text>
+              <Input
+                icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
+                placeholder="Enter your username"
+                onChangeText={(value) => (usernameRef.current = value)}
+              />
+              <Input
+                icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
+                placeholder="Enter your password"
+                secureTextEntry
+                onChangeText={(value) => (passwordRef.current = value)}
+              />
+              <Text style={styles.forgotPassword}>Forgot Password?</Text>
+              {/*button*/}
+              <Button title={'Login'} loading={loading} onPress={onSubmit} />
+            </View>
 
-        {/*footer*/}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <Pressable onPress={() => navigation.navigate('SignUp')}>
-            <Text
-              style={[
-                styles.footerText,
-                {
-                  color: theme.colors.primaryDark,
-                  fontWeight: theme.fonts.semibold,
-                },
-              ]}
-            >
-              Sign up
+            {/*footer*/}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <Pressable onPress={() => navigation.navigate('SignUp')}>
+                <Text
+                  style={[
+                    styles.footerText,
+                    {
+                      color: theme.colors.primaryDark,
+                      fontWeight: theme.fonts.semibold,
+                    },
+                  ]}
+                >
+                  Sign up
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScreenWrapper>
+      </ScrollView>
+      <ScreenWrapper bg="white">
+        <StatusBar style="dark" />
+        <View style={styles.container}>
+          <BackButton navigation={navigation} />
+
+          {/*welcome text*/}
+          <View>
+            <Text style={styles.welcomeText}>Hey!</Text>
+            <Text style={styles.welcomeText}>Welcome Back.</Text>
+          </View>
+
+          {/*form*/}
+          <View style={styles.form}>
+            <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
+              Please login to continue
             </Text>
-          </Pressable>
+            <Input
+              icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
+              placeholder="Enter your username"
+              onChangeText={(value) => (usernameRef.current = value)}
+            />
+            <Input
+              icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
+              placeholder="Enter your password"
+              secureTextEntry
+              onChangeText={(value) => (passwordRef.current = value)}
+            />
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+            {/*button*/}
+            <Button title={'Login'} loading={loading} onPress={onSubmit} />
+          </View>
+
+          {/*footer*/}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account?</Text>
+            <Pressable onPress={() => navigation.navigate('SignUp')}>
+              <Text
+                style={[
+                  styles.footerText,
+                  {
+                    color: theme.colors.primaryDark,
+                    fontWeight: theme.fonts.semibold,
+                  },
+                ]}
+              >
+                Sign up
+              </Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
-    </ScreenWrapper>
+      </ScreenWrapper>
+    </KeyboardAvoidingView>
   );
 };
 
