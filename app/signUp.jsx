@@ -8,7 +8,6 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import React, { useRef, useState } from 'react';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { theme } from '../constants/theme';
