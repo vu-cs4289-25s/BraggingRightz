@@ -146,7 +146,7 @@ describe('AuthService', () => {
     it('should return the current user session', async () => {
       auth.currentUser = { uid: '123', email: 'test@example.com' };
       getDoc.mockResolvedValue({
-        data: () => ({ username: 'testuser', birthday: '2000-01-01' }),
+        data: () => ({ username: 'testuser', fullName: 'test user' }),
       });
 
       const result = await AuthService.getSession();
@@ -155,7 +155,7 @@ describe('AuthService', () => {
         uid: '123',
         email: 'test@example.com',
         username: 'testuser',
-        birthday: '2000-01-01',
+        fullName: 'test user',
       });
     });
 
