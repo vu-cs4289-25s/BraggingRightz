@@ -30,7 +30,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
-class AuthService {
+export class AuthService {
   // Register new user
   async register({ email, username, password, fullName }) {
     try {

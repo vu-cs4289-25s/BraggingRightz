@@ -25,7 +25,6 @@ import Video from './Video';
 import Birthday from './Birthday';
 import Eye from './Eye';
 import EyeClosed from './EyeClosed';
-
 const icons = {
   home: Home,
   mail: Mail,

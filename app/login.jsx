@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import React, { useRef, useState } from 'react';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { theme } from '../constants/theme';
@@ -122,6 +123,57 @@ const Login = () => {
         </ScreenWrapper>
       </ScrollView>
     </KeyboardAvoidingView>
+    <ScreenWrapper bg="white">
+      <StatusBar style="dark" />
+      <View style={styles.container}>
+        <BackButton navigation={navigation} />
+
+        {/*welcome text*/}
+        <View>
+          <Text style={styles.welcomeText}>Hey!</Text>
+          <Text style={styles.welcomeText}>Welcome Back.</Text>
+        </View>
+
+        {/*form*/}
+        <View style={styles.form}>
+          <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
+            Please login to continue
+          </Text>
+          <Input
+            icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
+            placeholder="Enter your username"
+            onChangeText={(value) => (usernameRef.current = value)}
+          />
+          <Input
+            icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
+            placeholder="Enter your password"
+            secureTextEntry
+            onChangeText={(value) => (passwordRef.current = value)}
+          />
+          <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          {/*button*/}
+          <Button title={'Login'} loading={loading} onPress={onSubmit} />
+        </View>
+
+        {/*footer*/}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account?</Text>
+          <Pressable onPress={() => navigation.navigate('SignUp')}>
+            <Text
+              style={[
+                styles.footerText,
+                {
+                  color: theme.colors.primaryDark,
+                  fontWeight: theme.fonts.semibold,
+                },
+              ]}
+            >
+              Sign up
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    </ScreenWrapper>
   );
 };
 
