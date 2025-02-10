@@ -130,7 +130,7 @@ class AuthService {
         uid: user.uid,
         email: user.email,
         username: userData.username,
-        birthday: userData.birthday,
+        fullName: userData.fullName,
       };
     } catch (error) {
       this._handleError(error);
@@ -161,17 +161,6 @@ class AuthService {
   async forgotPassword(email) {
     try {
       await sendPasswordResetEmail(auth, email);
-      return true;
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
-  // Reset password with token (handled by Firebase automatically through email link)
-  // This method is for reference, as Firebase handles the reset flow
-  async resetPassword({ oobCode, newPassword }) {
-    try {
-      await auth.confirmPasswordReset(oobCode, newPassword);
       return true;
     } catch (error) {
       this._handleError(error);
