@@ -60,6 +60,7 @@ class AuthService {
         updatedAt: new Date().toISOString(),
         trophies: 0,
         groups: [],
+        profilePicture: null,
       });
 
       return {
