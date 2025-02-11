@@ -18,7 +18,7 @@ const Welcome = () => {
         <Image
           style={styles.welcomeImage}
           resizeMode="contain"
-          source={require('../assets/illustration.png')}
+          source={require('../assets/images/illustration.png')}
         />
 
         {/*title*/}
