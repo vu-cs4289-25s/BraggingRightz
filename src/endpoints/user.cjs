@@ -24,7 +24,12 @@ const {
   getDocs,
 } = require('firebase/firestore');
 const { deleteUser } = require('firebase/auth');
-const { getStorage, ref, uploadBytes, getDownloadURL } = require('firebase/storage');
+const {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} = require('firebase/storage');
 const { db, auth } = require('../firebase/config');
 
 class UserService {
