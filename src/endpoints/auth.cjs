@@ -63,6 +63,9 @@ class AuthService {
         profilePicture: null,
       });
 
+      // save session info
+      auth.currentUser = user;
+
       return {
         uid: user.uid,
         email: user.email,
@@ -97,6 +100,7 @@ class AuthService {
         password,
       );
       const user = userCredential.user;
+      auth.currentUser = user;
 
       return {
         uid: user.uid,
@@ -112,6 +116,7 @@ class AuthService {
   async logout() {
     try {
       await signOut(auth);
+      auth.currentUser = null;
       return true;
     } catch (error) {
       this._handleError(error);

@@ -44,14 +44,6 @@ class UserService {
 
       const userData = userDoc.data();
       return {
-        uid: userDoc.id,
-        username: userData.username,
-        email: userData.email,
-        fullName: userData.fullName,
-        createdAt: userData.createdAt,
-        trophies: userData.trophies,
-        profilePicture: userData.profilePicture,
-        groups: userData.groups,
         ...userData,
       };
     } catch (error) {
@@ -277,7 +269,7 @@ class UserService {
 
   // Error handler
   _handleError(error) {
-    let message = 'An error occurred.';
+    let message = error;
 
     if (error.code === 'permission-denied') {
       message = 'You do not have permission to perform this action.';
