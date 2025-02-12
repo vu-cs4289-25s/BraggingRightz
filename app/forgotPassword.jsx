@@ -6,6 +6,8 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Pressable,
+
 } from 'react-native';
 import React, { useRef, useState } from 'react';
 import ScreenWrapper from '../components/ScreenWrapper';
@@ -77,11 +79,26 @@ const ForgotPassword = () => {
               />
               {/*button*/}
               <Button
-                title={'Send Reset Password Email'}
+                title={'Reset Password'}
                 loading={loading}
                 onPress={handleForgotPassword}
               />
             </View>
+            <View style={styles.footer}>
+                          <Pressable onPress={() => navigation.navigate('Login')}>
+                            <Text
+                              style={[
+                                styles.footerText,
+                                {
+                                  color: theme.colors.primaryDark,
+                                  fontWeight: theme.fonts.semibold,
+                                },
+                              ]}
+                            >
+                              Back to Login
+                            </Text>
+                          </Pressable>
+                        </View>
 
             {/*footer*/}
           </View>
