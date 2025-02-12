@@ -58,7 +58,7 @@ const SignUp = () => {
         `Welcome, ${user.username}! Ready to Bet?`,
         [
           {
-            text: 'OK',
+            text: 'YEAH!',
             onPress: () => navigation.navigate('Home'),
           },
         ],
@@ -67,9 +67,7 @@ const SignUp = () => {
       setLoading(false);
       Alert.alert('Registration Failed: ', error.message);
     } finally {
-      // Do we have a profile page using props?
       setLoading(false);
-      //navigation.navigate(`Profile/${user.uid}`);
     }
   };
 

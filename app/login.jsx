@@ -49,6 +49,20 @@ const Login = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+      if (!usernameRef.current){
+        Alert.alert("Forgot Password", "Please enter your username to reset password.");
+        return;
+      }
+
+      try {
+        await AuthService.forgotPassword(usernameRef.current);
+        Alert.alert("Forgot Password", "A password reset link has been sent to your email.");
+      } catch (error) {
+        Alert.alert("Unable to Reset Password", error.message);
+      }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -85,7 +99,19 @@ const Login = () => {
                 secureTextEntry
                 onChangeText={(value) => (passwordRef.current = value)}
               />
-              <Text style={styles.forgotPassword}>Forgot Password?</Text>
+              <Pressable onPress={handleForgotPassword}>
+                <Text
+                    style={[
+                      styles.forgotPassword,
+                      {
+                        color: theme.colors.primaryDark,
+                        fontWeight: theme.fonts.semibold,
+                      },
+                    ]}
+                >
+                  Forgot Password?
+                </Text>
+              </Pressable>
               {/*button*/}
               <Button title={'Login'} loading={loading} onPress={onSubmit} />
             </View>
