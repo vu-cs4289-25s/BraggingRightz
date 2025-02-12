@@ -9,6 +9,7 @@ import Home from './app/main/home';
 import NewBet from './app/main/newBet';
 import Profile from './app/main/profile';
 import Notifications from './app/main/notifications';
+import ForgotPassword from './app/forgotPassword';
 
 const Stack = createStackNavigator();
 
@@ -20,6 +21,7 @@ export default function App() {
           <Stack.Screen name="Welcome" component={Welcome} />
           <Stack.Screen name="SignUp" component={SignUp} />
           <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
           <Stack.Screen name="Home" component={Home} />
           <Stack.Screen name="NewBet" component={NewBet} />
           <Stack.Screen name="Profile" component={Profile} />

@@ -1,6 +1,5 @@
 import {
   Alert,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -21,36 +20,30 @@ import Button from '../components/Button';
 
 import AuthService from '../src/endpoints/auth.cjs';
 
-const Login = () => {
+const ForgotPassword = () => {
   const navigation = useNavigation();
   const usernameRef = useRef(''); //saves username as reference
-  const passwordRef = useRef(''); //saves password as reference
   const [loading, setLoading] = useState(false); //loading state
 
-  const onSubmit = async () => {
-    if (!usernameRef.current || !passwordRef.current) {
-      Alert.alert('Login', 'Please fill all fields!');
+  const handleForgotPassword = async () => {
+    if (!usernameRef.current) {
+      Alert.alert(
+        'Forgot Password',
+        'Please enter your username to reset password.',
+      );
       return;
     }
 
-    // Log in user
-    setLoading(true);
     try {
-      const user = await AuthService.login({
-        username: usernameRef.current,
-        password: passwordRef.current,
-      });
-      navigation.navigate('Home');
-    } catch (error) {
-      Alert.alert('Login Failed: ', error.message);
+      await AuthService.forgotPassword(usernameRef.current);
+      Alert.alert(
+        'Forgot Password',
+        'A password reset link has been sent to your email.',
+      );
       navigation.navigate('Login');
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      Alert.alert('Unable to Reset Password', error.message);
     }
-  };
-
-  const handleForgotPassword = async () => {
-    navigation.navigate('ForgotPassword');
   };
 
   return (
@@ -69,60 +62,28 @@ const Login = () => {
 
             {/*welcome text*/}
             <View>
-              <Text style={styles.welcomeText}>Hey!</Text>
-              <Text style={styles.welcomeText}>Welcome Back.</Text>
+              <Text style={styles.welcomeText}>Reset Password</Text>
             </View>
 
             {/*form*/}
             <View style={styles.form}>
               <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
-                Please login to continue
+                Please enter your username to reset your password:
               </Text>
               <Input
-                icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
+                icon={<Icon name="user" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your username"
                 onChangeText={(value) => (usernameRef.current = value)}
               />
-              <Input
-                icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
-                placeholder="Enter your password"
-                secureTextEntry
-                onChangeText={(value) => (passwordRef.current = value)}
-              />
-              <Pressable onPress={handleForgotPassword}>
-                <Text
-                  style={[
-                    styles.forgotPassword,
-                    {
-                      color: theme.colors.primaryDark,
-                      fontWeight: theme.fonts.semibold,
-                    },
-                  ]}
-                >
-                  Forgot Password?
-                </Text>
-              </Pressable>
               {/*button*/}
-              <Button title={'Login'} loading={loading} onPress={onSubmit} />
+              <Button
+                title={'Send Reset Password Email'}
+                loading={loading}
+                onPress={handleForgotPassword}
+              />
             </View>
 
             {/*footer*/}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account?</Text>
-              <Pressable onPress={() => navigation.navigate('SignUp')}>
-                <Text
-                  style={[
-                    styles.footerText,
-                    {
-                      color: theme.colors.primaryDark,
-                      fontWeight: theme.fonts.semibold,
-                    },
-                  ]}
-                >
-                  Sign up
-                </Text>
-              </Pressable>
-            </View>
           </View>
         </ScreenWrapper>
       </ScrollView>
@@ -130,7 +91,7 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default ForgotPassword;
 
 const styles = StyleSheet.create({
   container: {

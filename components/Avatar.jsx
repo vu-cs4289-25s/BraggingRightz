@@ -5,11 +5,10 @@ import { hp, wp } from '../helpers/common';
 
 const Avatar = ({
   uri,
-  size=hp(4.5),
+  size = hp(4.5),
   //rounded=theme.radius.md,
-  style={}
+  style = {},
 }) => {
-  
   return (
     <View>
       <Text>Avatar</Text>

@@ -164,8 +164,20 @@ class AuthService {
   }
 
   // Request password reset
-  async forgotPassword(email) {
+  async forgotPassword(username) {
     try {
+      const userQuery = query(
+        collection(db, 'users'),
+        where('username', '==', username.toLowerCase()),
+      );
+      const querySnapshot = await getDocs(userQuery);
+
+      if (querySnapshot.empty) {
+        throw new Error('User not found');
+      }
+
+      const userDoc = querySnapshot.docs[0];
+      const email = userDoc.data().email;
       await sendPasswordResetEmail(auth, email);
       return true;
     } catch (error) {
