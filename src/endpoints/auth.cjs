@@ -40,7 +40,13 @@ class AuthService {
       // Check if username is available
       const isAvailable = await this.checkUsername(username);
       if (!isAvailable) {
-        throw new Error('Username is already taken');
+        this._handleError({ code: 'auth/username-already-in-use' });
+      }
+
+      // Check if email is available
+      const emailAvail = await this.checkEmail(email);
+      if (!emailAvail) {
+        this._handleError({ code: 'auth/email-already-in-use' });
       }
 
       // Create auth user
@@ -199,14 +205,25 @@ class AuthService {
     }
   }
 
+  // Check email availability
+  async checkEmail(email) {
+    try {
+      const userQuery = query(
+        collection(db, 'users'),
+        where('email', '==', email),
+      );
+      const querySnapshot = await getDocs(userQuery);
+      return querySnapshot.empty;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
   // Error handler
   _handleError(error) {
     let message = 'An error occurred.';
 
     switch (error.code) {
-      case 'auth/email-already-in-use':
-        message = 'This email is already registered.';
-        break;
       case 'auth/invalid-email':
         message = 'Invalid email address.';
         break;
@@ -218,6 +235,12 @@ class AuthService {
         break;
       case 'auth/wrong-password':
         message = 'Invalid password.';
+        break;
+      case 'auth/username-already-in-use':
+        message = 'Username is already taken.';
+        break;
+      case 'auth/email-already-in-use':
+        message = 'Email is already taken.';
         break;
       default:
         message = error.message;

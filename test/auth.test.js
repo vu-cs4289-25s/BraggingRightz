@@ -82,7 +82,9 @@ describe('AuthService', () => {
     });
 
     it('should throw an error if username is already taken', async () => {
-      getDocs.mockResolvedValue({ empty: false }); // Username already exists
+      createUserWithEmailAndPassword.mockRejectedValue({
+        code: 'auth/username-already-in-use',
+      });
 
       await expect(
         AuthService.register({
@@ -92,6 +94,21 @@ describe('AuthService', () => {
           fullName: 'Test User',
         }),
       ).rejects.toThrow('Username is already taken');
+    });
+
+    it('should throw an error if email is already taken', async () => {
+      createUserWithEmailAndPassword.mockRejectedValue({
+        code: 'auth/email-already-in-use',
+      });
+
+      await expect(
+        AuthService.register({
+          email: 'test@example.com',
+          username: 'testuser',
+          password: 'password123',
+          fullName: 'Test User',
+        }),
+      ).rejects.toThrow('Email is already taken');
     });
 
     it('should throw an error if registration fails', async () => {

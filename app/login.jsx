@@ -79,7 +79,7 @@ const Login = () => {
                 Please login to continue
               </Text>
               <Input
-                icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
+                icon={<Icon name="user" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your username"
                 onChangeText={(value) => (usernameRef.current = value)}
               />
