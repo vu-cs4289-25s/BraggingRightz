@@ -235,7 +235,13 @@ describe('AuthService', () => {
     it('should send a password reset email', async () => {
       sendPasswordResetEmail.mockResolvedValue();
 
-      const result = await AuthService.forgotPassword('test@example.com');
+      // make a user with username testuser
+      getDocs.mockResolvedValue({
+        empty: false,
+        docs: [{ data: () => ({ email: 'test@example.com' }) }],
+      });
+
+      const result = await AuthService.forgotPassword('testuser');
 
       expect(result).toBe(true);
       expect(sendPasswordResetEmail).toHaveBeenCalledWith(
