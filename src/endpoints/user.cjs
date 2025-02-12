@@ -24,6 +24,12 @@ const {
   getDocs,
 } = require('firebase/firestore');
 const { deleteUser } = require('firebase/auth');
+const {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} = require('firebase/storage');
 const { db, auth } = require('../firebase/config');
 
 class UserService {
@@ -38,12 +44,6 @@ class UserService {
 
       const userData = userDoc.data();
       return {
-        id: userDoc.id,
-        username: userData.username,
-        email: userData.email,
-        birthday: userData.birthday,
-        createdAt: userData.createdAt,
-        // Exclude sensitive information
         ...userData,
       };
     } catch (error) {
@@ -102,6 +102,32 @@ class UserService {
       await this._cleanupUserData(userId);
 
       return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Add profile picture
+  async addProfilePicture(userId, file) {
+    try {
+      const storage = getStorage();
+      const storageRef = ref(storage, `profile_pictures/${userId}.jpg`);
+
+      // Convert file URI to Blob
+      const response = await fetch(file);
+      const blob = await response.blob();
+
+      // Upload file to Firebase Storage
+      await uploadBytes(storageRef, blob);
+
+      // Get the download URL
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Update user's profile with the new picture URL
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { profilePicture: downloadURL });
+
+      return downloadURL;
     } catch (error) {
       this._handleError(error);
     }
@@ -243,7 +269,7 @@ class UserService {
 
   // Error handler
   _handleError(error) {
-    let message = 'An error occurred.';
+    let message = error;
 
     if (error.code === 'permission-denied') {
       message = 'You do not have permission to perform this action.';
