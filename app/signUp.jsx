@@ -43,10 +43,10 @@ const SignUp = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.2,  // Reduced quality for smaller file size
-        maxWidth: 500,  // Smaller max dimensions
+        quality: 0.2, // Reduced quality for smaller file size
+        maxWidth: 500, // Smaller max dimensions
         maxHeight: 500,
-        base64: true,  // Get base64 data
+        base64: true, // Get base64 data
       });
 
       if (!result.canceled) {
@@ -83,9 +83,11 @@ const SignUp = () => {
         code: error.code,
         message: error.message,
         stack: error.stack,
-        userId: userId
+        userId: userId,
       });
-      throw new Error('Failed to upload profile picture. Please try again later.');
+      throw new Error(
+        'Failed to upload profile picture. Please try again later.',
+      );
     }
   };
 
@@ -116,18 +118,23 @@ const SignUp = () => {
       });
 
       let profilePictureUrl = null;
-      
+
       // Upload profile picture using the user's UID if image is selected
       if (profileImage) {
         setUploadingImage(true);
         try {
           profilePictureUrl = await uploadImage(user.uid);
-          
+
           // Update the user's profile with the image URL
-          await AuthService.updateProfile(user.uid, { profilePicture: profilePictureUrl });
+          await AuthService.updateProfile(user.uid, {
+            profilePicture: profilePictureUrl,
+          });
         } catch (error) {
           console.log('Error uploading profile picture:', error);
-          Alert.alert('Warning', 'Failed to upload profile picture, but registration was successful.');
+          Alert.alert(
+            'Warning',
+            'Failed to upload profile picture, but registration was successful.',
+          );
         }
       }
 
@@ -172,21 +179,28 @@ const SignUp = () => {
               <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
                 Please fill in the details to create an account
               </Text>
-              
+
               {/* Profile Picture Selection */}
-              <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                onPress={pickImage}
+              >
                 {profileImage ? (
                   <Image source={{ uri: profileImage }} style={styles.avatar} />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
-                    <Ionicons name="person-outline" size={40} color={theme.colors.text} />
+                    <Ionicons
+                      name="person-outline"
+                      size={40}
+                      color={theme.colors.text}
+                    />
                   </View>
                 )}
                 <View style={styles.editIconContainer}>
                   <Ionicons name="camera" size={20} color="white" />
                 </View>
               </TouchableOpacity>
-              
+
               <Input
                 icon={<Icon name="user" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your full name"
@@ -208,10 +222,12 @@ const SignUp = () => {
                 secureTextEntry
                 onChangeText={(value) => (passwordRef.current = value)}
               />
-              <Button 
-                title={loading || uploadingImage ? 'Creating Account...' : 'Sign up'} 
-                loading={loading || uploadingImage} 
-                onPress={onSubmit} 
+              <Button
+                title={
+                  loading || uploadingImage ? 'Creating Account...' : 'Sign up'
+                }
+                loading={loading || uploadingImage}
+                onPress={onSubmit}
               />
             </View>
 

@@ -72,23 +72,9 @@ const Profile = () => {
 
     setUploading(true);
     try {
-      // Get the image as base64
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.2,
-        base64: true,
-      });
-
-      if (result.canceled) {
-        setUploading(false);
-        return;
-      }
-
-      // Convert base64 to blob
-      const base64Response = await fetch(`data:image/jpeg;base64,${result.assets[0].base64}`);
-      const blob = await base64Response.blob();
+      // Convert uri to blob
+      const response = await fetch(uri);
+      const blob = await response.blob();
 
       // Create file reference
       const filename = `profile_${auth.currentUser.uid}_${Date.now()}.jpg`;
@@ -104,20 +90,23 @@ const Profile = () => {
 
       // Update profile
       setProfileImage(downloadUrl);
-      await AuthService.updateProfile(auth.currentUser.uid, { profilePicture: downloadUrl });
+      await AuthService.updateProfile(auth.currentUser.uid, {
+        profilePicture: downloadUrl,
+      });
+
+      // Force reload profile image in Avatar component
+      await loadProfileImage();
+
       Alert.alert('Success', 'Profile photo updated successfully!');
     } catch (error) {
       console.log('Upload error details:', {
         code: error.code,
         message: error.message,
         stack: error.stack,
-        user: auth.currentUser?.uid
+        user: auth.currentUser?.uid,
       });
 
-      Alert.alert(
-        'Error',
-        'Failed to upload image. Please try again later.'
-      );
+      Alert.alert('Error', 'Failed to upload image. Please try again later.');
     } finally {
       setUploading(false);
     }
@@ -174,7 +163,11 @@ const Profile = () => {
               <ActivityIndicator size="large" color={theme.colors.primary} />
             ) : (
               <Image
-                source={profileImage ? { uri: profileImage } : require('../../assets/images/default-avatar.png')}
+                source={
+                  profileImage
+                    ? { uri: profileImage }
+                    : require('../../assets/images/default-avatar.png')
+                }
                 style={styles.avatar}
               />
             )}

@@ -33,7 +33,13 @@ const { auth, db } = require('../firebase/config');
 
 class AuthService {
   // Register new user
-  async register({ email, username, password, fullName, profilePicture = null }) {
+  async register({
+    email,
+    username,
+    password,
+    fullName,
+    profilePicture = null,
+  }) {
     try {
       // make everything lowercase
       username = username.toLowerCase();
@@ -99,25 +105,22 @@ class AuthService {
       }
 
       const userDoc = querySnapshot.docs[0];
-      const email = userDoc.data().email;
+      const userData = userDoc.data();
 
       // Login with email
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        email,
+        userData.email,
         password,
       );
       const user = userCredential.user;
 
-      // Get additional user data
-      const userData = userDoc.data();
-
       return {
         uid: user.uid,
-        email: user.email,
+        email: userData.email,
         username: userData.username,
         fullName: userData.fullName,
-        profilePicture: userData.profilePicture
+        profilePicture: userData.profilePicture || null,
       };
     } catch (error) {
       console.log('Login error:', error);
@@ -142,7 +145,9 @@ class AuthService {
       const user = auth.currentUser;
       if (!user) return null;
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
+
       if (!userDoc.exists()) {
         return null;
       }
@@ -150,10 +155,11 @@ class AuthService {
       const userData = userDoc.data();
       return {
         uid: user.uid,
-        email: user.email,
+        email: userData.email,
         username: userData.username,
         fullName: userData.fullName,
-        profilePicture: userData.profilePicture
+        profilePicture: userData.profilePicture || null,
+        updatedAt: userData.updatedAt,
       };
     } catch (error) {
       console.log('Get session error:', error);
@@ -241,10 +247,13 @@ class AuthService {
         throw new Error('User not found');
       }
 
-      await updateDoc(userRef, {
+      const timestamp = new Date().toISOString();
+      const updates = {
         ...updateData,
-        updatedAt: new Date().toISOString(),
-      });
+        updatedAt: timestamp,
+      };
+
+      await updateDoc(userRef, updates);
 
       // Get updated user data
       const updatedDoc = await getDoc(userRef);
@@ -255,8 +264,8 @@ class AuthService {
         email: userData.email,
         username: userData.username,
         fullName: userData.fullName,
-        profilePicture: userData.profilePicture,
-        ...updateData,
+        profilePicture: userData.profilePicture || null,
+        updatedAt: timestamp,
       };
     } catch (error) {
       console.log('Update profile error:', error);
