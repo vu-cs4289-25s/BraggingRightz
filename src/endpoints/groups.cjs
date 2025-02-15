@@ -48,10 +48,12 @@ class GroupService {
   }
 
   // Create group
-  async createGroup(groupData) {
+  async createGroup(name, members, creatorId) {
     try {
       const group = {
-        ...groupData,
+        name,
+        members: [...members, creatorId],
+        creatorId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -66,18 +68,42 @@ class GroupService {
     }
   }
 
-  // Update group
-  async updateGroup(groupId, updateData) {
+  // Update group name
+  async updateGroupName(groupId, newName) {
     try {
       const groupRef = doc(db, 'groups', groupId);
       await updateDoc(groupRef, {
-        ...updateData,
+        name: newName,
         updatedAt: serverTimestamp(),
       });
 
       return {
         id: groupId,
-        ...updateData,
+        name: newName,
+      };
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // add member to group
+  async addMember(groupId, memberId) {
+    try {
+      const groupRef = doc(db, 'groups', groupId);
+      // check if member already exists in this group
+      const groupDoc = await getDoc(groupRef);
+      if (groupDoc.data().members.includes(memberId)) {
+        this._handleError({ code: 'group/member-already-exists' });
+      }
+      await updateDoc(groupRef, {
+        // update members to include new member
+        members: arrayUnion(memberId),
+        updatedAt: serverTimestamp(),
+      });
+
+      return {
+        id: groupId,
+        members: arrayUnion(memberId),
       };
     } catch (error) {
       this._handleError(error);
@@ -117,53 +143,17 @@ class GroupService {
     }
   }
 
-  // Update group members
-  async updateGroupMembers(groupId, { addMembers = [], removeMembers = [] }) {
-    try {
-      const groupRef = doc(db, 'groups', groupId);
-
-      await updateDoc(groupRef, {
-        members: arrayUnion(...addMembers),
-        updatedAt: serverTimestamp(),
-      });
-
-      if (removeMembers.length > 0) {
-        await updateDoc(groupRef, {
-          members: arrayRemove(...removeMembers),
-        });
-      }
-
-      return true;
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
-  // Invite to group
-  async inviteToGroup(groupId, inviteeEmails) {
-    try {
-      const invites = inviteeEmails.map((email) => ({
-        groupId,
-        email,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-      }));
-
-      const inviteRefs = await Promise.all(
-        invites.map((invite) => addDoc(collection(db, 'groupInvites'), invite)),
-      );
-
-      return inviteRefs.map((ref, index) => ({
-        id: ref.id,
-        ...invites[index],
-      }));
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
   _handleError(error) {
-    throw new Error(error.message);
+    let message = 'An error occurred.';
+
+    switch (error.code) {
+      case 'group/member-already-exists':
+        message = 'Member is already in this group';
+        break;
+      default:
+        message = error.message;
+    }
+    throw new Error(message);
   }
 }
 

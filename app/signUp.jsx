@@ -7,6 +7,8 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
 import React, { useRef, useState } from 'react';
 import ScreenWrapper from '../components/ScreenWrapper';
@@ -18,16 +20,76 @@ import { useNavigation } from '@react-navigation/native';
 import { wp, hp } from '../helpers/common';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import * as ImagePicker from 'expo-image-picker';
+import { storage } from '../src/firebase/config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Ionicons } from '@expo/vector-icons';
 
 import AuthService from '../src/endpoints/auth';
 
 const SignUp = () => {
   const navigation = useNavigation();
-  const emailRef = useRef(''); //saves email as reference
-  const nameRef = useRef(''); //saves name as reference
-  const usernameRef = useRef(''); //saves username as reference
-  const passwordRef = useRef(''); //saves password as reference
-  const [loading, setLoading] = useState(false); //loading state
+  const emailRef = useRef('');
+  const nameRef = useRef('');
+  const usernameRef = useRef('');
+  const passwordRef = useRef('');
+  const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.2, // Reduced quality for smaller file size
+        maxWidth: 500, // Smaller max dimensions
+        maxHeight: 500,
+        base64: true, // Get base64 data
+      });
+
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const uploadImage = async (userId) => {
+    if (!profileImage) return null;
+
+    try {
+      // Convert base64 to blob
+      const base64Response = await fetch(profileImage);
+      const blob = await base64Response.blob();
+
+      // Create file reference
+      const filename = `profile_${userId}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, `profileImages/${filename}`);
+
+      // Upload file
+      await uploadBytes(storageRef, blob);
+      console.log('Uploaded blob successfully');
+
+      // Get URL
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log('Got download URL:', downloadUrl);
+
+      return downloadUrl;
+    } catch (error) {
+      console.log('Upload error details:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack,
+        userId: userId,
+      });
+      throw new Error(
+        'Failed to upload profile picture. Please try again later.',
+      );
+    }
+  };
 
   const onSubmit = async () => {
     if (
@@ -47,12 +109,35 @@ const SignUp = () => {
 
     setLoading(true);
     try {
+      // First register the user to get their UID
       const user = await AuthService.register({
         username: usernameRef.current,
         password: passwordRef.current,
         email: emailRef.current,
         fullName: nameRef.current,
       });
+
+      let profilePictureUrl = null;
+
+      // Upload profile picture using the user's UID if image is selected
+      if (profileImage) {
+        setUploadingImage(true);
+        try {
+          profilePictureUrl = await uploadImage(user.uid);
+
+          // Update the user's profile with the image URL
+          await AuthService.updateProfile(user.uid, {
+            profilePicture: profilePictureUrl,
+          });
+        } catch (error) {
+          console.log('Error uploading profile picture:', error);
+          Alert.alert(
+            'Warning',
+            'Failed to upload profile picture, but registration was successful.',
+          );
+        }
+      }
+
       Alert.alert(
         'Registration Successful',
         `Welcome, ${user.username}! Ready to Bet?`,
@@ -64,12 +149,10 @@ const SignUp = () => {
         ],
       );
     } catch (error) {
-      setLoading(false);
       Alert.alert('Registration Failed: ', error.message);
     } finally {
-      // Do we have a profile page using props?
       setLoading(false);
-      //navigation.navigate(`Profile/${user.uid}`);
+      setUploadingImage(false);
     }
   };
 
@@ -79,7 +162,7 @@ const SignUp = () => {
       style={{ flex: 1 }}
     >
       <ScrollView
-        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1 }}
       >
         <ScreenWrapper bg="white">
@@ -87,17 +170,37 @@ const SignUp = () => {
           <View style={styles.container}>
             <BackButton navigation={navigation} />
 
-            {/*welcome text*/}
             <View>
               <Text style={styles.welcomeText}>Let's</Text>
               <Text style={styles.welcomeText}>Get Started!</Text>
             </View>
 
-            {/*form*/}
             <View style={styles.form}>
               <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
                 Please fill in the details to create an account
               </Text>
+
+              {/* Profile Picture Selection */}
+              <TouchableOpacity
+                style={styles.avatarContainer}
+                onPress={pickImage}
+              >
+                {profileImage ? (
+                  <Image source={{ uri: profileImage }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Ionicons
+                      name="person-outline"
+                      size={40}
+                      color={theme.colors.text}
+                    />
+                  </View>
+                )}
+                <View style={styles.editIconContainer}>
+                  <Ionicons name="camera" size={20} color="white" />
+                </View>
+              </TouchableOpacity>
+
               <Input
                 icon={<Icon name="user" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your full name"
@@ -119,11 +222,15 @@ const SignUp = () => {
                 secureTextEntry
                 onChangeText={(value) => (passwordRef.current = value)}
               />
-              {/*button*/}
-              <Button title={'Sign up'} loading={loading} onPress={onSubmit} />
+              <Button
+                title={
+                  loading || uploadingImage ? 'Creating Account...' : 'Sign up'
+                }
+                loading={loading || uploadingImage}
+                onPress={onSubmit}
+              />
             </View>
 
-            {/*footer*/}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
               <Pressable onPress={() => navigation.navigate('Login')}>
@@ -143,66 +250,6 @@ const SignUp = () => {
           </View>
         </ScreenWrapper>
       </ScrollView>
-      <ScreenWrapper bg="white">
-        <StatusBar style="dark" />
-        <View style={styles.container}>
-          <BackButton navigation={navigation} />
-
-          {/*welcome text*/}
-          <View>
-            <Text style={styles.welcomeText}>Let's</Text>
-            <Text style={styles.welcomeText}>Get Started!</Text>
-          </View>
-
-          {/*form*/}
-          <View style={styles.form}>
-            <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
-              Please fill in the details to create an account
-            </Text>
-            <Input
-              icon={<Icon name="user" size={26} strokeWidth={1.6} />}
-              placeholder="Enter your full name"
-              onChangeText={(value) => (nameRef.current = value)}
-            />
-            <Input
-              icon={<Icon name="video" size={26} strokeWidth={1.6} />}
-              placeholder="Enter your username"
-              onChangeText={(value) => (usernameRef.current = value)}
-            />
-            <Input
-              icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
-              placeholder="Enter your email"
-              onChangeText={(value) => (emailRef.current = value)}
-            />
-            <Input
-              icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
-              placeholder="Enter your password"
-              secureTextEntry
-              onChangeText={(value) => (passwordRef.current = value)}
-            />
-            {/*button*/}
-            <Button title={'Sign up'} loading={loading} onPress={onSubmit} />
-          </View>
-
-          {/*footer*/}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account?</Text>
-            <Pressable onPress={() => navigation.navigate('Login')}>
-              <Text
-                style={[
-                  styles.footerText,
-                  {
-                    color: theme.colors.primaryDark,
-                    fontWeight: theme.fonts.semibold,
-                  },
-                ]}
-              >
-                Log in
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </ScreenWrapper>
     </KeyboardAvoidingView>
   );
 };
@@ -238,5 +285,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: theme.colors.text,
     fontSize: hp(1.6),
+  },
+  avatarContainer: {
+    width: hp(15),
+    height: hp(15),
+    borderRadius: hp(7.5),
+    backgroundColor: '#ebeced',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: hp(2),
+    position: 'relative',
+  },
+  avatar: {
+    width: hp(14),
+    height: hp(14),
+    borderRadius: hp(7),
+  },
+  avatarPlaceholder: {
+    width: hp(14),
+    height: hp(14),
+    borderRadius: hp(7),
+    backgroundColor: '#ebeced',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

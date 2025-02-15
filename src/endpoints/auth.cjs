@@ -4,7 +4,7 @@ POST /auth/register → Register a new user with email, username, password, and 
 POST /auth/login → Log in a user with username and password
 POST /auth/logout → Log out the current user
 GET /auth/session → Get the current user session
-PUT /auth/update-password → Update user’s password
+PUT /auth/update-password → Update user's password
 POST /auth/forgot-password → Request a password reset link
 POST /auth/reset-password → Reset password using token
 GET /auth/check-username/{username} → Check if a username is available
@@ -27,12 +27,19 @@ const {
   collection,
   where,
   getDocs,
+  updateDoc,
 } = require('firebase/firestore');
 const { auth, db } = require('../firebase/config');
 
 class AuthService {
   // Register new user
-  async register({ email, username, password, fullName }) {
+  async register({
+    email,
+    username,
+    password,
+    fullName,
+    profilePicture = null,
+  }) {
     try {
       // make everything lowercase
       username = username.toLowerCase();
@@ -66,7 +73,7 @@ class AuthService {
         updatedAt: new Date().toISOString(),
         trophies: 0,
         groups: [],
-        profilePicture: null,
+        profilePicture,
       });
 
       // save session info
@@ -76,6 +83,7 @@ class AuthService {
         uid: user.uid,
         email: user.email,
         username,
+        profilePicture,
       };
     } catch (error) {
       this._handleError(error);
@@ -97,23 +105,25 @@ class AuthService {
       }
 
       const userDoc = querySnapshot.docs[0];
-      const email = userDoc.data().email;
+      const userData = userDoc.data();
 
       // Login with email
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        email,
+        userData.email,
         password,
       );
       const user = userCredential.user;
-      auth.currentUser = user;
 
       return {
         uid: user.uid,
-        email: user.email,
-        username,
+        email: userData.email,
+        username: userData.username,
+        fullName: userData.fullName,
+        profilePicture: userData.profilePicture || null,
       };
     } catch (error) {
+      console.log('Login error:', error);
       this._handleError(error);
     }
   }
@@ -135,16 +145,24 @@ class AuthService {
       const user = auth.currentUser;
       if (!user) return null;
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data();
+      const userRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userRef);
 
+      if (!userDoc.exists()) {
+        return null;
+      }
+
+      const userData = userDoc.data();
       return {
         uid: user.uid,
-        email: user.email,
+        email: userData.email,
         username: userData.username,
         fullName: userData.fullName,
+        profilePicture: userData.profilePicture || null,
+        updatedAt: userData.updatedAt,
       };
     } catch (error) {
+      console.log('Get session error:', error);
       this._handleError(error);
     }
   }
@@ -215,6 +233,42 @@ class AuthService {
       const querySnapshot = await getDocs(userQuery);
       return querySnapshot.empty;
     } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Update user profile
+  async updateProfile(userId, updateData) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const timestamp = new Date().toISOString();
+      const updates = {
+        ...updateData,
+        updatedAt: timestamp,
+      };
+
+      await updateDoc(userRef, updates);
+
+      // Get updated user data
+      const updatedDoc = await getDoc(userRef);
+      const userData = updatedDoc.data();
+
+      return {
+        uid: userId,
+        email: userData.email,
+        username: userData.username,
+        fullName: userData.fullName,
+        profilePicture: userData.profilePicture || null,
+        updatedAt: timestamp,
+      };
+    } catch (error) {
+      console.log('Update profile error:', error);
       this._handleError(error);
     }
   }

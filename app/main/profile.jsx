@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   View,
   Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -14,9 +16,102 @@ import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import { Ionicons } from '@expo/vector-icons';
+import { useState, useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { storage, auth } from '../../src/firebase/config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import AuthService from '../../src/endpoints/auth';
 
 const Profile = () => {
   const navigation = useNavigation();
+  const [profileImage, setProfileImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    loadProfileImage();
+  }, []);
+
+  const loadProfileImage = async () => {
+    try {
+      if (auth.currentUser) {
+        const userDoc = await AuthService.getSession();
+        if (userDoc && userDoc.profilePicture) {
+          setProfileImage(userDoc.profilePicture);
+        }
+      }
+    } catch (error) {
+      console.log('Error loading profile image:', error);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.2,
+        maxWidth: 500,
+        maxHeight: 500,
+        base64: true,
+      });
+
+      if (!result.canceled) {
+        await uploadImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const uploadImage = async (uri) => {
+    if (!auth.currentUser) {
+      Alert.alert('Error', 'Please log in to upload a profile picture.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Convert uri to blob
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // Create file reference
+      const filename = `profile_${auth.currentUser.uid}_${Date.now()}.jpg`;
+      const storageRef = ref(storage, `profileImages/${filename}`);
+
+      // Upload file
+      await uploadBytes(storageRef, blob);
+      console.log('Uploaded blob successfully');
+
+      // Get URL
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log('Got download URL:', downloadUrl);
+
+      // Update profile
+      setProfileImage(downloadUrl);
+      await AuthService.updateProfile(auth.currentUser.uid, {
+        profilePicture: downloadUrl,
+      });
+
+      // Force reload profile image in Avatar component
+      await loadProfileImage();
+
+      Alert.alert('Success', 'Profile photo updated successfully!');
+    } catch (error) {
+      console.log('Upload error details:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack,
+        user: auth.currentUser?.uid,
+      });
+
+      Alert.alert('Error', 'Failed to upload image. Please try again later.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <ScreenWrapper bg="white">
       <ScrollView
@@ -63,12 +158,23 @@ const Profile = () => {
 
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: 'https://via.placeholder.com/150' }}
-              style={styles.avatar}
-            />
-          </View>
+          <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
+            {uploading ? (
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            ) : (
+              <Image
+                source={
+                  profileImage
+                    ? { uri: profileImage }
+                    : require('../../assets/images/default-avatar.png')
+                }
+                style={styles.avatar}
+              />
+            )}
+            <View style={styles.editIconContainer}>
+              <Ionicons name="camera" size={20} color="white" />
+            </View>
+          </TouchableOpacity>
           <Text style={styles.name}>John Doe</Text>
           <View style={styles.locationContainer}>
             <Ionicons
@@ -206,11 +312,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: hp(2),
+    position: 'relative',
   },
   avatar: {
     width: hp(14),
     height: hp(14),
     borderRadius: hp(7),
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   name: {
     fontSize: hp(2.8),

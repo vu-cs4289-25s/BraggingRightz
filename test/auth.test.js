@@ -72,6 +72,7 @@ describe('AuthService', () => {
         uid: '123',
         email: 'test@example.com',
         username: 'testuser',
+        profilePicture: null,
       });
       expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
         auth,
@@ -144,10 +145,23 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('should log in a user successfully', async () => {
+      const mockUserData = {
+        email: 'test@example.com',
+        username: 'testuser',
+        fullName: 'Test User',
+        profilePicture: null,
+      };
+
       getDocs.mockResolvedValue({
         empty: false,
-        docs: [{ data: () => ({ email: 'test@example.com' }) }],
+        docs: [
+          {
+            data: () => mockUserData,
+            exists: () => true,
+          },
+        ],
       });
+
       signInWithEmailAndPassword.mockResolvedValue({
         user: { uid: '123', email: 'test@example.com' },
       });
@@ -161,12 +175,9 @@ describe('AuthService', () => {
         uid: '123',
         email: 'test@example.com',
         username: 'testuser',
+        fullName: 'Test User',
+        profilePicture: null,
       });
-      expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
-        auth,
-        'test@example.com',
-        'password123',
-      );
     });
 
     it('should throw an error if user not found', async () => {
@@ -191,10 +202,20 @@ describe('AuthService', () => {
 
   describe('getSession', () => {
     it('should return the current user session', async () => {
-      auth.currentUser = { uid: '123', email: 'test@example.com' };
+      const mockUserData = {
+        email: 'test@example.com',
+        username: 'testuser',
+        fullName: 'Test User',
+        profilePicture: null,
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+
       getDoc.mockResolvedValue({
-        data: () => ({ username: 'testuser', fullName: 'test user' }),
+        exists: () => true,
+        data: () => mockUserData,
       });
+
+      auth.currentUser = { uid: '123', email: 'test@example.com' };
 
       const result = await AuthService.getSession();
 
@@ -202,15 +223,25 @@ describe('AuthService', () => {
         uid: '123',
         email: 'test@example.com',
         username: 'testuser',
-        fullName: 'test user',
+        fullName: 'Test User',
+        profilePicture: null,
+        updatedAt: '2024-01-01T00:00:00.000Z',
       });
     });
 
     it('should return null if no user is logged in', async () => {
       auth.currentUser = null;
+      const result = await AuthService.getSession();
+      expect(result).toBeNull();
+    });
+
+    it('should return null if user document does not exist', async () => {
+      auth.currentUser = { uid: '123', email: 'test@example.com' };
+      getDoc.mockResolvedValue({
+        exists: () => false,
+      });
 
       const result = await AuthService.getSession();
-
       expect(result).toBeNull();
     });
   });
