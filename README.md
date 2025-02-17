@@ -1,8 +1,8 @@
 # Bragging Rightz
 
-This is a betting app where friends can make personalized bets with each other and interact via reactions, chat, and leaderboad features.
+This is a betting app where friends can make personalized bets with each other and interact via leaderboad, chat, and reaction features.
 
-<center><img src="assets/images/illustration.png"/></center>
+<center><img src="assets/images/illustration.png" style="width: 50%;"/></center>
 
 ## Local development
 
