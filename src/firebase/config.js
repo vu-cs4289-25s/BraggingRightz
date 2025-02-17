@@ -13,7 +13,7 @@ const firebaseConfig = {
   apiKey: 'AIzaSyCSixS0TPhJ8AplsJG-YCjK7pkPzTK8iIg',
   authDomain: 'bragging-rightz.firebaseapp.com',
   projectId: 'bragging-rightz',
-  storageBucket: 'bragging-rightz.appspot.com',
+  storageBucket: 'bragging-rightz.firebasestorage.app',
   messagingSenderId: '983478005100',
   appId: '1:983478005100:web:53d6b5a42a6c92c4795749',
   measurementId: 'G-E1C4ELL8D0',

@@ -31,10 +31,12 @@ const {
   arrayUnion,
   arrayRemove,
   increment,
+  setDoc,
+  Timestamp,
 } = require('firebase/firestore');
 const { db } = require('../firebase/config');
 
-class BetService {
+class BetsService {
   // Get all bets in a group
   async getGroupBets(groupId) {
     try {
@@ -54,76 +56,351 @@ class BetService {
     }
   }
 
-  // Create new bet
-  async createBet(groupId, betData) {
+  // Create a new bet
+  async createBet({
+    creatorId,
+    title,
+    description,
+    stake,
+    answerOptions,
+    expiresAt,
+    groupId = null,
+  }) {
     try {
-      const groupRef = doc(db, 'groups', groupId);
-      const groupDoc = await getDoc(groupRef);
+      const betRef = doc(collection(db, 'bets'));
+      const timestamp = new Date().toISOString();
 
-      if (!groupDoc.exists()) {
-        throw new Error('Group not found');
+      // Validate answer options
+      if (!Array.isArray(answerOptions) || answerOptions.length < 2) {
+        throw new Error('Bet must have at least 2 answer options');
       }
 
-      const bet = {
-        ...betData,
-        groupId,
-        status: 'active',
+      // Format answer options with IDs
+      const formattedOptions = answerOptions.map((option, index) => ({
+        id: `option_${index + 1}`,
+        text: option,
         participants: [],
-        answers: [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      }));
+
+      const betData = {
+        id: betRef.id,
+        creatorId,
+        title,
+        description,
+        stake,
+        answerOptions: formattedOptions,
+        status: 'open', // open -> locked -> completed
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        expiresAt, // When betting closes
+        resultReleasedAt: null, // When result was released
+        groupId,
+        winningOptionId: null,
+        totalPool: 0, // Total points wagered
       };
 
-      const betRef = await addDoc(collection(db, 'bets'), bet);
-      return {
-        id: betRef.id,
-        ...bet,
-      };
+      await setDoc(betRef, betData);
+
+      // If this is a group bet, update the group's bets array
+      if (groupId) {
+        const groupRef = doc(db, 'groups', groupId);
+        await updateDoc(groupRef, {
+          bets: arrayUnion(betRef.id),
+          updatedAt: timestamp,
+        });
+      }
+
+      return betData;
     } catch (error) {
       this._handleError(error);
     }
   }
 
-  // Get bet details
-  async getBetDetails(groupId, betId) {
+  // Get bet by ID
+  async getBet(betId) {
     try {
       const betDoc = await getDoc(doc(db, 'bets', betId));
-
-      if (!betDoc.exists() || betDoc.data().groupId !== groupId) {
+      if (!betDoc.exists()) {
         throw new Error('Bet not found');
       }
-
-      return {
-        id: betDoc.id,
-        ...betDoc.data(),
-      };
+      return betDoc.data();
     } catch (error) {
       this._handleError(error);
     }
   }
 
-  // Edit bet
-  async editBet(groupId, betId, updateData) {
+  // Get user's bets
+  async getUserBets(userId, status = null) {
+    try {
+      let betQuery = query(
+        collection(db, 'bets'),
+        where('participants', 'array-contains', userId),
+      );
+
+      if (status) {
+        betQuery = query(betQuery, where('status', '==', status));
+      }
+
+      const querySnapshot = await getDocs(betQuery);
+      return querySnapshot.docs.map((doc) => doc.data());
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Update bet
+  async updateBet(betId, updateData) {
     try {
       const betRef = doc(db, 'bets', betId);
       const betDoc = await getDoc(betRef);
 
-      if (!betDoc.exists() || betDoc.data().groupId !== groupId) {
+      if (!betDoc.exists()) {
         throw new Error('Bet not found');
       }
 
-      if (betDoc.data().status !== 'active') {
-        throw new Error('Cannot edit expired or resolved bet');
+      const timestamp = new Date().toISOString();
+      const updates = {
+        ...updateData,
+        updatedAt: timestamp,
+      };
+
+      await updateDoc(betRef, updates);
+
+      // Get updated bet data
+      const updatedDoc = await getDoc(betRef);
+      return updatedDoc.data();
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Place a bet
+  async placeBet(betId, userId, optionId) {
+    try {
+      const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
       }
 
+      const betData = betDoc.data();
+
+      // Validate bet status
+      if (betData.status !== 'open') {
+        throw new Error('Bet is no longer accepting wagers');
+      }
+
+      // Check if bet has expired
+      if (betData.expiresAt && new Date(betData.expiresAt) < new Date()) {
+        throw new Error('Bet has expired');
+      }
+
+      // Validate option exists
+      const selectedOption = betData.answerOptions.find(
+        (opt) => opt.id === optionId,
+      );
+      if (!selectedOption) {
+        throw new Error('Invalid answer option');
+      }
+
+      // Check if user has already placed a bet
+      const hasExistingBet = betData.answerOptions.some((opt) =>
+        opt.participants.includes(userId),
+      );
+      if (hasExistingBet) {
+        throw new Error('User has already placed a bet');
+      }
+
+      // Deduct points from user
+      const pointsService = require('./points');
+      await pointsService.deductPoints(
+        userId,
+        betData.stake,
+        `Bet stake for ${betId}`,
+      );
+
+      const timestamp = new Date().toISOString();
+
+      // Update bet with new participant and total pool
+      const updatedOptions = betData.answerOptions.map((opt) =>
+        opt.id === optionId
+          ? { ...opt, participants: [...opt.participants, userId] }
+          : opt,
+      );
+
       await updateDoc(betRef, {
-        ...updateData,
-        updatedAt: serverTimestamp(),
+        answerOptions: updatedOptions,
+        totalPool: increment(betData.stake),
+        updatedAt: timestamp,
       });
 
+      // Get updated bet data
+      const updatedDoc = await getDoc(betRef);
+      return updatedDoc.data();
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Lock bet (called automatically when bet expires)
+  async lockBet(betId) {
+    try {
+      const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const betData = betDoc.data();
+      if (betData.status !== 'open') {
+        throw new Error('Bet is not in open status');
+      }
+
+      const timestamp = new Date().toISOString();
+      await updateDoc(betRef, {
+        status: 'locked',
+        updatedAt: timestamp,
+      });
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Release result (only creator can do this)
+  async releaseResult(betId, creatorId, winningOptionId) {
+    try {
+      const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const betData = betDoc.data();
+
+      // Validate creator
+      if (betData.creatorId !== creatorId) {
+        throw new Error('Only the bet creator can release results');
+      }
+
+      // Validate bet status
+      if (betData.status !== 'locked') {
+        throw new Error('Bet must be locked before releasing results');
+      }
+
+      // Validate winning option
+      const winningOption = betData.answerOptions.find(
+        (opt) => opt.id === winningOptionId,
+      );
+      if (!winningOption) {
+        throw new Error('Invalid winning option');
+      }
+
+      const timestamp = new Date().toISOString();
+
+      // Calculate winnings
+      const winners = winningOption.participants;
+      const totalWinners = winners.length;
+
+      if (totalWinners > 0) {
+        const winningsPerPerson = Math.floor(betData.totalPool / totalWinners);
+
+        // Distribute winnings to winners
+        const pointsService = require('./points');
+        const distributionPromises = winners.map((winnerId) =>
+          pointsService.addPoints(
+            winnerId,
+            winningsPerPerson,
+            `Won bet ${betId} - ${betData.title}`,
+          ),
+        );
+        await Promise.all(distributionPromises);
+      }
+
+      // Update bet status
+      await updateDoc(betRef, {
+        status: 'completed',
+        winningOptionId,
+        resultReleasedAt: timestamp,
+        updatedAt: timestamp,
+      });
+
+      // Get updated bet data
+      const updatedDoc = await getDoc(betRef);
+      return updatedDoc.data();
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Get bet results
+  async getBetResults(betId) {
+    try {
+      const betDoc = await getDoc(doc(db, 'bets', betId));
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const betData = betDoc.data();
+      if (betData.status !== 'completed') {
+        throw new Error('Results not yet available');
+      }
+
+      const winningOption = betData.answerOptions.find(
+        (opt) => opt.id === betData.winningOptionId,
+      );
+
       return {
-        id: betId,
-        ...updateData,
+        betId,
+        title: betData.title,
+        totalPool: betData.totalPool,
+        winningOption: {
+          id: winningOption.id,
+          text: winningOption.text,
+          winners: winningOption.participants,
+          winningsPerPerson: Math.floor(
+            betData.totalPool / winningOption.participants.length,
+          ),
+        },
+        resultReleasedAt: betData.resultReleasedAt,
+      };
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Get bet statistics
+  async getBetStats(betId) {
+    try {
+      const betDoc = await getDoc(doc(db, 'bets', betId));
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const betData = betDoc.data();
+      const totalParticipants = betData.answerOptions.reduce(
+        (sum, opt) => sum + opt.participants.length,
+        0,
+      );
+
+      return {
+        betId,
+        title: betData.title,
+        totalPool: betData.totalPool,
+        totalParticipants,
+        optionStats: betData.answerOptions.map((opt) => ({
+          id: opt.id,
+          text: opt.text,
+          participantCount: opt.participants.length,
+          percentage:
+            totalParticipants > 0
+              ? (opt.participants.length / totalParticipants) * 100
+              : 0,
+        })),
       };
     } catch (error) {
       this._handleError(error);
@@ -131,131 +408,27 @@ class BetService {
   }
 
   // Delete bet
-  async deleteBet(groupId, betId) {
+  async deleteBet(betId) {
     try {
       const betRef = doc(db, 'bets', betId);
       const betDoc = await getDoc(betRef);
 
-      if (!betDoc.exists() || betDoc.data().groupId !== groupId) {
+      if (!betDoc.exists()) {
         throw new Error('Bet not found');
       }
 
-      if (betDoc.data().status !== 'active') {
-        throw new Error('Cannot delete expired or resolved bet');
-      }
-
-      await deleteDoc(betRef);
-      return true;
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
-  // Join bet
-  async joinBet(groupId, betId, userId, stake) {
-    try {
-      const betRef = doc(db, 'bets', betId);
-      const betDoc = await getDoc(betRef);
-
-      if (!betDoc.exists() || betDoc.data().groupId !== groupId) {
-        throw new Error('Bet not found');
-      }
-
-      if (betDoc.data().status !== 'active') {
-        throw new Error('Cannot join expired or resolved bet');
-      }
-
-      // Add participant and update points
-      await updateDoc(betRef, {
-        participants: arrayUnion({
-          userId,
-          stake,
-          joinedAt: serverTimestamp(),
-        }),
-      });
-
-      // Deduct points from user's balance
-      await updateDoc(doc(db, 'points', userId), {
-        balance: increment(-stake),
-      });
-
-      return true;
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
-  // Submit answer
-  async submitAnswer(groupId, betId, userId, answer) {
-    try {
-      const betRef = doc(db, 'bets', betId);
-      const betDoc = await getDoc(betRef);
-
-      if (!betDoc.exists() || betDoc.data().groupId !== groupId) {
-        throw new Error('Bet not found');
-      }
-
-      if (betDoc.data().status !== 'active') {
-        throw new Error('Cannot submit answer to expired or resolved bet');
-      }
-
-      await updateDoc(betRef, {
-        answers: arrayUnion({
-          userId,
-          answer,
-          submittedAt: serverTimestamp(),
-        }),
-      });
-
-      return true;
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
-  // Lock bet
-  async lockBet(groupId, betId) {
-    try {
-      const betRef = doc(db, 'bets', betId);
-      await updateDoc(betRef, {
-        status: 'locked',
-        lockedAt: serverTimestamp(),
-      });
-      return true;
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
-  // Resolve bet
-  async resolveBet(groupId, betId, winningAnswer) {
-    try {
-      const betRef = doc(db, 'bets', betId);
-      const betDoc = await getDoc(betRef);
       const betData = betDoc.data();
 
-      // Calculate winnings and distribute points
-      const winners = betData.answers.filter((a) => a.answer === winningAnswer);
-      const totalStake = betData.participants.reduce(
-        (sum, p) => sum + p.stake,
-        0,
-      );
-      const winnerShare = totalStake / winners.length;
-
-      // Update winners' points
-      for (const winner of winners) {
-        await updateDoc(doc(db, 'points', winner.userId), {
-          balance: increment(winnerShare),
+      // If this is a group bet, update the group's bets array
+      if (betData.groupId) {
+        const groupRef = doc(db, 'groups', betData.groupId);
+        await updateDoc(groupRef, {
+          bets: arrayRemove(betId),
+          updatedAt: new Date().toISOString(),
         });
       }
 
-      // Mark bet as resolved
-      await updateDoc(betRef, {
-        status: 'resolved',
-        winningAnswer,
-        resolvedAt: serverTimestamp(),
-      });
-
+      await deleteDoc(betRef);
       return true;
     } catch (error) {
       this._handleError(error);
@@ -318,9 +491,11 @@ class BetService {
     }
   }
 
+  // Error handler
   _handleError(error) {
-    throw new Error(error.message);
+    console.error('BetsService Error:', error);
+    throw new Error(error.message || 'An error occurred in BetsService');
   }
 }
 
-module.exports = new BetService();
+module.exports = new BetsService();
