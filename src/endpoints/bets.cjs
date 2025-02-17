@@ -59,9 +59,8 @@ class BetsService {
   // Create a new bet
   async createBet({
     creatorId,
-    title,
-    description,
-    stake,
+    question,
+    wagerAmount,
     answerOptions,
     expiresAt,
     groupId = null,
@@ -85,9 +84,8 @@ class BetsService {
       const betData = {
         id: betRef.id,
         creatorId,
-        title,
-        description,
-        stake,
+        question,
+        wagerAmount,
         answerOptions: formattedOptions,
         status: 'open', // open -> locked -> completed
         createdAt: timestamp,
