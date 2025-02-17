@@ -1,47 +1,12 @@
-# React Native Firebase
+# Bragging Rightz
 
-This is a React Native Firebase Starter Project with login, registration, persisted login, database reads and writes. You can use this project as boilerplate for bootstrapping any new React Native app that uses Firebase as its backend.
+This is a betting app where friends can make personalized bets with each other and interact via reactions, chat, and leaderboad features.
 
-<center><img src="https://www.instamobile.io/wp-content/uploads/2020/05/react-native-firebase.png" alt="react native firebase"/></center>
+<center><img src="assets/images/illustration.png"/></center>
 
-This React Native Firebase starter contains a few key features that all apps backed by Fireabase support:
+## Local development
 
-- Registration with E-mail & Password
-- Login with E-mail and Password
-- Handling persisted login credentials
-- Navigation (react-native-navigation)
-- Writing to Firestore Database
-- Reading from Firestore Database
-- Creating Firestore indices (for performance)
-
-## Getting Started (with Expo)
-
-```
-git clone https://github.com/instamobile/react-native-firebase.git
-cd react-native-firebase
-npm install
-npx expo start
-```
-
-## Getting Started (without Expo)
-
-If you prefer using React Native CLI, you'll need to eject from Expo first:
-
-```
-git clone https://github.com/instamobile/react-native-firebase.git
-cd react-native-firebase
-npx expo prebuild
-npm install
-react-native run-android // react-native run-ios
-```
-
-This React Native Firebase starter is built with Firebase Web SDK, which makes it compatible with both Expo CLI and React Native CLI.
-
----
-
-# Local development
-
-## To run locally
+### To run locally
 
 1. Clone repo and go into directory
 2. Install dependencies
@@ -52,7 +17,7 @@ This React Native Firebase starter is built with Firebase Web SDK, which makes i
 
    `npx expo start`
 
-## To connect to your own firebase project
+### To connect to your own firebase project
 
 1. Go to https://console.firebase.google.com/
 
@@ -102,9 +67,9 @@ This React Native Firebase starter is built with Firebase Web SDK, which makes i
    - Click on the url in the error message you got
    - An index will pop up, all you need to do is click **save**
 
-## Errors I ran into
+### Errors & respective solutions
 
-### Fix `npm install` error
+#### Fix `npm install` error
 
 1. **Uninstall the existing version:**
 
@@ -131,6 +96,4 @@ https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/
    `npx expo install --fix`
 
 ## TODO:
-
-- Fix "Console Error: The action 'NAVIGATE' with payload {...} was not handled by any navigator"
-  - Occurs when trying registering new user
+- Migrate to eas builds (for development then produciton)
