@@ -34,6 +34,7 @@ const NewBet = () => {
   //const editorRef = useRef("");
   //const bodyRef = useRef("");
   const [loading, setLoading] = useState(false);
+  const [coinAmount, setCoinAmount] = useState('');
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -101,8 +102,12 @@ const NewBet = () => {
       Alert.alert('Please fill in all vote options.');
       return;
     }
-    if (!endTime) {
+    if (endTime.getTime() < Date.now()) {
       Alert.alert('Please specify when the voting ends.');
+      return;
+    }
+    if (!coinAmount || !/^\d+$/.test(coinAmount)) {
+      Alert.alert('Please enter a valid integer coin amount.');
       return;
     }
     // log bet data; later this will be submitted and displayed in the feed
@@ -207,6 +212,18 @@ const NewBet = () => {
                 setSelectedGroup(item.id);
               }}
               dropDownStyle={[pickerDropdownStyle.dropdown, { zIndex: 20 }]}
+            />
+          </View>
+
+          {/* Wager Amount */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Wager Amount (coins)</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Enter coin amount"
+              value={coinAmount}
+              onChangeText={setCoinAmount}
+              keyboardType="numeric"
             />
           </View>
         </ScrollView>
