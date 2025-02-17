@@ -64,7 +64,7 @@ const Home = () => {
                 color={theme.colors.text}
               />
             </Pressable>
-            <Pressable onPress={() => navigation.navigate('newBet')}>
+            <Pressable onPress={() => navigation.navigate('NewBet')}>
               <Icon
                 name="plus"
                 size={hp(3.2)}
