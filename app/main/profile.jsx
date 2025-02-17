@@ -13,6 +13,7 @@ import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { useEffect } from 'react';
 
 const Profile = () => {
   const navigation = useNavigation();
