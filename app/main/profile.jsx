@@ -27,6 +27,21 @@ const Profile = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [uploading, setUploading] = useState(false);
 
+  const uriToBlob = (uri) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        resolve(xhr.response);
+      };
+      xhr.onerror = function () {
+        reject(new Error('uriToBlob failed'));
+      };
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
+  };
+
   useEffect(() => {
     loadProfileImage();
   }, []);
@@ -46,6 +61,17 @@ const Profile = () => {
 
   const pickImage = async () => {
     try {
+      // Request permission first
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission needed',
+          'Please grant permission to access your photos.',
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -56,11 +82,18 @@ const Profile = () => {
         base64: true,
       });
 
-      if (!result.canceled) {
+      console.log('Image picker result:', {
+        cancelled: result.canceled,
+        type: result.assets?.[0]?.type,
+        uri: result.assets?.[0]?.uri?.substring(0, 50) + '...',
+      });
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
         await uploadImage(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image');
+      console.log('Image picker error:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
@@ -72,16 +105,29 @@ const Profile = () => {
 
     setUploading(true);
     try {
-      // Convert uri to blob
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      // Convert uri to blob using the new method
+      const blob = await uriToBlob(uri);
+
+      // Log file details
+      console.log('File details:', {
+        size: blob.size,
+        type: blob.type,
+        user: auth.currentUser.uid,
+      });
 
       // Create file reference
       const filename = `profile_${auth.currentUser.uid}_${Date.now()}.jpg`;
       const storageRef = ref(storage, `profileImages/${filename}`);
 
-      // Upload file
-      await uploadBytes(storageRef, blob);
+      // Log storage reference
+      console.log('Storage reference:', storageRef.fullPath);
+
+      // Upload file with metadata
+      const metadata = {
+        contentType: 'image/jpeg',
+      };
+
+      await uploadBytes(storageRef, blob, metadata);
       console.log('Uploaded blob successfully');
 
       // Get URL
@@ -104,9 +150,18 @@ const Profile = () => {
         message: error.message,
         stack: error.stack,
         user: auth.currentUser?.uid,
+        serverResponse: error.serverResponse, // Log the server response
       });
 
-      Alert.alert('Error', 'Failed to upload image. Please try again later.');
+      // More specific error messages
+      let errorMessage = 'Failed to upload image. Please try again later.';
+      if (error.code === 'storage/unauthorized') {
+        errorMessage = 'You do not have permission to upload files.';
+      } else if (error.code === 'storage/quota-exceeded') {
+        errorMessage = 'Storage quota exceeded. Please contact support.';
+      }
+
+      Alert.alert('Error', errorMessage);
     } finally {
       setUploading(false);
     }

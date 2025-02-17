@@ -57,23 +57,36 @@ const SignUp = () => {
     }
   };
 
+  const uriToBlob = (uri) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = () => resolve(xhr.response);
+      xhr.onerror = () => reject(new Error('uriToBlob failed'));
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
+  };
+
   const uploadImage = async (userId) => {
     if (!profileImage) return null;
 
     try {
-      // Convert base64 to blob
-      const base64Response = await fetch(profileImage);
-      const blob = await base64Response.blob();
+      // Convert URI to blob using XMLHttpRequest
+      const blob = await uriToBlob(profileImage);
 
       // Create file reference
       const filename = `profile_${userId}_${Date.now()}.jpg`;
       const storageRef = ref(storage, `profileImages/${filename}`);
 
-      // Upload file
-      await uploadBytes(storageRef, blob);
+      // Optional: define metadata for the image
+      const metadata = { contentType: 'image/jpeg' };
+
+      // Upload file with metadata
+      await uploadBytes(storageRef, blob, metadata);
       console.log('Uploaded blob successfully');
 
-      // Get URL
+      // Get download URL
       const downloadUrl = await getDownloadURL(storageRef);
       console.log('Got download URL:', downloadUrl);
 
