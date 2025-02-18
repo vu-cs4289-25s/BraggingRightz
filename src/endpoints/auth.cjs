@@ -160,6 +160,7 @@ class AuthService {
         fullName: userData.fullName,
         profilePicture: userData.profilePicture || null,
         updatedAt: userData.updatedAt,
+        groups: userData.groups,
       };
     } catch (error) {
       console.log('Get session error:', error);
