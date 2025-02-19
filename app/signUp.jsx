@@ -234,6 +234,13 @@ const SignUp = () => {
                 placeholder="Enter your email"
                 onChangeText={(value) => (emailRef.current = value)}
               />
+              <Pressable onPress={() => setShowDatePicker(true)}>
+                <Input
+                  icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
+                  placeholder="Enter your birthdate"
+                  value={birthdate.toLocaleDateString()}
+                />
+              </Pressable>
               <Input
                 onPress={() => setShowDatePicker(true)}
                 icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}

@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Pressable,
   StyleSheet,
   Text,
   ScrollView,
   View,
-  Alert,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -13,8 +13,8 @@ import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { useEffect } from 'react';
 import AuthService from '../../src/endpoints/auth.cjs';
-import BetsService from '../../src/endpoints/bets.cjs';
 
 const Profile = () => {
   const navigation = useNavigation();
