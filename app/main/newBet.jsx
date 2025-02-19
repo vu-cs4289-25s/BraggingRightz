@@ -18,8 +18,11 @@ import Avatar from '../../components/Avatar';
 import Button from '../../components/Button';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Dropdown } from 'react-native-element-dropdown';
+import BetsService from '../../src/endpoints/bets.cjs';
+import { useNavigation } from '@react-navigation/native';
 
 const NewBet = () => {
+  const navigation = useNavigation();
   const [session, setSession] = useState(null);
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']); // two default empty options
@@ -42,6 +45,14 @@ const NewBet = () => {
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
         // when groups logic is implemented, update the groups state accordingly.
+        if (sessionData.groups && sessionData.groups.length > 0) {
+          setGroups(sessionData.groups);
+        } else {
+          Alert.alert(
+            'No groups found for this user. Join or create a group to start betting!',
+          );
+          navigation.navigate('Groups');
+        }
       } catch (error) {
         console.log('Error fetching session:', error);
       }
@@ -88,7 +99,7 @@ const NewBet = () => {
     hour12: true,
   });
 
-  const submitBet = () => {
+  const submitBet = async () => {
     // validate inputs
     if (!selectedGroup) {
       Alert.alert('Please select a group.');
@@ -110,14 +121,27 @@ const NewBet = () => {
       Alert.alert('Please enter a valid integer coin amount.');
       return;
     }
-    // log bet data; later this will be submitted and displayed in the feed
+    // submit the bet
+    try {
+      await BetsService.createBet({
+        creatorId: session.userId,
+        question,
+        options,
+        endTime,
+        groupId: selectedGroup,
+        wagerAmount: parseInt(coinAmount, 10),
+      });
+      Alert.alert('Bet created successfully, let the betting begin!');
+    } catch (error) {
+      Alert.alert('Creating Bet Failed: ', error.message);
+    }
+    navigation.navigate('Home');
     console.log({
       selectedGroup,
       question,
       options,
       endTime,
     });
-    Alert.alert('Bet created successfully!');
   };
 
   return (
@@ -125,22 +149,9 @@ const NewBet = () => {
       <View style={styles.container}>
         <Header title="Create Bet" showBackButton={true} />
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* User Info */}
-          <View style={styles.header}>
-            <Avatar
-              uri={session?.profilePicture}
-              size={hp(6.5)}
-              rounded={theme.radius.xl}
-            />
-            <View style={styles.userInfo}>
-              <Text style={styles.username}>{session?.username}</Text>
-              <Text style={styles.publicText}>Public</Text>
-            </View>
-          </View>
-
           {/* Bet Question */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Bet Question</Text>
+            <Text style={styles.sectionTitle}>What are you betting on?</Text>
             <TextInput
               style={[styles.textInput, { height: hp(8) }]}
               placeholder="Type your bet question here..."
