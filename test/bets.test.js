@@ -47,9 +47,8 @@ describe('BetsService', () => {
     it('should create a new bet successfully', async () => {
       const mockBetData = {
         creatorId: 'user123',
-        title: 'Test Bet',
-        description: 'Test Description',
-        stake: 100,
+        question: 'Test Bet',
+        wagerAmount: 100,
         answerOptions: ['Option 1', 'Option 2'],
         expiresAt: '2024-12-31T23:59:59.999Z',
       };
@@ -63,9 +62,8 @@ describe('BetsService', () => {
       expect(result).toMatchObject({
         id: 'bet123',
         creatorId: 'user123',
-        title: 'Test Bet',
-        description: 'Test Description',
-        stake: 100,
+        question: 'Test Bet',
+        wagerAmount: 100,
         status: 'open',
         totalPool: 0,
         winningOptionId: null,

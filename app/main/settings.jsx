@@ -2,14 +2,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import React from 'react';
 
-const EditProfile = () => {
+const Settings = () => {
   return (
     <ScreenWrapper>
-      <Text>Edit Profile</Text>
+      <Text>Settings</Text>
     </ScreenWrapper>
   );
 };
 
-export default EditProfile;
+export default Settings;
 
 const styles = StyleSheet.create({});

@@ -10,6 +10,8 @@ import NewBet from './app/main/newBet';
 import Profile from './app/main/profile';
 import Notifications from './app/main/notifications';
 import ForgotPassword from './app/forgotPassword';
+import EditProfile from './app/main/editProfile';
+import Settings from './app/main/settings';
 
 const Stack = createStackNavigator();
 
@@ -17,7 +19,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false }} id={'root'}>
           <Stack.Screen name="Welcome" component={Welcome} />
           <Stack.Screen name="SignUp" component={SignUp} />
           <Stack.Screen name="Login" component={Login} />
@@ -26,6 +28,8 @@ export default function App() {
           <Stack.Screen name="NewBet" component={NewBet} />
           <Stack.Screen name="Profile" component={Profile} />
           <Stack.Screen name="Notifications" component={Notifications} />
+          <Stack.Screen name="EditProfile" component={EditProfile} />
+          <Stack.Screen name="Settings" component={Settings} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
