@@ -110,6 +110,32 @@ const Profile = () => {
           )}
         </View>
 
+        <Pressable
+          onPress={() => {
+            Alert.alert('Logout', 'Are you sure you want to logout?', [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Logout',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await AuthService.logout();
+                    navigation.navigate('Login');
+                  } catch (error) {
+                    console.log('Error logging out:', error);
+                  }
+                },
+              },
+            ]);
+          }}
+          style={styles.logoutButton}
+        >
+          <Text style={styles.logoutText}>Logout</Text>
+        </Pressable>
+
         <View style={styles.sectionDivider} />
 
         <Text style={styles.sectionTitle}>My Stats</Text>
@@ -257,6 +283,19 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     zIndex: 1,
+  },
+  logoutButton: {
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    borderRadius: 10,
+    marginHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutText: {
+    color: '#FF0000',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   sectionDivider: {
     height: 1,
