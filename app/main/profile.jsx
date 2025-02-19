@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
   Text,
   ScrollView,
   View,
-  Image,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -13,172 +13,17 @@ import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { useEffect } from 'react';
 import AuthService from '../../src/endpoints/auth.cjs';
+import BetsService from '../../src/endpoints/bets.cjs';
 
 const Profile = () => {
   const navigation = useNavigation();
-  const [session, setSession] = React.useState(null);
-
-  const uriToBlob = (uri) => {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = function () {
-        resolve(xhr.response);
-      };
-      xhr.onerror = function () {
-        reject(new Error('uriToBlob failed'));
-      };
-      xhr.responseType = 'blob';
-      xhr.open('GET', uri, true);
-      xhr.send(null);
-    });
-  };
-
-  useEffect(() => {
-    loadProfileImage();
-  }, []);
-
-  const loadProfileImage = async () => {
-    try {
-      if (auth.currentUser) {
-        const userDoc = await AuthService.getSession();
-        if (userDoc && userDoc.profilePicture) {
-          setProfileImage(userDoc.profilePicture);
-        }
-      }
-    } catch (error) {
-      console.log('Error loading profile image:', error);
-    }
-  };
-
-  const pickImage = async () => {
-    try {
-      // Request permission first
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission needed',
-          'Please grant permission to access your photos.',
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.2,
-        maxWidth: 500,
-        maxHeight: 500,
-        base64: true,
-      });
-
-      console.log('Image picker result:', {
-        cancelled: result.canceled,
-        type: result.assets?.[0]?.type,
-        uri: result.assets?.[0]?.uri?.substring(0, 50) + '...',
-      });
-
-      if (!result.canceled && result.assets?.[0]?.uri) {
-        await uploadImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.log('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
-    }
-  };
-
-  const uploadImage = async (uri) => {
-    if (!auth.currentUser) {
-      Alert.alert('Error', 'Please log in to upload a profile picture.');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      // Convert uri to blob using the new method
-      const blob = await uriToBlob(uri);
-
-      // Log file details
-      console.log('File details:', {
-        size: blob.size,
-        type: blob.type,
-        user: auth.currentUser.uid,
-      });
-
-      // Create file reference
-      const filename = `profile_${auth.currentUser.uid}_${Date.now()}.jpg`;
-      const storageRef = ref(storage, `profileImages/${filename}`);
-
-      // Log storage reference
-      console.log('Storage reference:', storageRef.fullPath);
-
-      // Upload file with metadata
-      const metadata = {
-        contentType: 'image/jpeg',
-      };
-
-      await uploadBytes(storageRef, blob, metadata);
-      console.log('Uploaded blob successfully');
-
-      // Get URL
-      const downloadUrl = await getDownloadURL(storageRef);
-      console.log('Got download URL:', downloadUrl);
-
-      // Update profile
-      setProfileImage(downloadUrl);
-      await AuthService.updateProfile(auth.currentUser.uid, {
-        profilePicture: downloadUrl,
-      });
-
-      // Force reload profile image in Avatar component
-      await loadProfileImage();
-
-      Alert.alert('Success', 'Profile photo updated successfully!');
-    } catch (error) {
-      console.log('Upload error details:', {
-        code: error.code,
-        message: error.message,
-        stack: error.stack,
-        user: auth.currentUser?.uid,
-        serverResponse: error.serverResponse, // Log the server response
-      });
-
-      // More specific error messages
-      let errorMessage = 'Failed to upload image. Please try again later.';
-      if (error.code === 'storage/unauthorized') {
-        errorMessage = 'You do not have permission to upload files.';
-      } else if (error.code === 'storage/quota-exceeded') {
-        errorMessage = 'Storage quota exceeded. Please contact support.';
-      }
-
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        const sessionData = await AuthService.getSession();
-        setSession(sessionData);
-        console.log('Session data:', sessionData);
-        // when groups logic is implemented, update the groups state accordingly.
-      } catch (error) {
-        console.log('Error fetching session:', error);
-      }
-    };
-    fetchSession();
-  }, []);
-
-  const userStats = [
-    { icon: 'trophy', label: 'Bragging Rightz', value: '13' },
-    { icon: 'coins', label: 'Coins Won', value: '13,000' },
-    { icon: 'chart-line', label: 'Bets Won', value: '30/56' },
-  ];
+  const [session, setSession] = useState(null);
+  const [profileImage, setProfileImage] = useState(null);
+  const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [birthdate, setBirthdate] = useState('');
 
   const userBets = [
     {
@@ -204,6 +49,23 @@ const Profile = () => {
     },
   ];
 
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const sessionData = await AuthService.getSession();
+        setSession(sessionData);
+        setUsername(sessionData.username);
+        setFullName(sessionData.fullName);
+        setEmail(sessionData.email);
+        setBirthdate(new Date(sessionData.birthdate).toLocaleDateString());
+        setProfileImage(sessionData.profilePicture);
+      } catch (error) {
+        console.log('Error fetching session:', error);
+      }
+    };
+    fetchSession();
+  }, []);
+
   return (
     <ScreenWrapper bg="white">
       <ScrollView
@@ -214,23 +76,13 @@ const Profile = () => {
           <Text style={styles.title}>My Profile</Text>
           <View style={styles.icons}>
             <Pressable onPress={() => navigation.navigate('Notifications')}>
-              <Icon
-                name="heart"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
+              <Icon name="heart" size={hp(3.2)} color={theme.colors.text} />
             </Pressable>
             <Pressable onPress={() => navigation.navigate('newBet')}>
-              <Icon
-                name="plus"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
+              <Icon name="plus" size={hp(3.2)} color={theme.colors.text} />
             </Pressable>
-            <Pressable onPress={() => navigation.navigate('Profile')}>
-              <Avatar />
+            <Pressable onPress={() => navigation.navigate('Settings')}>
+              <Icon name="gear" size={hp(3.2)} color={theme.colors.text} />
             </Pressable>
           </View>
         </View>
@@ -238,69 +90,113 @@ const Profile = () => {
 
         <View style={styles.profileContainer}>
           <Avatar
-            uri={
-              session?.profilePicture || // default profile picture if not available
-              'https://www.kindpng.com/picc/m/21-210790_default-profile-picture-avatar-png-clipart.png'
-            }
+            uri={profileImage || require('../../assets/images/icon.png')}
             size={hp(15)}
             rounded={theme.radius.xl}
           />
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{session?.username}</Text>
-            <Text style={styles.userEmail}>{session?.fullName}</Text>
-            <Text style={styles.userEmail}>{session?.email}</Text>
-            <Text style={styles.userBirthdate}>april</Text>
-          </View>
-          <View style={styles.coinContainer}>
-            <Icon name="crown" size={24} color="#FFD700" />
-            <Text style={styles.coinCount}>130</Text>
-            <Icon name="plus-circle" size={24} color="#4CAF50" />
-          </View>
+          {session && (
+            <View style={styles.userInfo}>
+              <Pressable
+                onPress={() => navigation.navigate('EditProfile')}
+                style={styles.editButton}
+              >
+                <Icon name="edit" size={hp(3.2)} color={theme.colors.text} />
+              </Pressable>
+              <Text style={styles.userName}>{username}</Text>
+              <Text style={styles.userEmail}>{fullName}</Text>
+              <Text style={styles.userEmail}>{email}</Text>
+              <Text style={styles.userBirthdate}>{birthdate}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.sectionDivider} />
 
         <Text style={styles.sectionTitle}>My Stats</Text>
         <View style={styles.statsContainer}>
-          {userStats.map((stat, index) => (
-            <View key={index} style={styles.statItem}>
-              <Icon name={stat.icon} size={24} color="#FFD700" />
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+          {session && (
+            <View style={styles.statItem}>
+              <Icon name="trophy" size={24} color="#FFD700" />
+              <Text style={styles.statValue}>{session.trophies}</Text>
+              <Text style={styles.statLabel}>Trophies</Text>
             </View>
-          ))}
+          )}
+          {session && (
+            <View style={styles.statItem}>
+              <Icon name="coins" size={24} color="#FFD700" />
+              <Text style={styles.statValue}>{session.numCoins || 0}</Text>
+              <Text style={styles.statLabel}>Coins</Text>
+            </View>
+          )}
+          {session && (
+            <View style={styles.statItem}>
+              <Icon name="chart-line" size={24} color="#FFD700" />
+              <Text style={styles.statValue}>{session.betsWon || 0}</Text>
+              <Text style={styles.statLabel}>Bets Won</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.sectionDivider} />
 
         <Text style={styles.sectionTitle}>My Bet History</Text>
-        <View style={styles.betsContainer}>
-          {userBets.map((bet, index) => (
-            <View key={index} style={styles.betItem}>
-              <Text style={styles.betDescription}>{bet.bet}</Text>
-              <View style={styles.betDetails}>
-                <Text style={styles.betDate}>{bet.date}</Text>
-                <Text style={styles.betGroup}>{bet.group}</Text>
-                <View style={styles.betResult}>
-                  <Icon
-                    name={bet.result === 'win' ? 'trophy' : 'times-circle'}
-                    size={18}
-                    color={bet.result === 'win' ? '#FFD700' : '#FF0000'}
-                  />
-                  <Text
-                    style={[
-                      styles.betCoins,
-                      { color: bet.result === 'win' ? '#4CAF50' : '#FF0000' },
-                    ]}
-                  >
-                    {bet.result === 'win' ? '+' : ''}
-                    {bet.coins}
-                  </Text>
-                </View>
+        {/*TODO replace the following with the comment below once bets are made (wired code)*/}
+        {userBets.map((bet, index) => (
+          <View key={index} style={styles.betItem}>
+            <Text style={styles.betDescription}>{bet.bet}</Text>
+            <View style={styles.betDetails}>
+              <Text style={styles.betDate}>{bet.date}</Text>
+              <Text style={styles.betGroup}>{bet.group}</Text>
+              <View style={styles.betResult}>
+                <Icon
+                  name={bet.result === 'win' ? 'trophy' : 'times-circle'}
+                  size={18}
+                  color={bet.result === 'win' ? '#FFD700' : '#FF0000'}
+                />
+                <Text
+                  style={[
+                    styles.betCoins,
+                    { color: bet.result === 'win' ? '#4CAF50' : '#FF0000' },
+                  ]}
+                >
+                  {bet.result === 'win' ? '+' : ''}
+                  {bet.coins}
+                </Text>
               </View>
             </View>
-          ))}
-        </View>
+          </View>
+        ))}
+        {/*<View style={styles.betsContainer}>*/}
+        {/*  {session?.bets?.length > 0 ? (*/}
+        {/*    session.bets.map((bet, index) => (*/}
+        {/*      <View key={index} style={styles.betItem}>*/}
+        {/*        <Text style={styles.betDescription}>{bet.bet}</Text>*/}
+        {/*        <View style={styles.betDetails}>*/}
+        {/*          <Text style={styles.betDate}>{bet.date}</Text>*/}
+        {/*          <Text style={styles.betGroup}>{bet.group}</Text>*/}
+        {/*          <View style={styles.betResult}>*/}
+        {/*            <Icon*/}
+        {/*              name={bet.result === 'win' ? 'trophy' : 'times-circle'}*/}
+        {/*              size={18}*/}
+        {/*              color={bet.result === 'win' ? '#FFD700' : '#FF0000'}*/}
+        {/*            />*/}
+        {/*            <Text*/}
+        {/*              style={[*/}
+        {/*                styles.betCoins,*/}
+        {/*                { color: bet.result === 'win' ? '#4CAF50' : '#FF0000' },*/}
+        {/*              ]}*/}
+        {/*            >*/}
+        {/*              {bet.result === 'win' ? '+' : ''}*/}
+        {/*              {bet.coins}*/}
+        {/*            </Text>*/}
+        {/*          </View>*/}
+        {/*        </View>*/}
+        {/*      </View>*/}
+        {/*    ))*/}
+        {/*  ) : (*/}
+        {/*    <Text>No bets found.</Text>*/}
+        {/*  )}*/}
+        {/*</View>*/}
       </ScrollView>
     </ScreenWrapper>
   );
@@ -333,18 +229,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    //borderWidth: 1,
-    //borderColor: '#ccc6c6',
     backgroundColor: '#f9f9f9',
     borderRadius: 10,
     margin: 10,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#fff',
   },
   userInfo: {
     alignItems: 'left',
@@ -365,28 +252,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  coinContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 10,
-    marginHorizontal: 110,
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
-  },
-  coinCount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginHorizontal: 15,
+  editButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 1,
   },
   sectionDivider: {
     height: 1,

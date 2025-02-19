@@ -94,6 +94,7 @@ class BetsService {
         updatedAt: timestamp,
         expiresAt, // When betting closes
         resultReleasedAt: null, // When result was released
+        participants: [],
         groupId,
         winningOptionId: null,
         totalPool: 0, // Total points wagered

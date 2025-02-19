@@ -74,6 +74,7 @@ class AuthService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         trophies: 0,
+        numCoins: 100,
         groups: [],
         profilePicture,
       });
@@ -155,6 +156,8 @@ class AuthService {
       }
 
       const userData = userDoc.data();
+      console.log('userData', userData);
+
       return {
         uid: user.uid,
         email: userData.email,
@@ -164,6 +167,8 @@ class AuthService {
         profilePicture: userData.profilePicture || null,
         updatedAt: userData.updatedAt,
         trophies: userData.trophies,
+        numCoins: userData.numCoins,
+        groups: userData.groups,
       };
     } catch (error) {
       console.log('Get session error:', error);
