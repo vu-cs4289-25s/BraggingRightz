@@ -35,7 +35,7 @@ const EditProfile = () => {
     setFullName('John Doe');
     setUsername('johndoe');
     setEmail('john.doe@gmail.com');
-    setBirthdate('January 1, 1990');
+    //setBirthdate('January 1, 1990');
   }, []);
 
   const pickImage = async () => {
@@ -90,34 +90,34 @@ const EditProfile = () => {
                 </View>
               </TouchableOpacity>
             </View>
-            <Text style={{fontSize: hp(1.5), color: theme.colors.text}}>
+            <Text style={{ fontSize: hp(1.5), color: theme.colors.text }}>
               Please fill in your profile details
             </Text>
             <Input
               icon={<Icon name="user" />}
-              placeholder='Enter your name'
+              placeholder="Enter your name"
               value={null}
-              onChangeText={value=>{}}
-              />
-              <Input
+              onChangeText={(value) => {}}
+            />
+            <Input
               icon={<Icon name="user" />}
-              placeholder='Enter your new username'
+              placeholder="Enter your new username"
               value={null}
-              onChangeText={value=>{}}
-              />
-              <Input
+              onChangeText={(value) => {}}
+            />
+            <Input
               icon={<Icon name="mail" />}
-              placeholder='Enter your new email'
+              placeholder="Enter your new email"
               value={null}
-              onChangeText={value=>{}}
-              />
-              <Input
+              onChangeText={(value) => {}}
+            />
+            <Input
               icon={<Icon name="lock" />}
-              placeholder='Enter your new password'
+              placeholder="Enter your new password"
               value={null}
-              onChangeText={value=>{}}
-              />
-              <Button title="Update" loading={loading} onPress={handleUpdate} />
+              onChangeText={(value) => {}}
+            />
+            <Button title="Update" loading={loading} onPress={handleUpdate} />
           </View>
         </ScrollView>
       </View>
