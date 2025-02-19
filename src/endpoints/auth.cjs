@@ -38,6 +38,7 @@ class AuthService {
     username,
     password,
     fullName,
+    birthdate,
     profilePicture = null,
   }) {
     try {
@@ -69,6 +70,7 @@ class AuthService {
         email,
         username,
         fullName,
+        birthdate,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         trophies: 0,
@@ -158,8 +160,10 @@ class AuthService {
         email: userData.email,
         username: userData.username,
         fullName: userData.fullName,
+        birthdate: userData.birthdate,
         profilePicture: userData.profilePicture || null,
         updatedAt: userData.updatedAt,
+        trophies: userData.trophies,
       };
     } catch (error) {
       console.log('Get session error:', error);

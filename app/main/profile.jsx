@@ -14,9 +14,11 @@ import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useEffect } from 'react';
+import AuthService from '../../src/endpoints/auth.cjs';
 
 const Profile = () => {
   const navigation = useNavigation();
+  const [session, setSession] = React.useState(null);
 
   const uriToBlob = (uri) => {
     return new Promise((resolve, reject) => {
@@ -157,6 +159,21 @@ const Profile = () => {
       setUploading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const sessionData = await AuthService.getSession();
+        setSession(sessionData);
+        console.log('Session data:', sessionData);
+        // when groups logic is implemented, update the groups state accordingly.
+      } catch (error) {
+        console.log('Error fetching session:', error);
+      }
+    };
+    fetchSession();
+  }, []);
+
   const userStats = [
     { icon: 'trophy', label: 'Bragging Rightz', value: '13' },
     { icon: 'coins', label: 'Coins Won', value: '13,000' },
@@ -194,7 +211,7 @@ const Profile = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>BraggingRightz</Text>
+          <Text style={styles.title}>My Profile</Text>
           <View style={styles.icons}>
             <Pressable onPress={() => navigation.navigate('Notifications')}>
               <Icon
@@ -219,19 +236,20 @@ const Profile = () => {
         </View>
         <View style={styles.sectionDivider} />
 
-        <Text style={styles.sectionTitle}>My Profile</Text>
         <View style={styles.profileContainer}>
-          <Image
-            source={{
-              uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-Ixuuet5HEVHDLgwCoBxpKtLUmSrx0u.png',
-            }}
-            style={styles.profileImage}
+          <Avatar
+            uri={
+              session?.profilePicture || // default profile picture if not available
+              'https://www.kindpng.com/picc/m/21-210790_default-profile-picture-avatar-png-clipart.png'
+            }
+            size={hp(15)}
+            rounded={theme.radius.xl}
           />
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>johnnydoe47</Text>
-            <Text style={styles.userEmail}>John Doe</Text>
-            <Text style={styles.userEmail}>john.doe@gmail.com</Text>
-            <Text style={styles.userBirthdate}>April 14, 2003</Text>
+            <Text style={styles.userName}>{session?.username}</Text>
+            <Text style={styles.userEmail}>{session?.fullName}</Text>
+            <Text style={styles.userEmail}>{session?.email}</Text>
+            <Text style={styles.userBirthdate}>april</Text>
           </View>
           <View style={styles.coinContainer}>
             <Icon name="crown" size={24} color="#FFD700" />
@@ -255,7 +273,7 @@ const Profile = () => {
 
         <View style={styles.sectionDivider} />
 
-        <Text style={styles.sectionTitle}>My Bets</Text>
+        <Text style={styles.sectionTitle}>My Bet History</Text>
         <View style={styles.betsContainer}>
           {userBets.map((bet, index) => (
             <View key={index} style={styles.betItem}>

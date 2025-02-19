@@ -24,6 +24,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { storage } from '../src/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import AuthService from '../src/endpoints/auth';
 
@@ -33,6 +34,8 @@ const SignUp = () => {
   const nameRef = useRef('');
   const usernameRef = useRef('');
   const passwordRef = useRef('');
+  const [birthdate, setBirthdate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -109,7 +112,8 @@ const SignUp = () => {
       !emailRef.current ||
       !passwordRef.current ||
       !nameRef.current ||
-      !usernameRef.current
+      !usernameRef.current ||
+      !birthdate
     ) {
       Alert.alert('Error', 'Please fill out all fields!');
       return;
@@ -128,6 +132,7 @@ const SignUp = () => {
         password: passwordRef.current,
         email: emailRef.current,
         fullName: nameRef.current,
+        birthdate: birthdate.toISOString(),
       });
 
       let profilePictureUrl = null;
@@ -229,6 +234,13 @@ const SignUp = () => {
                 placeholder="Enter your email"
                 onChangeText={(value) => (emailRef.current = value)}
               />
+              <Pressable onPress={() => setShowDatePicker(true)}>
+                <Input
+                  icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
+                  placeholder="Enter your birthdate"
+                  value={birthdate.toLocaleDateString()}
+                />
+              </Pressable>
               <Input
                 icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your password"
