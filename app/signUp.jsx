@@ -5,6 +5,7 @@ import {
   Text,
   View,
   KeyboardAvoidingView,
+  Modal,
   ScrollView,
   Platform,
   Image,
@@ -24,6 +25,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { storage } from '../src/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import AuthService from '../src/endpoints/auth';
 
@@ -33,6 +35,8 @@ const SignUp = () => {
   const nameRef = useRef('');
   const usernameRef = useRef('');
   const passwordRef = useRef('');
+  const [birthdate, setBirthdate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -109,7 +113,8 @@ const SignUp = () => {
       !emailRef.current ||
       !passwordRef.current ||
       !nameRef.current ||
-      !usernameRef.current
+      !usernameRef.current ||
+      !birthdate
     ) {
       Alert.alert('Error', 'Please fill out all fields!');
       return;
@@ -128,6 +133,7 @@ const SignUp = () => {
         password: passwordRef.current,
         email: emailRef.current,
         fullName: nameRef.current,
+        birthdate: birthdate.toISOString(),
       });
 
       let profilePictureUrl = null;
@@ -184,8 +190,7 @@ const SignUp = () => {
             <BackButton navigation={navigation} />
 
             <View>
-              <Text style={styles.welcomeText}>Let's</Text>
-              <Text style={styles.welcomeText}>Get Started!</Text>
+              <Text style={styles.welcomeText}>Let's get started!</Text>
             </View>
 
             <View style={styles.form}>
@@ -229,6 +234,80 @@ const SignUp = () => {
                 placeholder="Enter your email"
                 onChangeText={(value) => (emailRef.current = value)}
               />
+              <Input
+                onPress={() => setShowDatePicker(true)}
+                icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
+                placeholder="Enter your birthdate"
+                value={birthdate.toLocaleDateString()}
+              />
+              {showDatePicker && (
+                <Modal
+                  transparent={true}
+                  animationType="slide"
+                  visible={showDatePicker}
+                  onRequestClose={() => setShowDatePicker(false)}
+                >
+                  <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
+                      <DateTimePicker
+                        value={birthdate}
+                        mode="date"
+                        display="spinner" // or "default" depending on your platform/UX preference
+                        onChange={(event, selectedDate) => {
+                          // On Android, the picker fires onChange on cancel too.
+                          if (event.type === 'set' && selectedDate) {
+                            setBirthdate(selectedDate);
+                          }
+                          setShowDatePicker(false);
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowDatePicker(false)}
+                        style={styles.modalCloseButton}
+                      >
+                        <Text style={styles.modalCloseText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Modal>
+              )}
+              <Input
+                onPress={() => setShowDatePicker(true)}
+                icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
+                placeholder="Enter your birthdate"
+                value={birthdate.toLocaleDateString()}
+              />
+              {showDatePicker && (
+                <Modal
+                  transparent={true}
+                  animationType="slide"
+                  visible={showDatePicker}
+                  onRequestClose={() => setShowDatePicker(false)}
+                >
+                  <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
+                      <DateTimePicker
+                        value={birthdate}
+                        mode="date"
+                        display="spinner" // or "default" depending on your platform/UX preference
+                        onChange={(event, selectedDate) => {
+                          // On Android, the picker fires onChange on cancel too.
+                          if (event.type === 'set' && selectedDate) {
+                            setBirthdate(selectedDate);
+                          }
+                          setShowDatePicker(false);
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowDatePicker(false)}
+                        style={styles.modalCloseButton}
+                      >
+                        <Text style={styles.modalCloseText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Modal>
+              )}
               <Input
                 icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your password"
@@ -279,6 +358,8 @@ const styles = StyleSheet.create({
     fontSize: hp(4),
     fontWeight: theme.fonts.bold,
     color: theme.colors.text,
+    marginTop: hp(-2),
+    marginBottom: hp(-8),
   },
   form: {
     gap: 25,
@@ -293,6 +374,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 5,
+    marginBottom: hp(5),
   },
   footerText: {
     textAlign: 'center',
@@ -333,5 +415,26 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)', // semi-transparent background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    width: wp(80),
+    alignItems: 'center',
+  },
+  modalCloseButton: {
+    marginTop: 10,
+    padding: 10,
+  },
+  modalCloseText: {
+    color: theme.colors.primary,
+    fontWeight: 'bold',
   },
 });
