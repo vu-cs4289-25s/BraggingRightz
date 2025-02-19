@@ -104,9 +104,6 @@ const Home = () => {
             </TouchableOpacity>
           ))}
         </ScrollView>
-
-        {/* Logout Button */}
-        <Button title="Logout" onPress={onLogout} />
       </View>
     </ScreenWrapper>
   );
@@ -146,6 +143,7 @@ const styles = StyleSheet.create({
   icons: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: 20,
   },
   profileSection: {
