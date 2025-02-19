@@ -234,13 +234,43 @@ const SignUp = () => {
                 placeholder="Enter your email"
                 onChangeText={(value) => (emailRef.current = value)}
               />
-              <Pressable onPress={() => setShowDatePicker(true)}>
-                <Input
-                  icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
-                  placeholder="Enter your birthdate"
-                  value={birthdate.toLocaleDateString()}
-                />
-              </Pressable>
+              <Input
+                onPress={() => setShowDatePicker(true)}
+                icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
+                placeholder="Enter your birthdate"
+                value={birthdate.toLocaleDateString()}
+              />
+              {showDatePicker && (
+                <Modal
+                  transparent={true}
+                  animationType="slide"
+                  visible={showDatePicker}
+                  onRequestClose={() => setShowDatePicker(false)}
+                >
+                  <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
+                      <DateTimePicker
+                        value={birthdate}
+                        mode="date"
+                        display="spinner" // or "default" depending on your platform/UX preference
+                        onChange={(event, selectedDate) => {
+                          // On Android, the picker fires onChange on cancel too.
+                          if (event.type === 'set' && selectedDate) {
+                            setBirthdate(selectedDate);
+                          }
+                          setShowDatePicker(false);
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowDatePicker(false)}
+                        style={styles.modalCloseButton}
+                      >
+                        <Text style={styles.modalCloseText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Modal>
+              )}
               <Input
                 onPress={() => setShowDatePicker(true)}
                 icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
