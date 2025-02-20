@@ -36,7 +36,7 @@ const Login = () => {
     // Log in user
     setLoading(true);
     try {
-      const user = await AuthService.login({
+      await AuthService.login({
         username: usernameRef.current,
         password: passwordRef.current,
       });

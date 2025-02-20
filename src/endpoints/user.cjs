@@ -52,7 +52,7 @@ class UserService {
   }
 
   // Update user profile
-  async updateUserProfile(userId, updateData) {
+  async updateUserProfile({ userId, updateData }) {
     try {
       const userRef = doc(db, 'users', userId);
       const userDoc = await getDoc(userRef);
@@ -60,15 +60,28 @@ class UserService {
       if (!userDoc.exists()) {
         throw new Error('User not found');
       }
-
       // If username is being updated, check availability
-      if (updateData.username) {
+      if (
+        updateData.username &&
+        updateData.username !== userDoc.data().username
+      ) {
         const isUsernameAvailable = await this._checkUsernameAvailability(
           updateData.username,
           userId,
         );
         if (!isUsernameAvailable) {
           throw new Error('Username is already taken');
+        }
+      }
+
+      // same for email
+      if (updateData.email && updateData.email !== userDoc.data().email) {
+        const isEmailAvailable = await this._checkEmailAvailability(
+          updateData.email,
+          userId,
+        );
+        if (!isEmailAvailable) {
+          throw new Error('Email is already taken');
         }
       }
 
@@ -102,32 +115,6 @@ class UserService {
       await this._cleanupUserData(userId);
 
       return true;
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
-  // Add profile picture
-  async addProfilePicture(userId, file) {
-    try {
-      const storage = getStorage();
-      const storageRef = ref(storage, `profile_pictures/${userId}.jpg`);
-
-      // Convert file URI to Blob
-      const response = await fetch(file);
-      const blob = await response.blob();
-
-      // Upload file to Firebase Storage
-      await uploadBytes(storageRef, blob);
-
-      // Get the download URL
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // Update user's profile with the new picture URL
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, { profilePicture: downloadURL });
-
-      return downloadURL;
     } catch (error) {
       this._handleError(error);
     }
@@ -278,6 +265,20 @@ class UserService {
     }
 
     throw new Error(message);
+  }
+
+  async _checkEmailAvailability(email, userId) {
+    const userQuery = query(
+      collection(db, 'users'),
+      where('email', '==', email),
+    );
+    const querySnapshot = await getDocs(userQuery);
+
+    // Email is available if no documents exist or if the only document is the current user
+    return (
+      querySnapshot.empty ||
+      (querySnapshot.size === 1 && querySnapshot.docs[0].id === userId)
+    );
   }
 }
 

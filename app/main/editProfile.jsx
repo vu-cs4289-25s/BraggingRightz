@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   View,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -19,27 +18,36 @@ import Camera from '../../assets/icons/Camera';
 import { useNavigation } from '@react-navigation/native';
 import Input from '../../components/Input';
 import Icon from '../../assets/icons';
+import AuthService from '../../src/endpoints/auth.cjs';
+import UserService from '../../src/endpoints/user.cjs';
 
 const EditProfile = () => {
   const navigation = useNavigation();
+  const [userId, setUserId] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [birthdate, setBirthdate] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    //fetch the user's current profile data.
-    setProfileImage('https://via.placeholder.com/150');
-    setFullName('John Doe');
-    setUsername('johndoe');
-    setEmail('john.doe@gmail.com');
-    //setBirthdate('January 1, 1990');
+    const fetchSession = async () => {
+      try {
+        const sessionData = await AuthService.getSession();
+        setUserId(sessionData.uid);
+        setProfileImage(sessionData.profilePicture);
+        setFullName(sessionData.fullName);
+        setUsername(sessionData.username);
+        setEmail(sessionData.email);
+      } catch (error) {
+        console.log('Error fetching session:', error);
+      }
+    };
+    fetchSession();
   }, []);
 
   const pickImage = async () => {
-    // request permission and launch image picker
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       alert('Permission to access camera roll is required!');
@@ -52,20 +60,39 @@ const EditProfile = () => {
       quality: 1,
     });
     if (!result.cancelled) {
-      setProfileImage(result.uri);
     }
   };
 
   const handleUpdate = async () => {
     setLoading(true);
-    // perform your update logic here.
-    console.log('Profile updated:', {
+    const updateData = {
       fullName,
       username,
       email,
-      birthdate,
-      profileImage,
-    });
+      profilePicture: profileImage,
+    };
+    if (password) {
+      updateData.password = password;
+    }
+    console.log('updateData in frontend', updateData);
+    try {
+      await UserService.updateUserProfile({
+        userId: userId,
+        updateData: updateData,
+      });
+      console.log('Profile updated: ', updateData);
+      // reset everything
+      setFullName('');
+      setUsername('');
+      setEmail('');
+      setPassword('');
+
+      navigation.navigate('Profile');
+    } catch (error) {
+      console.log('Update error:', error);
+      Alert.alert('Update Failed:', error.message);
+      setLoading(false);
+    }
     setLoading(false);
   };
 
@@ -96,26 +123,23 @@ const EditProfile = () => {
             <Input
               icon={<Icon name="user" />}
               placeholder="Enter your name"
-              value={null}
-              onChangeText={(value) => {}}
+              onChangeText={setFullName}
             />
             <Input
               icon={<Icon name="user" />}
               placeholder="Enter your new username"
-              value={null}
-              onChangeText={(value) => {}}
+              onChangeText={setUsername}
             />
             <Input
               icon={<Icon name="mail" />}
               placeholder="Enter your new email"
-              value={null}
-              onChangeText={(value) => {}}
+              onChangeText={setEmail}
             />
             <Input
               icon={<Icon name="lock" />}
               placeholder="Enter your new password"
-              value={null}
-              onChangeText={(value) => {}}
+              secureTextEntry
+              onChangeText={setPassword}
             />
             <Button title="Update" loading={loading} onPress={handleUpdate} />
           </View>
