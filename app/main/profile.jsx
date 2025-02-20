@@ -6,6 +6,8 @@ import {
   ScrollView,
   View,
   Alert,
+  Touchable,
+  TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -13,8 +15,11 @@ import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import Logout from '../../assets/icons/logout';
+import Edit from '../../assets/icons/Edit';
 import AuthService from '../../src/endpoints/auth.cjs';
 import BetsService from '../../src/endpoints/bets.cjs';
+import Header from '../../components/Header';
 
 const Profile = () => {
   const navigation = useNavigation();
@@ -66,42 +71,69 @@ const Profile = () => {
     fetchSession();
   }, []);
 
+  const handleLogout = async () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await AuthService.logout();
+            navigation.navigate('Login');
+          } catch (error) {
+            console.log('Error logging out:', error);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <ScreenWrapper bg="white">
+      <View>
+        <Header
+          title="Profile"
+          showBackButton={true}
+          rightComponent={
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.headerLogout}
+            >
+              <Logout
+                strokeWidth={2}
+                size={hp(2.5)}
+                color={theme.colors.rose}
+              />
+            </TouchableOpacity>
+          }
+        />
+      </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>My Profile</Text>
-          <View style={styles.icons}>
-            <Pressable onPress={() => navigation.navigate('Notifications')}>
-              <Icon name="heart" size={hp(3.2)} color={theme.colors.text} />
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('newBet')}>
-              <Icon name="plus" size={hp(3.2)} color={theme.colors.text} />
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('Settings')}>
-              <Icon name="gear" size={hp(3.2)} color={theme.colors.text} />
-            </Pressable>
-          </View>
-        </View>
-        <View style={styles.sectionDivider} />
-
         <View style={styles.profileContainer}>
-          <Avatar
-            uri={profileImage || require('../../assets/images/icon.png')}
-            size={hp(15)}
-            rounded={theme.radius.xl}
-          />
-          {session && (
-            <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Avatar
+              uri={profileImage || require('../../assets/images/icon.png')}
+              size={hp(15)}
+              rounded={theme.radius.xl}
+            />
+            {session && (
               <Pressable
                 onPress={() => navigation.navigate('EditProfile')}
-                style={styles.editButton}
+                style={styles.editIcon}
               >
-                <Icon name="edit" size={hp(3.2)} color={theme.colors.text} />
+                <Edit size={hp(2)} color={theme.colors.dark} />
               </Pressable>
+            )}
+          </View>
+          {session && (
+            <View style={styles.userInfo}>
               <Text style={styles.userName}>{username}</Text>
               <Text style={styles.userEmail}>{fullName}</Text>
               <Text style={styles.userEmail}>{email}</Text>
@@ -109,32 +141,6 @@ const Profile = () => {
             </View>
           )}
         </View>
-
-        <Pressable
-          onPress={() => {
-            Alert.alert('Logout', 'Are you sure you want to logout?', [
-              {
-                text: 'Cancel',
-                style: 'cancel',
-              },
-              {
-                text: 'Logout',
-                style: 'destructive',
-                onPress: async () => {
-                  try {
-                    await AuthService.logout();
-                    navigation.navigate('Login');
-                  } catch (error) {
-                    console.log('Error logging out:', error);
-                  }
-                },
-              },
-            ]);
-          }}
-          style={styles.logoutButton}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-        </Pressable>
 
         <View style={styles.sectionDivider} />
 
@@ -233,6 +239,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: hp(4),
   },
+  headerLogout: {
+    padding: 8,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -258,6 +267,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     borderRadius: 10,
     margin: 10,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  editIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: -5,
+    backgroundColor: 'white',
+    borderRadius: 50,
+    padding: 5,
+    shadowColor: theme.colors.textLight,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 7,
   },
   userInfo: {
     alignItems: 'left',
