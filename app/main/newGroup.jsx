@@ -28,11 +28,11 @@ const NewGroup = () => {
   const navigation = useNavigation();
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(false);
-  const groupName= useRef('');
+  const groupName = useRef('');
   const [friends, setFriends] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [isPrivate, setIsPrivate] = useState(true);
-  const description= useRef("");
+  const description = useRef('');
 
   const onSubmit = async () => {
     if (!groupName.current) {
@@ -40,7 +40,7 @@ const NewGroup = () => {
       return;
     }
 
-    if (selectedMembers.length === 0){
+    if (selectedMembers.length === 0) {
       // FOR NOW DO NOTHING
       //Alert.alert("Create New Group", "Please select at least one member");
     }
@@ -55,14 +55,13 @@ const NewGroup = () => {
         isPrivate: isPrivate,
       });
 
-      Alert.alert("Group Successfully Created!", "Create Some Bets!" );
-
+      Alert.alert('Group Successfully Created!', 'Create Some Bets!');
     } catch (error) {
-      Alert.alert("Group Creation Failed", error.message);
+      Alert.alert('Group Creation Failed', error.message);
     }
 
     navigation.navigate('Home');
-  }
+  };
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -84,7 +83,7 @@ const NewGroup = () => {
   const fetchFriends = async () => {
     // Replace with actual API call to fetch friends
     return [
-      { label: "Friend 1", value: 'friend1' },
+      { label: 'Friend 1', value: 'friend1' },
       { label: 'Friend 2', value: 'friend2' },
       { label: 'Friend 3', value: 'friend3' },
     ];
@@ -101,11 +100,11 @@ const NewGroup = () => {
               Group Name
             </Text>
             <View style={styles.inputContainer}>
-            <Input
-              icon={<User name="User" size={26} strokeWidth={1.6} />}
-              placeholder="Name your new group"
-              onChangeText={(value) => (groupName.current = value)}
-            />
+              <Input
+                icon={<User name="User" size={26} strokeWidth={1.6} />}
+                placeholder="Name your new group"
+                onChangeText={(value) => (groupName.current = value)}
+              />
             </View>
 
             <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
@@ -118,45 +117,54 @@ const NewGroup = () => {
               />
             </View>
 
-            <Text style={ {fontSize: hp(2), color: theme.colors.text }}>Visibility</Text>
+            <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
+              Visibility
+            </Text>
             <View style={styles.inputContainer}>
               <Dropdown
                 data={[
-                  { label: 'Private', value: true},
+                  { label: 'Private', value: true },
                   { label: 'Public', value: false },
                 ]}
                 labelField="label"
                 valueField="value"
                 placeholder="Select visibility"
                 value={isPrivate}
-                onChange={item => setIsPrivate(item.value)}
+                onChange={(item) => setIsPrivate(item.value)}
                 style={styles.dropdown}
               />
             </View>
 
-            <Text style={ {fontSize: hp(2), color: theme.colors.text }}>Add Members</Text>
-           <View style={styles.inputContainer}>
-            <Dropdown
-              data={friends}
-              labelField="label"
-              valueField="value"
-              placeholder="Select members"
-              value={selectedMembers}
-              onChange={item => {
-                setSelectedMembers([...selectedMembers, item.value]);
-              }}
-              multiple={true}
-              style={styles.dropdown}
-            />
-           </View>
+            <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
+              Add Members
+            </Text>
+            <View style={styles.inputContainer}>
+              <Dropdown
+                data={friends}
+                labelField="label"
+                valueField="value"
+                placeholder="Select members"
+                value={selectedMembers}
+                onChange={(item) => {
+                  setSelectedMembers([...selectedMembers, item.value]);
+                }}
+                multiple={true}
+                style={styles.dropdown}
+              />
+            </View>
             {/*button*/}
-            <Button title={'Create Group'} loading={loading} onPress={onSubmit} marginTop={10} />
+            <Button
+              title={'Create Group'}
+              loading={loading}
+              onPress={onSubmit}
+              marginTop={10}
+            />
           </View>
         </ScrollView>
       </View>
     </ScreenWrapper>
   );
-}
+};
 
 export default NewGroup;
 
@@ -187,5 +195,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-  }
+  },
 });

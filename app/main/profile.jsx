@@ -5,7 +5,6 @@ import {
   Text,
   ScrollView,
   View,
-  Alert,
   Touchable,
   TouchableOpacity,
 } from 'react-native';
@@ -15,7 +14,6 @@ import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import Logout from '../../assets/icons/logout';
 import Edit from '../../assets/icons/Edit';
 import AuthService from '../../src/endpoints/auth.cjs';
 import BetsService from '../../src/endpoints/bets.cjs';
@@ -70,48 +68,9 @@ const Profile = () => {
     };
     fetchSession();
   }, []);
-  
-  const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await AuthService.logout();
-            navigation.navigate('Login');
-          } catch (error) {
-            console.log('Error logging out:', error);
-          }
-        },
-      },
-    ]);
-  };
 
   return (
     <ScreenWrapper bg="white">
-      <View>
-        <Header
-          title="Profile"
-          showBackButton={true}
-          rightComponent={
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={styles.headerLogout}
-            >
-              <Logout
-                strokeWidth={2}
-                size={hp(2.5)}
-                color={theme.colors.rose}
-              />
-            </TouchableOpacity>
-          }
-        />
-      </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
