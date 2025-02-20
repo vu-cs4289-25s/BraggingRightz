@@ -41,6 +41,11 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 0,
+    paddingHorizontal: wp(4),
+  },
+  rightComponent: {
+    position: 'absolute',
+    right: 0,
   },
   rightComponent: {
     position: 'absolute',

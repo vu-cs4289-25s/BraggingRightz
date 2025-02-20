@@ -1,0 +1,191 @@
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Platform,
+} from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import ScreenWrapper from '../../components/ScreenWrapper';
+import Header from '../../components/Header';
+import { hp, wp } from '../../helpers/common';
+import { theme } from '../../constants/theme';
+import AuthService from '../../src/endpoints/auth.cjs';
+import Avatar from '../../components/Avatar';
+import Button from '../../components/Button';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { Dropdown } from 'react-native-element-dropdown';
+import GroupsService from '../../src/endpoints/groups.cjs';
+import { useNavigation } from '@react-navigation/native';
+import Input from '../../components/Input';
+import User from '../../assets/icons/User';
+import BetsService from '../../src/endpoints/bets';
+
+const NewGroup = () => {
+  const navigation = useNavigation();
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const groupName= useRef('');
+  const [friends, setFriends] = useState([]);
+  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [isPrivate, setIsPrivate] = useState(true);
+  const description= useRef("");
+
+  const onSubmit = async () => {
+    if (!groupName.current) {
+      Alert.alert('Create New Group', 'Please name your group');
+      return;
+    }
+
+    if (selectedMembers.length === 0){
+      // FOR NOW DO NOTHING
+      //Alert.alert("Create New Group", "Please select at least one member");
+    }
+    setLoading(true);
+
+    try {
+      await GroupsService.createGroup({
+        creatorId: session.uid,
+        name: groupName.current,
+        description: description.current,
+        members: selectedMembers,
+        isPrivate: isPrivate,
+      });
+
+      Alert.alert("Group Successfully Created!", "Create Some Bets!" );
+
+    } catch (error) {
+      Alert.alert("Group Creation Failed", error.message);
+    }
+
+    navigation.navigate('Home');
+  }
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const sessionData = await AuthService.getSession();
+        setSession(sessionData);
+
+        // SEMILOGIC TO FETCH LIST OF USERS FRIENDS
+        // const friendsList = await fetchFriends();
+        // setFriends(friendsList);
+      } catch (error) {
+        console.log('Error fetching session:', error);
+      }
+    };
+    fetchSession();
+  }, []);
+
+  // SEMILOGIC TO FETCH LIST OF USERS FRIENDS TO BE ABLE TO SELECT MEMBERS
+  const fetchFriends = async () => {
+    // Replace with actual API call to fetch friends
+    return [
+      { label: "Friend 1", value: 'friend1' },
+      { label: 'Friend 2', value: 'friend2' },
+      { label: 'Friend 3', value: 'friend3' },
+    ];
+  };
+
+  return (
+    <ScreenWrapper bg="white">
+      <View style={styles.container}>
+        <Header title="Create Group" showBackButton={true} />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/*form*/}
+          <View style={styles.form}>
+            <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
+              Group Name
+            </Text>
+            <View style={styles.inputContainer}>
+            <Input
+              icon={<User name="User" size={26} strokeWidth={1.6} />}
+              placeholder="Name your new group"
+              onChangeText={(value) => (groupName.current = value)}
+            />
+            </View>
+
+            <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
+              Description
+            </Text>
+            <View style={styles.inputContainer}>
+              <Input
+                placeholder="Add group description"
+                onChangeText={(value) => (description.current = value)}
+              />
+            </View>
+
+            <Text style={ {fontSize: hp(2), color: theme.colors.text }}>Visibility</Text>
+            <View style={styles.inputContainer}>
+              <Dropdown
+                data={[
+                  { label: 'Private', value: true},
+                  { label: 'Public', value: false },
+                ]}
+                labelField="label"
+                valueField="value"
+                placeholder="Select visibility"
+                value={isPrivate}
+                onChange={item => setIsPrivate(item.value)}
+                style={styles.dropdown}
+              />
+            </View>
+
+            <Text style={ {fontSize: hp(2), color: theme.colors.text }}>Add Members</Text>
+           <View style={styles.inputContainer}>
+            <Dropdown
+              data={friends}
+              labelField="label"
+              valueField="value"
+              placeholder="Select members"
+              value={selectedMembers}
+              onChange={item => {
+                setSelectedMembers([...selectedMembers, item.value]);
+              }}
+              multiple={true}
+              style={styles.dropdown}
+            />
+           </View>
+            {/*button*/}
+            <Button title={'Create Group'} loading={loading} onPress={onSubmit} marginTop={10} />
+          </View>
+        </ScrollView>
+      </View>
+    </ScreenWrapper>
+  );
+}
+
+export default NewGroup;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  scrollContent: {
+    paddingVertical: 20,
+  },
+  form: {
+    marginVertical: 20,
+    padding: 16,
+    borderRadius: 8,
+  },
+  groupDetailsText: {
+    fontSize: hp(1.5),
+    color: theme.colors.text,
+    marginBottom: 10,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  dropdown: {
+    borderWidth: 2,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  }
+});

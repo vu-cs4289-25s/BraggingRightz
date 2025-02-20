@@ -7,6 +7,7 @@ import SignUp from './app/signUp';
 import Login from './app/login';
 import ForgotPassword from './app/forgotPassword';
 import Notifications from './app/main/notifications';
+import NewGroup from './app/main/newGroup';
 import EditProfile from './app/main/editProfile';
 import Settings from './app/main/settings';
 import BottomTabNavigator from './components/BottomTabNavigator';
@@ -25,6 +26,7 @@ export default function App() {
           {/* replaced Home, NewBet, Profile screens with our bottom tab navigator */}
           <Stack.Screen name="Main" component={BottomTabNavigator} />
           <Stack.Screen name="Notifications" component={Notifications} />
+          <Stack.Screen name="NewGroup" component={NewGroup} />
           <Stack.Screen name="EditProfile" component={EditProfile} />
           <Stack.Screen name="Settings" component={Settings} />
         </Stack.Navigator>
