@@ -71,26 +71,26 @@ const Profile = () => {
     fetchSession();
   }, []);
 
-  const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await AuthService.logout();
-            navigation.navigate('Welcome');
-          } catch (error) {
-            console.log('Error logging out:', error);
-          }
-        },
-      },
-    ]);
-  };
+  // const handleLogout = async () => {
+  //   Alert.alert('Logout', 'Are you sure you want to logout?', [
+  //     {
+  //       text: 'Cancel',
+  //       style: 'cancel',
+  //     },
+  //     {
+  //       text: 'Logout',
+  //       style: 'destructive',
+  //       onPress: async () => {
+  //         try {
+  //           await AuthService.logout();
+  //           navigation.navigate('Welcome');
+  //         } catch (error) {
+  //           console.log('Error logging out:', error);
+  //         }
+  //       },
+  //     },
+  //   ]);
+  // };
 
   return (
     <ScreenWrapper bg="white">
@@ -104,14 +104,15 @@ const Profile = () => {
             showBackButton={false}
             rightComponent={
               <TouchableOpacity
-                onPress={handleLogout}
+                onPress={() => navigation.navigate('Settings')}
                 style={styles.headerLogout}
               >
-                <Logout
+                <Icon
+                  name="gear"
                   style={styles.logoutButton}
                   strokeWidth={2}
                   size={hp(2.5)}
-                  color={theme.colors.rose}
+                  color={theme.colors.text}
                 />
               </TouchableOpacity>
             }
