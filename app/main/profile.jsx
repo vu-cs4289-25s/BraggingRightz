@@ -83,7 +83,7 @@ const Profile = () => {
         onPress: async () => {
           try {
             await AuthService.logout();
-            navigation.navigate('Login');
+            navigation.navigate('Welcome');
           } catch (error) {
             console.log('Error logging out:', error);
           }
@@ -94,16 +94,20 @@ const Profile = () => {
 
   return (
     <ScreenWrapper bg="white">
-      <View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View>
         <Header
           title="Profile"
-          showBackButton={true}
+          showBackButton={false}
           rightComponent={
             <TouchableOpacity
               onPress={handleLogout}
               style={styles.headerLogout}
             >
-              <Logout
+              <Logout style={styles.logoutButton} 
                 strokeWidth={2}
                 size={hp(2.5)}
                 color={theme.colors.rose}
@@ -112,10 +116,6 @@ const Profile = () => {
           }
         />
       </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
         <View style={styles.profileContainer}>
           <View style={styles.avatarContainer}>
             <Avatar
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: 'white',
     borderRadius: 10,
     margin: 10,
   },

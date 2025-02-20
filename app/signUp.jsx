@@ -26,6 +26,7 @@ import { storage } from '../src/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 import AuthService from '../src/endpoints/auth';
 
@@ -163,7 +164,7 @@ const SignUp = () => {
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Home'),
+            onPress: () => navigation.navigate('Main'),
           },
         ],
       );
@@ -173,6 +174,11 @@ const SignUp = () => {
       setLoading(false);
       setUploadingImage(false);
     }
+  };
+
+  const handleDateConfirm = (date) => {
+    setBirthdate(date);
+    setShowDatePicker(false);
   };
 
   return (
@@ -241,72 +247,12 @@ const SignUp = () => {
                 value={birthdate.toLocaleDateString()}
               />
               {showDatePicker && (
-                <Modal
-                  transparent={true}
-                  animationType="slide"
-                  visible={showDatePicker}
-                  onRequestClose={() => setShowDatePicker(false)}
-                >
-                  <View style={styles.modalBackground}>
-                    <View style={styles.modalContainer}>
-                      <DateTimePicker
-                        value={birthdate}
-                        mode="date"
-                        display="spinner" // or "default" depending on your platform/UX preference
-                        onChange={(event, selectedDate) => {
-                          // On Android, the picker fires onChange on cancel too.
-                          if (event.type === 'set' && selectedDate) {
-                            setBirthdate(selectedDate);
-                          }
-                          setShowDatePicker(false);
-                        }}
-                      />
-                      <TouchableOpacity
-                        onPress={() => setShowDatePicker(false)}
-                        style={styles.modalCloseButton}
-                      >
-                        <Text style={styles.modalCloseText}>Cancel</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Modal>
-              )}
-              <Input
-                onPress={() => setShowDatePicker(true)}
-                icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
-                placeholder="Enter your birthdate"
-                value={birthdate.toLocaleDateString()}
-              />
-              {showDatePicker && (
-                <Modal
-                  transparent={true}
-                  animationType="slide"
-                  visible={showDatePicker}
-                  onRequestClose={() => setShowDatePicker(false)}
-                >
-                  <View style={styles.modalBackground}>
-                    <View style={styles.modalContainer}>
-                      <DateTimePicker
-                        value={birthdate}
-                        mode="date"
-                        display="spinner" // or "default" depending on your platform/UX preference
-                        onChange={(event, selectedDate) => {
-                          // On Android, the picker fires onChange on cancel too.
-                          if (event.type === 'set' && selectedDate) {
-                            setBirthdate(selectedDate);
-                          }
-                          setShowDatePicker(false);
-                        }}
-                      />
-                      <TouchableOpacity
-                        onPress={() => setShowDatePicker(false)}
-                        style={styles.modalCloseButton}
-                      >
-                        <Text style={styles.modalCloseText}>Cancel</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Modal>
+                <DateTimePickerModal
+                  isVisible={showDatePicker}
+                  mode="date"
+                  onConfirm={handleDateConfirm}
+                  onCancel={() => setShowDatePicker(false)}
+                />
               )}
               <Input
                 icon={<Icon name="lock" size={26} strokeWidth={1.6} />}

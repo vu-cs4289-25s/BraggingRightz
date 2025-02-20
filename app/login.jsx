@@ -40,7 +40,7 @@ const Login = () => {
         username: usernameRef.current,
         password: passwordRef.current,
       });
-      navigation.navigate('Home');
+      navigation.navigate('Main');
     } catch (error) {
       Alert.alert('Login Failed: ', error.message);
       navigation.navigate('Login');

@@ -171,15 +171,3 @@ const styles = StyleSheet.create({
   },
 });
 
-{
-  /* <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
-          <Avatar
-            uri={profileImage || require('../../assets/images/icon.png')}
-            size={hp(15)}
-            rounded={theme.radius.xl}
-          />
-          <View style={styles.editIcon}>
-            <Camera size={hp(2)} color={theme.colors.dark} />
-          </View>
-        </TouchableOpacity> */
-}

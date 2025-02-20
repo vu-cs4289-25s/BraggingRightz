@@ -23,34 +23,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 const Home = () => {
   const navigation = useNavigation();
-  const [showGif, setShowGif] = useState(true);
-
-  useEffect(() => {
-    // Automatically hide the GIF after 3 seconds
-    const timer = setTimeout(() => setShowGif(false), 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const onLogout = async () => {
-    try {
-      await AuthService.logout();
-      navigation.navigate('Welcome');
-    } catch (error) {
-      Alert.alert('Logout Failed', error.message);
-    }
-  };
 
   return (
     <ScreenWrapper>
-      {/* Show the GIF animation when the page first loads */}
-      {showGif && (
-        <ImageBackground
-          source={require('../../assets/animations/trophy-background.gif')}
-          style={styles.gifBackground}
-          resizeMode="cover"
-        />
-      )}
-
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -64,17 +39,17 @@ const Home = () => {
                 color={theme.colors.text}
               />
             </Pressable>
-            <Pressable onPress={() => navigation.navigate('NewBet')}>
+            {/* <Pressable onPress={() => navigation.navigate('NewBet')}>
               <Icon
                 name="plus"
                 size={hp(3.2)}
                 strokeWidth={2}
                 color={theme.colors.text}
               />
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('Profile')}>
+            </Pressable> */}
+            {/* <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar />
-            </Pressable>
+            </Pressable> */}
           </View>
         </View>
 
