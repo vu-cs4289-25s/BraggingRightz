@@ -99,23 +99,24 @@ const Profile = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <View>
-        <Header
-          title="Profile"
-          showBackButton={false}
-          rightComponent={
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={styles.headerLogout}
-            >
-              <Logout style={styles.logoutButton} 
-                strokeWidth={2}
-                size={hp(2.5)}
-                color={theme.colors.rose}
-              />
-            </TouchableOpacity>
-          }
-        />
-      </View>
+          <Header
+            title="Profile"
+            showBackButton={false}
+            rightComponent={
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={styles.headerLogout}
+              >
+                <Logout
+                  style={styles.logoutButton}
+                  strokeWidth={2}
+                  size={hp(2.5)}
+                  color={theme.colors.rose}
+                />
+              </TouchableOpacity>
+            }
+          />
+        </View>
         <View style={styles.profileContainer}>
           <View style={styles.avatarContainer}>
             <Avatar

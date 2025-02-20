@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Home from '../app/main/home';          // adjust paths as needed
+import Home from '../app/main/home'; // adjust paths as needed
 import NewBet from '../app/main/newBet';
 import Profile from '../app/main/profile';
 import { theme } from '../constants/theme';
