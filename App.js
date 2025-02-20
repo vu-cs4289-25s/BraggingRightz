@@ -10,6 +10,7 @@ import NewBet from './app/main/newBet';
 import Profile from './app/main/profile';
 import Notifications from './app/main/notifications';
 import ForgotPassword from './app/forgotPassword';
+import NewGroup from './app/main/newGroup';
 
 const Stack = createStackNavigator();
 
@@ -26,6 +27,7 @@ export default function App() {
           <Stack.Screen name="NewBet" component={NewBet} />
           <Stack.Screen name="Profile" component={Profile} />
           <Stack.Screen name="Notifications" component={Notifications} />
+          <Stack.Screen name="NewGroup" component={NewGroup} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
