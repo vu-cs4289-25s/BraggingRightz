@@ -47,9 +47,9 @@ const Home = () => {
                 color={theme.colors.text}
               />
             </Pressable> */}
-            {/* <Pressable onPress={() => navigation.navigate('Profile')}>
+            <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar />
-            </Pressable> */}
+            </Pressable>
           </View>
         </View>
 

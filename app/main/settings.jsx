@@ -1,14 +1,17 @@
+import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
-import React from 'react';
 import { ScrollView } from 'react-native-gesture-handler';
 import Header from '../../components/Header';
 import { theme } from '../../constants/theme';
 import { hp, wp } from '../../helpers/common';
 import Logout from '../../assets/icons/logout';
 import AuthService from '../../src/endpoints/auth.cjs';
+import { useNavigation } from '@react-navigation/native';
 
 const Settings = () => {
+  const navigation = useNavigation(); // initialize navigation
+
   const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       {
@@ -41,10 +44,7 @@ const Settings = () => {
             title="Settings"
             showBackButton={true}
             rightComponent={
-              <TouchableOpacity
-                onPress={handleLogout}
-                style={styles.headerLogout}
-              >
+              <TouchableOpacity onPress={handleLogout} style={styles.headerLogout}>
                 <Logout
                   style={styles.logoutButton}
                   strokeWidth={2}
