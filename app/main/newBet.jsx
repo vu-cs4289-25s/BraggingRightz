@@ -1,4 +1,6 @@
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -6,10 +8,9 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  Platform,
 } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
-import ScreemWrapper from '../../components/ScreenWrapper';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
 import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
@@ -145,108 +146,122 @@ const NewBet = () => {
   };
 
   return (
-    <ScreemWrapper bg="white">
-      <View style={styles.container}>
-        <Header title="Create Bet" showBackButton={true} />
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Bet Question */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>What are you betting on?</Text>
-            <TextInput
-              style={[styles.textInput, { height: hp(8) }]}
-              placeholder="Type your bet question here..."
-              value={question}
-              onChangeText={setQuestion}
-              multiline
-            />
-          </View>
+    <ScreenWrapper bg="white">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
+          <Header title="Create Bet" showBackButton={true} />
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Bet Question */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>What are you betting on?</Text>
+              <TextInput
+                style={[styles.textInput, { height: hp(8) }]}
+                placeholder="Type your bet question here..."
+                placeholderTextColor={theme.colors.textLight} // darker placeholder
+                value={question}
+                onChangeText={setQuestion}
+                multiline
+              />
+            </View>
 
-          {/* Vote Options */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Vote Options</Text>
-            {options.map((option, index) => (
-              <View key={index} style={styles.optionRow}>
-                <TextInput
-                  style={[styles.textInput, { flex: 1 }]}
-                  placeholder={`Option ${index + 1}`}
-                  value={option}
-                  onChangeText={(text) => updateOption(text, index)}
-                />
-                {options.length > 2 && (
-                  <TouchableOpacity
-                    onPress={() => removeOption(index)}
-                    style={styles.removeButton}
-                  >
-                    <Text style={styles.removeButtonText}>X</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
-            <TouchableOpacity
-              onPress={addOption}
-              style={styles.addOptionButton}
-            >
-              <Text style={styles.addOptionText}>+ Add Option</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Vote Options */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Vote Options</Text>
+              {options.map((option, index) => (
+                <View key={index} style={styles.optionRow}>
+                  <TextInput
+                    style={[styles.textInput, { flex: 1 }]}
+                    placeholder={`Option ${index + 1}`}
+                    placeholderTextColor={theme.colors.textLight}
+                    value={option}
+                    onChangeText={(text) => updateOption(text, index)}
+                  />
+                  {options.length > 2 && (
+                    <TouchableOpacity
+                      onPress={() => removeOption(index)}
+                      style={styles.removeButton}
+                    >
+                      <Text style={styles.removeButtonText}>X</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+              <TouchableOpacity
+                onPress={addOption}
+                style={styles.addOptionButton}
+              >
+                <Text style={styles.addOptionText}>+ Add Option</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Voting End Time */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Voting Ends At</Text>
-            <TouchableOpacity onPress={showDatePicker} style={styles.dateInput}>
-              <Text style={styles.dateText}>{formattedEndTime}</Text>
-            </TouchableOpacity>
-            <DateTimePickerModal
-              isVisible={isDatePickerVisible}
-              mode="datetime"
-              onConfirm={handleConfirm}
-              onCancel={hideDatePicker}
-            />
-          </View>
+            {/* Voting End Time */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Voting Ends At</Text>
+              <TouchableOpacity
+                onPress={showDatePicker}
+                style={styles.dateInput}
+              >
+                <Text style={styles.dateText}>{formattedEndTime}</Text>
+              </TouchableOpacity>
+              <DateTimePickerModal
+                isVisible={isDatePickerVisible}
+                mode="datetime"
+                onConfirm={handleConfirm}
+                onCancel={hideDatePicker}
+              />
+            </View>
 
-          {/* Group Selection */}
-          <View style={[styles.section, { zIndex: 10 }]}>
-            <Text style={styles.sectionTitle}>Select Group</Text>
-            <Dropdown
-              style={[pickerDropdownStyle.dropdown, { zIndex: 10 }]}
-              placeholderStyle={pickerDropdownStyle.placeholderStyle}
-              selectedTextStyle={pickerDropdownStyle.selectedTextStyle}
-              iconStyle={pickerDropdownStyle.iconStyle}
-              data={groups}
-              maxHeight={300}
-              labelField="name"
-              valueField="id"
-              placeholder="Select a group"
-              value={selectedGroup}
-              onChange={(item) => {
-                console.log('Selected Group:', item);
-                setSelectedGroup(item.id);
-              }}
-              dropDownStyle={[pickerDropdownStyle.dropdown, { zIndex: 20 }]}
-            />
-          </View>
+            {/* Group Selection */}
+            <View style={[styles.section, { zIndex: 10 }]}>
+              <Text style={styles.sectionTitle}>Select Group</Text>
+              <Dropdown
+                style={[pickerDropdownStyle.dropdown, { zIndex: 10 }]}
+                placeholderStyle={pickerDropdownStyle.placeholderStyle}
+                selectedTextStyle={pickerDropdownStyle.selectedTextStyle}
+                iconStyle={pickerDropdownStyle.iconStyle}
+                data={groups}
+                maxHeight={300}
+                labelField="name"
+                valueField="id"
+                placeholder="Select a group"
+                value={selectedGroup}
+                onChange={(item) => {
+                  console.log('Selected Group:', item);
+                  setSelectedGroup(item.id);
+                }}
+                dropDownStyle={[pickerDropdownStyle.dropdown, { zIndex: 20 }]}
+              />
+            </View>
 
-          {/* Wager Amount */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Wager Amount (coins)</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Enter coin amount"
-              value={coinAmount}
-              onChangeText={setCoinAmount}
-              keyboardType="numeric"
+            {/* Wager Amount */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Wager Amount (coins)</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Enter coin amount"
+                placeholderTextColor={theme.colors.textLight}
+                value={coinAmount}
+                onChangeText={setCoinAmount}
+                keyboardType="numeric"
+              />
+            </View>
+            <Button
+              buttionStyle={{ height: hp(6.2) }}
+              title="Create Bet"
+              loading={loading}
+              hasShadow={true}
+              onPress={submitBet}
             />
-          </View>
-        </ScrollView>
-        <Button
-          buttionStyle={{ height: hp(6.2) }}
-          title="Create Bet"
-          loading={loading}
-          hasShadow={true}
-          onPress={submitBet}
-        />
-      </View>
-    </ScreemWrapper>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </ScreenWrapper>
   );
 };
 
@@ -255,12 +270,14 @@ export default NewBet;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBottom: 30,
+    marginBottom: 0,
     paddingHorizontal: wp(4),
     gap: 15,
+    backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    paddingBottom: hp(2),
+    flexGrow: 1,
+    paddingBottom: hp(3),
     gap: 20,
   },
   header: {
@@ -291,11 +308,11 @@ const styles = StyleSheet.create({
   },
   textInput: {
     borderWidth: 1,
-    borderColor: theme.colors.gray,
+    borderColor: theme.colors.textLight, // darker border
     borderRadius: theme.radius.xl,
     padding: 12,
     fontSize: hp(2),
-    color: theme.colors.text,
+    color: theme.colors.text, // ensure input text is dark for readability
   },
   optionRow: {
     flexDirection: 'row',
@@ -321,16 +338,16 @@ const styles = StyleSheet.create({
   },
   dateInput: {
     borderWidth: 1,
-    borderColor: theme.colors.gray,
+    borderColor: theme.colors.textDark,
     borderRadius: theme.radius.xl,
     padding: 12,
   },
   dateText: {
     fontSize: hp(2),
-    color: theme.colors.text,
+    color: theme.colors.textLight,
   },
   placeholder: {
-    color: theme.colors.text,
+    color: theme.colors.textLight,
   },
 });
 

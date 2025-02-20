@@ -16,11 +16,11 @@ const Button = ({
     shadowColor: theme.colors.dark,
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: 4,
     },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   };
 
   if (loading) {

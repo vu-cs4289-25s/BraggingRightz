@@ -47,4 +47,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
   },
+  rightComponent: {
+    position: 'absolute',
+    right: 0,
+  },
 });

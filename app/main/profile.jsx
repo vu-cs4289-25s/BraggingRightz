@@ -70,7 +70,7 @@ const Profile = () => {
     };
     fetchSession();
   }, []);
-
+  
   const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       {
@@ -116,6 +116,26 @@ const Profile = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <View>
+          <Header
+            title="Profile"
+            showBackButton={false}
+            rightComponent={
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Settings')}
+                style={styles.headerLogout}
+              >
+                <Icon
+                  name="gear"
+                  style={styles.logoutButton}
+                  strokeWidth={2}
+                  size={hp(2.5)}
+                  color={theme.colors.text}
+                />
+              </TouchableOpacity>
+            }
+          />
+        </View>
         <View style={styles.profileContainer}>
           <View style={styles.avatarContainer}>
             <Avatar
@@ -264,7 +284,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: 'white',
     borderRadius: 10,
     margin: 10,
   },
