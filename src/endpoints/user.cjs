@@ -7,6 +7,7 @@ GET /users/{user_id}/points → Retrieve current points balance
 GET /users/{user_id}/leaderboard-rank → Get user’s rank on the leaderboard
 GET /users/{user_id}/history → Get user’s betting history
 GET /users/{user_id}/notifications → Retrieve unread notifications
+GET /users/{username} -> Retrieve uid from username
 we are using firebase for the db
  */
 
@@ -212,6 +213,39 @@ class UserService {
     } catch (error) {
       this._handleError(error);
     }
+  }
+
+  // Get UID from username
+  async getUid({ username }) {
+    try {
+        const usersRef = collection(db, "users"); // Reference to users collection
+        const q = query(usersRef, where("username", "==", username)); // Query where username matches
+
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.error("No user found with username:", username);
+            return null;
+        }
+
+        const userDoc = querySnapshot.docs[0]; // Assuming username is unique
+        console.log("User found:", userDoc.id, userDoc.data());
+
+        return userDoc.id;
+    } catch (error) {
+        console.error("Error fetching UID:", error);
+        return null;
+    }
+  }
+
+  // Check user exists based on username
+  async userExists({username}){
+    const userQuery = query (
+      collection(db, 'users'),
+      where('username', '==', username),
+    );
+    const querySnapshot = await getDocs(userQuery);
+    return (!userQuery.empty);
   }
 
   // Helper method to check username availability

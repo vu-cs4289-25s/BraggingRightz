@@ -75,6 +75,7 @@ class AuthService {
         updatedAt: new Date().toISOString(),
         trophies: 0,
         numCoins: 100,
+        friends: [],
         groups: [],
         profilePicture,
       });
@@ -169,6 +170,7 @@ class AuthService {
         trophies: userData.trophies,
         numCoins: userData.numCoins,
         groups: userData.groups,
+        friends: userData.friends,
       };
     } catch (error) {
       console.log('Get session error:', error);
