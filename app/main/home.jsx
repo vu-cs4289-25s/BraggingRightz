@@ -1,33 +1,27 @@
-"use client"
+'use client';
 
-
-import React, { useState, useEffect } from "react"
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Pressable, ImageBackground } from "react-native"
-import { useNavigation } from "@react-navigation/native"
-import ScreenWrapper from "../../components/ScreenWrapper"
-import AuthService from "../../src/endpoints/auth"
-import { theme } from "../../constants/theme"
-import { hp, wp } from "../../helpers/common"
-//import Icon from "../../assets/icons"
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Pressable,
+  ImageBackground,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import ScreenWrapper from '../../components/ScreenWrapper';
+import AuthService from '../../src/endpoints/auth';
+import { theme } from '../../constants/theme';
+import { hp, wp } from '../../helpers/common';
 import Icon from 'react-native-vector-icons/FontAwesome';
-
-
-import { Ionicons } from "@expo/vector-icons"
+import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/Avatar';
 
-
-
-
 const Home = () => {
-  const navigation = useNavigation()
-  const [showGif, setShowGif] = useState(true)
-
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowGif(false), 3000)
-    return () => clearTimeout(timer)
-  }, [])
-
+  const navigation = useNavigation();
 
   const userBets = [
     {
@@ -53,28 +47,8 @@ const Home = () => {
     },
   ];
 
-
-  const onLogout = async () => {
-    try {
-      await AuthService.logout()
-      navigation.navigate("Welcome")
-    } catch (error) {
-      Alert.alert("Logout Failed", error.message)
-    }
-  }
-
-
   return (
     <ScreenWrapper bg="white">
-      {showGif && (
-        <ImageBackground
-          source={require("../../assets/animations/trophy-background.gif")}
-          style={styles.gifBackground}
-          resizeMode="cover"
-        />
-      )}
-
-
       <ScrollView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -88,14 +62,6 @@ const Home = () => {
                 color={theme.colors.text}
               />
             </Pressable>
-            {/* <Pressable onPress={() => navigation.navigate('NewBet')}>
-              <Icon
-                name="plus"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
-            </Pressable> */}
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar />
             </Pressable>
@@ -103,17 +69,22 @@ const Home = () => {
         </View>
         <View style={styles.sectionDivider} />
 
-
         {/* Coins Display */}
         <View style={styles.coinsSection}>
-          <Ionicons name="logo-bitcoin" size={hp(4)} color={theme.colors.primary} />
+          <Ionicons
+            name="logo-bitcoin"
+            size={hp(4)}
+            color={theme.colors.primary}
+          />
           <Text style={styles.coinsText}>785 coins</Text>
         </View>
 
-
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate("NewBet")}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('NewBet')}
+          >
             {/*<Icon name="plus-circle" size={hp(3)} color={theme.colors.primary} />*/}
             <Icon
               name="heart"
@@ -123,57 +94,65 @@ const Home = () => {
             />
             <Text style={styles.actionText}>Join Group</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate("FindFriends")}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('FindFriends')}
+          >
             <Icon
               name="thumbs-o-up"
               size={hp(3.2)}
               strokeWidth={2}
               color={theme.colors.text}
-            />            <Text style={styles.actionText}>Something</Text>
+            />{' '}
+            <Text style={styles.actionText}>Something</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate("LeaderBoard")}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('LeaderBoard')}
+          >
             <Icon
               name="plus-square"
               size={hp(3.2)}
               strokeWidth={2}
               color={theme.colors.text}
-            />            <Text style={styles.actionText}>Get More Coins</Text>
+            />{' '}
+            <Text style={styles.actionText}>Get More Coins</Text>
           </TouchableOpacity>
         </View>
-
 
         {/* My Groups Preview */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>My Groups</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("MyGroups")}>
+            <TouchableOpacity onPress={() => navigation.navigate('MyGroups')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupsScroll}>
-            {["Sports Fans", "Movie Buffs", "Trivia Night"].map((group, index) => (
-              <View style={styles.betsContainer}>
-                <View style={styles.betItem}>
-                  <TouchableOpacity key={index} style={styles.groupItem}>
-                    {/*<Icon name="users" size={hp(3)} color={theme.colors.primary} />*/}
-                    <Text style={styles.betDescription}>{group}</Text>
-                  </TouchableOpacity>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.groupsScroll}
+          >
+            {['Sports Fans', 'Movie Buffs', 'Trivia Night'].map(
+              (group, index) => (
+                <View style={styles.betsContainer}>
+                  <View style={styles.betItem}>
+                    <TouchableOpacity key={index} style={styles.groupItem}>
+                      {/*<Icon name="users" size={hp(3)} color={theme.colors.primary} />*/}
+                      <Text style={styles.betDescription}>{group}</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ),
+            )}
           </ScrollView>
         </View>
-
-
-
-
-
 
         {/* Active Bets Preview */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Live & Upcoming Bets</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("ActiveBets")}>
+            <TouchableOpacity onPress={() => navigation.navigate('ActiveBets')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -205,27 +184,25 @@ const Home = () => {
             ))}
           </View>
         </View>
-
       </ScrollView>
     </ScreenWrapper>
-  )
-}
-
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   gifBackground: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
     zIndex: 999,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: hp(2),
     marginHorizontal: wp(4),
     marginTop: hp(2),
@@ -233,7 +210,7 @@ const styles = StyleSheet.create({
   title: {
     color: theme.colors.text,
     fontSize: hp(3.2),
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   icons: {
     flexDirection: 'row',
@@ -257,9 +234,9 @@ const styles = StyleSheet.create({
     gap: wp(4),
   },
   coinsSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.colors.card,
     paddingVertical: hp(2),
     marginHorizontal: wp(4),
@@ -268,17 +245,17 @@ const styles = StyleSheet.create({
   },
   coinsText: {
     fontSize: hp(3),
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: theme.colors.text,
     marginLeft: wp(2),
   },
   quickActions: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginBottom: hp(3),
   },
   actionButton: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   actionText: {
     marginTop: hp(1),
@@ -290,14 +267,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(4),
   },
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: hp(2),
   },
   sectionTitle: {
     fontSize: hp(2.2),
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: theme.colors.text,
   },
   seeAllText: {
@@ -305,10 +282,10 @@ const styles = StyleSheet.create({
     fontSize: hp(1.8),
   },
   groupsScroll: {
-    flexDirection: "row",
+    flexDirection: 'row',
   },
   groupItem: {
-    alignItems: "center",
+    alignItems: 'center',
     marginRight: wp(4),
     backgroundColor: theme.colors.card,
     padding: hp(2),
@@ -381,10 +358,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: hp(1.8),
   },
-})
+});
 
-
-export default Home
-
-
-
+export default Home;
