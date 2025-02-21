@@ -36,11 +36,11 @@ const Login = () => {
     // Log in user
     setLoading(true);
     try {
-      const user = await AuthService.login({
+      await AuthService.login({
         username: usernameRef.current,
         password: passwordRef.current,
       });
-      navigation.navigate('Home');
+      navigation.navigate('Main');
     } catch (error) {
       Alert.alert('Login Failed: ', error.message);
       navigation.navigate('Login');
@@ -69,8 +69,7 @@ const Login = () => {
 
             {/*welcome text*/}
             <View>
-              <Text style={styles.welcomeText}>Hey!</Text>
-              <Text style={styles.welcomeText}>Welcome Back.</Text>
+              <Text style={styles.welcomeText}>Welcome Back!</Text>
             </View>
 
             {/*form*/}

@@ -88,14 +88,14 @@ const Home = () => {
                 color={theme.colors.text}
               />
             </Pressable>
-            <Pressable onPress={() => navigation.navigate('NewBet')}>
+            {/* <Pressable onPress={() => navigation.navigate('NewBet')}>
               <Icon
                 name="plus"
                 size={hp(3.2)}
                 strokeWidth={2}
                 color={theme.colors.text}
               />
-            </Pressable>
+            </Pressable> */}
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar />
             </Pressable>
@@ -237,6 +237,22 @@ const styles = StyleSheet.create({
   },
   icons: {
     flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 20,
+  },
+  profileSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+    marginTop: 40,
+  },
+  avatarContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#ebeced',
+    justifyContent: 'center',
     alignItems: 'center',
     gap: wp(4),
   },

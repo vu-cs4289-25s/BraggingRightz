@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
   Text,
   ScrollView,
   View,
-  Image,
+  Touchable,
+  TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -13,15 +14,19 @@ import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import Edit from '../../assets/icons/Edit';
+import AuthService from '../../src/endpoints/auth.cjs';
+import BetsService from '../../src/endpoints/bets.cjs';
+import Header from '../../components/Header';
 
 const Profile = () => {
   const navigation = useNavigation();
-
-  const userStats = [
-    { icon: 'trophy', label: 'Bragging Rightz', value: '13' },
-    { icon: 'coins', label: 'Coins Won', value: '13,000' },
-    { icon: 'chart-line', label: 'Bets Won', value: '30/56' },
-  ];
+  const [session, setSession] = useState(null);
+  const [profileImage, setProfileImage] = useState(null);
+  const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [birthdate, setBirthdate] = useState('');
 
   const userBets = [
     {
@@ -47,102 +52,162 @@ const Profile = () => {
     },
   ];
 
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const sessionData = await AuthService.getSession();
+        setSession(sessionData);
+        setUsername(sessionData.username);
+        setFullName(sessionData.fullName);
+        setEmail(sessionData.email);
+        setBirthdate(new Date(sessionData.birthdate).toLocaleDateString());
+        setProfileImage(sessionData.profilePicture);
+      } catch (error) {
+        console.log('Error fetching session:', error);
+      }
+    };
+    fetchSession();
+  }, []);
+
   return (
     <ScreenWrapper bg="white">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>BraggingRightz</Text>
-          <View style={styles.icons}>
-            <Pressable onPress={() => navigation.navigate('Notifications')}>
-              <Icon
-                name="heart"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('newBet')}>
-              <Icon
-                name="plus"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('Profile')}>
-              <Avatar />
-            </Pressable>
-          </View>
-        </View>
-        <View style={styles.sectionDivider} />
-
-        <Text style={styles.sectionTitle}>My Profile</Text>
-        <View style={styles.profileContainer}>
-          <Image
-            source={{
-              uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-Ixuuet5HEVHDLgwCoBxpKtLUmSrx0u.png',
-            }}
-            style={styles.profileImage}
+        <View>
+          <Header
+            title="Profile"
+            showBackButton={false}
+            rightComponent={
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Settings')}
+                style={styles.headerLogout}
+              >
+                <Icon
+                  name="gear"
+                  style={styles.logoutButton}
+                  strokeWidth={2}
+                  size={hp(2.5)}
+                  color={theme.colors.text}
+                />
+              </TouchableOpacity>
+            }
           />
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>johnnydoe47</Text>
-            <Text style={styles.userEmail}>John Doe</Text>
-            <Text style={styles.userEmail}>john.doe@gmail.com</Text>
-            <Text style={styles.userBirthdate}>April 14, 2003</Text>
+        </View>
+        <View style={styles.profileContainer}>
+          <View style={styles.avatarContainer}>
+            <Avatar
+              uri={profileImage || require('../../assets/images/icon.png')}
+              size={hp(15)}
+              rounded={theme.radius.xl}
+            />
+            {session && (
+              <Pressable
+                onPress={() => navigation.navigate('EditProfile')}
+                style={styles.editIcon}
+              >
+                <Edit size={hp(2)} color={theme.colors.dark} />
+              </Pressable>
+            )}
           </View>
-          <View style={styles.coinContainer}>
-            <Icon name="crown" size={24} color="#FFD700" />
-            <Text style={styles.coinCount}>130</Text>
-            <Icon name="plus-circle" size={24} color="#4CAF50" />
-          </View>
+          {session && (
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{username}</Text>
+              <Text style={styles.userEmail}>{fullName}</Text>
+              <Text style={styles.userEmail}>{email}</Text>
+              <Text style={styles.userBirthdate}>{birthdate}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.sectionDivider} />
 
         <Text style={styles.sectionTitle}>My Stats</Text>
         <View style={styles.statsContainer}>
-          {userStats.map((stat, index) => (
-            <View key={index} style={styles.statItem}>
-              <Icon name={stat.icon} size={24} color="#FFD700" />
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+          {session && (
+            <View style={styles.statItem}>
+              <Icon name="trophy" size={24} color="#FFD700" />
+              <Text style={styles.statValue}>{session.trophies}</Text>
+              <Text style={styles.statLabel}>Trophies</Text>
             </View>
-          ))}
+          )}
+          {session && (
+            <View style={styles.statItem}>
+              <Icon name="coins" size={24} color="#FFD700" />
+              <Text style={styles.statValue}>{session.numCoins || 0}</Text>
+              <Text style={styles.statLabel}>Coins</Text>
+            </View>
+          )}
+          {session && (
+            <View style={styles.statItem}>
+              <Icon name="chart-line" size={24} color="#FFD700" />
+              <Text style={styles.statValue}>{session.betsWon || 0}</Text>
+              <Text style={styles.statLabel}>Bets Won</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.sectionDivider} />
 
-        <Text style={styles.sectionTitle}>My Bets</Text>
-        <View style={styles.betsContainer}>
-          {userBets.map((bet, index) => (
-            <View key={index} style={styles.betItem}>
-              <Text style={styles.betDescription}>{bet.bet}</Text>
-              <View style={styles.betDetails}>
-                <Text style={styles.betDate}>{bet.date}</Text>
-                <Text style={styles.betGroup}>{bet.group}</Text>
-                <View style={styles.betResult}>
-                  <Icon
-                    name={bet.result === 'win' ? 'trophy' : 'times-circle'}
-                    size={18}
-                    color={bet.result === 'win' ? '#FFD700' : '#FF0000'}
-                  />
-                  <Text
-                    style={[
-                      styles.betCoins,
-                      { color: bet.result === 'win' ? '#4CAF50' : '#FF0000' },
-                    ]}
-                  >
-                    {bet.result === 'win' ? '+' : ''}
-                    {bet.coins}
-                  </Text>
-                </View>
+        <Text style={styles.sectionTitle}>My Bet History</Text>
+        {/*TODO replace the following with the comment below once bets are made (wired code)*/}
+        {userBets.map((bet, index) => (
+          <View key={index} style={styles.betItem}>
+            <Text style={styles.betDescription}>{bet.bet}</Text>
+            <View style={styles.betDetails}>
+              <Text style={styles.betDate}>{bet.date}</Text>
+              <Text style={styles.betGroup}>{bet.group}</Text>
+              <View style={styles.betResult}>
+                <Icon
+                  name={bet.result === 'win' ? 'trophy' : 'times-circle'}
+                  size={18}
+                  color={bet.result === 'win' ? '#FFD700' : '#FF0000'}
+                />
+                <Text
+                  style={[
+                    styles.betCoins,
+                    { color: bet.result === 'win' ? '#4CAF50' : '#FF0000' },
+                  ]}
+                >
+                  {bet.result === 'win' ? '+' : ''}
+                  {bet.coins}
+                </Text>
               </View>
             </View>
-          ))}
-        </View>
+          </View>
+        ))}
+        {/*<View style={styles.betsContainer}>*/}
+        {/*  {session?.bets?.length > 0 ? (*/}
+        {/*    session.bets.map((bet, index) => (*/}
+        {/*      <View key={index} style={styles.betItem}>*/}
+        {/*        <Text style={styles.betDescription}>{bet.bet}</Text>*/}
+        {/*        <View style={styles.betDetails}>*/}
+        {/*          <Text style={styles.betDate}>{bet.date}</Text>*/}
+        {/*          <Text style={styles.betGroup}>{bet.group}</Text>*/}
+        {/*          <View style={styles.betResult}>*/}
+        {/*            <Icon*/}
+        {/*              name={bet.result === 'win' ? 'trophy' : 'times-circle'}*/}
+        {/*              size={18}*/}
+        {/*              color={bet.result === 'win' ? '#FFD700' : '#FF0000'}*/}
+        {/*            />*/}
+        {/*            <Text*/}
+        {/*              style={[*/}
+        {/*                styles.betCoins,*/}
+        {/*                { color: bet.result === 'win' ? '#4CAF50' : '#FF0000' },*/}
+        {/*              ]}*/}
+        {/*            >*/}
+        {/*              {bet.result === 'win' ? '+' : ''}*/}
+        {/*              {bet.coins}*/}
+        {/*            </Text>*/}
+        {/*          </View>*/}
+        {/*        </View>*/}
+        {/*      </View>*/}
+        {/*    ))*/}
+        {/*  ) : (*/}
+        {/*    <Text>No bets found.</Text>*/}
+        {/*  )}*/}
+        {/*</View>*/}
       </ScrollView>
     </ScreenWrapper>
   );
@@ -152,6 +217,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingBottom: hp(4),
+  },
+  headerLogout: {
+    padding: 8,
   },
   header: {
     flexDirection: 'row',
@@ -175,18 +243,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    //borderWidth: 1,
-    //borderColor: '#ccc6c6',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: 'white',
     borderRadius: 10,
     margin: 10,
   },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#fff',
+  avatarContainer: {
+    position: 'relative',
+  },
+  editIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: -5,
+    backgroundColor: 'white',
+    borderRadius: 50,
+    padding: 5,
+    shadowColor: theme.colors.textLight,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 7,
   },
   userInfo: {
     alignItems: 'left',
@@ -207,28 +282,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  coinContainer: {
-    flexDirection: 'row',
+  editButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 1,
+  },
+  logoutButton: {
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    borderRadius: 10,
+    marginHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 10,
-    marginHorizontal: 110,
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
   },
-  coinCount: {
+  logoutText: {
+    color: '#FF0000',
     fontSize: 16,
     fontWeight: 'bold',
-    marginHorizontal: 15,
   },
   sectionDivider: {
     height: 1,

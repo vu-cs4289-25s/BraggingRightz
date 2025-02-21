@@ -38,6 +38,7 @@ class AuthService {
     username,
     password,
     fullName,
+    birthdate,
     profilePicture = null,
   }) {
     try {
@@ -69,9 +70,11 @@ class AuthService {
         email,
         username,
         fullName,
+        birthdate,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         trophies: 0,
+        numCoins: 100,
         groups: [],
         profilePicture,
       });
@@ -153,13 +156,19 @@ class AuthService {
       }
 
       const userData = userDoc.data();
+      console.log('userData', userData);
+
       return {
         uid: user.uid,
         email: userData.email,
         username: userData.username,
         fullName: userData.fullName,
+        birthdate: userData.birthdate,
         profilePicture: userData.profilePicture || null,
         updatedAt: userData.updatedAt,
+        trophies: userData.trophies,
+        numCoins: userData.numCoins,
+        groups: userData.groups,
       };
     } catch (error) {
       console.log('Get session error:', error);

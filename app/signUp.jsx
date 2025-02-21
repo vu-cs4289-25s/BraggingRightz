@@ -5,6 +5,7 @@ import {
   Text,
   View,
   KeyboardAvoidingView,
+  Modal,
   ScrollView,
   Platform,
   Image,
@@ -24,6 +25,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { storage } from '../src/firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 import AuthService from '../src/endpoints/auth';
 
@@ -33,6 +36,8 @@ const SignUp = () => {
   const nameRef = useRef('');
   const usernameRef = useRef('');
   const passwordRef = useRef('');
+  const [birthdate, setBirthdate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -57,23 +62,36 @@ const SignUp = () => {
     }
   };
 
+  const uriToBlob = (uri) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = () => resolve(xhr.response);
+      xhr.onerror = () => reject(new Error('uriToBlob failed'));
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
+  };
+
   const uploadImage = async (userId) => {
     if (!profileImage) return null;
 
     try {
-      // Convert base64 to blob
-      const base64Response = await fetch(profileImage);
-      const blob = await base64Response.blob();
+      // Convert URI to blob using XMLHttpRequest
+      const blob = await uriToBlob(profileImage);
 
       // Create file reference
       const filename = `profile_${userId}_${Date.now()}.jpg`;
       const storageRef = ref(storage, `profileImages/${filename}`);
 
-      // Upload file
-      await uploadBytes(storageRef, blob);
+      // Optional: define metadata for the image
+      const metadata = { contentType: 'image/jpeg' };
+
+      // Upload file with metadata
+      await uploadBytes(storageRef, blob, metadata);
       console.log('Uploaded blob successfully');
 
-      // Get URL
+      // Get download URL
       const downloadUrl = await getDownloadURL(storageRef);
       console.log('Got download URL:', downloadUrl);
 
@@ -96,7 +114,8 @@ const SignUp = () => {
       !emailRef.current ||
       !passwordRef.current ||
       !nameRef.current ||
-      !usernameRef.current
+      !usernameRef.current ||
+      !birthdate
     ) {
       Alert.alert('Error', 'Please fill out all fields!');
       return;
@@ -115,6 +134,7 @@ const SignUp = () => {
         password: passwordRef.current,
         email: emailRef.current,
         fullName: nameRef.current,
+        birthdate: birthdate.toISOString(),
       });
 
       let profilePictureUrl = null;
@@ -144,7 +164,7 @@ const SignUp = () => {
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Home'),
+            onPress: () => navigation.navigate('Main'),
           },
         ],
       );
@@ -154,6 +174,11 @@ const SignUp = () => {
       setLoading(false);
       setUploadingImage(false);
     }
+  };
+
+  const handleDateConfirm = (date) => {
+    setBirthdate(date);
+    setShowDatePicker(false);
   };
 
   return (
@@ -171,8 +196,7 @@ const SignUp = () => {
             <BackButton navigation={navigation} />
 
             <View>
-              <Text style={styles.welcomeText}>Let's</Text>
-              <Text style={styles.welcomeText}>Get Started!</Text>
+              <Text style={styles.welcomeText}>Let's get started!</Text>
             </View>
 
             <View style={styles.form}>
@@ -216,6 +240,20 @@ const SignUp = () => {
                 placeholder="Enter your email"
                 onChangeText={(value) => (emailRef.current = value)}
               />
+              <Input
+                onPress={() => setShowDatePicker(true)}
+                icon={<Icon name="birthday" size={26} strokeWidth={1.6} />}
+                placeholder="Enter your birthdate"
+                value={birthdate.toLocaleDateString()}
+              />
+              {showDatePicker && (
+                <DateTimePickerModal
+                  isVisible={showDatePicker}
+                  mode="date"
+                  onConfirm={handleDateConfirm}
+                  onCancel={() => setShowDatePicker(false)}
+                />
+              )}
               <Input
                 icon={<Icon name="lock" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your password"
@@ -266,6 +304,8 @@ const styles = StyleSheet.create({
     fontSize: hp(4),
     fontWeight: theme.fonts.bold,
     color: theme.colors.text,
+    marginTop: hp(-2),
+    marginBottom: hp(-8),
   },
   form: {
     gap: 25,
@@ -280,6 +320,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 5,
+    marginBottom: hp(5),
   },
   footerText: {
     textAlign: 'center',
@@ -320,5 +361,26 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)', // semi-transparent background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    width: wp(80),
+    alignItems: 'center',
+  },
+  modalCloseButton: {
+    marginTop: 10,
+    padding: 10,
+  },
+  modalCloseText: {
+    color: theme.colors.primary,
+    fontWeight: 'bold',
   },
 });
