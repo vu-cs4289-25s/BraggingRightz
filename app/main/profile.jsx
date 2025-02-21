@@ -140,11 +140,12 @@ const Profile = () => {
             </View>
           )}
           {session && (
-            <View style={styles.statItem}>
+            // TODO: live updates
+            <Pressable onPress={() => navigation.navigate('Friends')} style={styles.statItem}>
               <Icon name="chart-line" size={24} color="#FFD700" />
-              <Text style={styles.statValue}>{session.betsWon || 0}</Text>
-              <Text style={styles.statLabel}>Bets Won</Text>
-            </View>
+              <Text style={styles.statValue}>{session.friends.length || 0}</Text>
+              <Text style={styles.statLabel}>Friends</Text>
+            </Pressable>
           )}
         </View>
 
@@ -175,7 +176,7 @@ const Profile = () => {
                 </Text>
               </View>
             </View>
-          </View>
+          </View>        
         ))}
         {/*<View style={styles.betsContainer}>*/}
         {/*  {session?.bets?.length > 0 ? (*/}
