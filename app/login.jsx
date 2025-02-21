@@ -36,7 +36,7 @@ const Login = () => {
     // Log in user
     setLoading(true);
     try {
-      const user = await AuthService.login({
+      await AuthService.login({
         username: usernameRef.current,
         password: passwordRef.current,
       });
@@ -78,7 +78,7 @@ const Login = () => {
                 Please login to continue
               </Text>
               <Input
-                icon={<Icon name="mail" size={26} strokeWidth={1.6} />}
+                icon={<Icon name="user" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your username"
                 onChangeText={(value) => (usernameRef.current = value)}
               />
@@ -88,7 +88,19 @@ const Login = () => {
                 secureTextEntry
                 onChangeText={(value) => (passwordRef.current = value)}
               />
-              <Text style={styles.forgotPassword}>Forgot Password?</Text>
+              <Pressable onPress={handleForgotPassword}>
+                <Text
+                  style={[
+                    styles.forgotPassword,
+                    {
+                      color: theme.colors.primaryDark,
+                      fontWeight: theme.fonts.semibold,
+                    },
+                  ]}
+                >
+                  Forgot Password?
+                </Text>
+              </Pressable>
               {/*button*/}
               <Button title={'Login'} loading={loading} onPress={onSubmit} />
             </View>
