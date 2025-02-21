@@ -11,6 +11,7 @@ import NewGroup from './app/main/newGroup';
 import EditProfile from './app/main/editProfile';
 import Settings from './app/main/settings';
 import BottomTabNavigator from './components/BottomTabNavigator';
+import Friends from './app/main/friends';
 
 const Stack = createStackNavigator();
 
@@ -29,6 +30,7 @@ export default function App() {
           <Stack.Screen name="NewGroup" component={NewGroup} />
           <Stack.Screen name="EditProfile" component={EditProfile} />
           <Stack.Screen name="Settings" component={Settings} />
+          <Stack.Screen name="Friends" component={Friends} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
