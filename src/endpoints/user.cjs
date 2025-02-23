@@ -218,34 +218,34 @@ class UserService {
   // Get UID from username
   async getUid({ username }) {
     try {
-        const usersRef = collection(db, "users"); // Reference to users collection
-        const q = query(usersRef, where("username", "==", username)); // Query where username matches
+      const usersRef = collection(db, 'users'); // Reference to users collection
+      const q = query(usersRef, where('username', '==', username)); // Query where username matches
 
-        const querySnapshot = await getDocs(q);
+      const querySnapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-            console.error("No user found with username:", username);
-            return null;
-        }
-
-        const userDoc = querySnapshot.docs[0]; // Assuming username is unique
-        console.log("User found:", userDoc.id, userDoc.data());
-
-        return userDoc.id;
-    } catch (error) {
-        console.error("Error fetching UID:", error);
+      if (querySnapshot.empty) {
+        console.error('No user found with username:', username);
         return null;
+      }
+
+      const userDoc = querySnapshot.docs[0]; // Assuming username is unique
+      console.log('User found:', userDoc.id, userDoc.data());
+
+      return userDoc.id;
+    } catch (error) {
+      console.error('Error fetching UID:', error);
+      return null;
     }
   }
 
   // Check user exists based on username
-  async userExists({username}){
-    const userQuery = query (
+  async userExists({ username }) {
+    const userQuery = query(
       collection(db, 'users'),
       where('username', '==', username),
     );
     const querySnapshot = await getDocs(userQuery);
-    return (!userQuery.empty);
+    return !userQuery.empty;
   }
 
   // Helper method to check username availability
