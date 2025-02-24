@@ -30,7 +30,6 @@ export default function App() {
           <Stack.Screen name="Notifications" component={Notifications} />
           <Stack.Screen name="NewGroup" component={NewGroup} />
           <Stack.Screen name="Profile" component={Profile} />
-          <Stack.Screen name="Friends" component={Friends} />
           <Stack.Screen name="EditProfile" component={EditProfile} />
           <Stack.Screen name="Settings" component={Settings} />
           <Stack.Screen name="Friends" component={Friends} />
