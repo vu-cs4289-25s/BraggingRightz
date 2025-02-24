@@ -152,7 +152,7 @@ const Home = () => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Live & Upcoming Bets</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ActiveBets')}>
+            <TouchableOpacity onPress={() => navigation.navigate('MyBets')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
