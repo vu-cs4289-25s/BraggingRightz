@@ -16,6 +16,7 @@ import Friends from './app/main/friends';
 import MyBets from './app/main/MyBets';
 import BetDetails from './app/main/BetDetails';
 import NewBet from './app/main/newBet';
+import Groups from './app/main/groups';
 
 const Stack = createStackNavigator();
 
@@ -39,6 +40,7 @@ export default function App() {
           <Stack.Screen name="BetDetails" component={BetDetails} />
           <Stack.Screen name="MyBets" component={MyBets} />
           <Stack.Screen name="NewBet" component={NewBet} />
+          <Stack.Screen name="Groups" component={Groups} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
