@@ -134,7 +134,6 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             style={styles.groupsScroll}
           >
-
             {['Sports Fans', 'Movie Buffs', 'Trivia Night'].map(
               (group, index) => (
                 <View style={styles.betsContainer}>
@@ -154,7 +153,7 @@ const Home = () => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Live & Upcoming Bets</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ActiveBets')}>
+            <TouchableOpacity onPress={() => navigation.navigate('MyBets')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
