@@ -60,9 +60,8 @@ const Home = () => {
 
   return (
     <ScreenWrapper bg="white">
-      <ScrollView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
+       {/* Header */}
+       <View style={styles.header}>
           <Text style={styles.title}>BraggingRightz</Text>
           <View style={styles.icons}>
             <Pressable onPress={() => navigation.navigate('Notifications')}>
@@ -79,7 +78,7 @@ const Home = () => {
           </View>
         </View>
         <View style={styles.sectionDivider} />
-
+      <ScrollView style={styles.container}>
         {/* Coins Display */}
         <View style={styles.coinsSection}>
           <Ionicons

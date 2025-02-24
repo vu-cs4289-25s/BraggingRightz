@@ -50,9 +50,7 @@ const BottomTabNavigator = () => {
         component={Profile}
         options={{
           tabBarIcon: ({ color, size }) => (
-            // You can use your Avatar component or an icon for Profile here.
-            // Using a font icon example:
-            <Avatar />
+            <Avatar size={hp(3)}/>
           ),
           tabBarLabel: 'Profile',
         }}
