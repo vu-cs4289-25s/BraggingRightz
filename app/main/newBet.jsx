@@ -21,7 +21,7 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Dropdown } from 'react-native-element-dropdown';
 import BetsService from '../../src/endpoints/bets.cjs';
 import { useNavigation } from '@react-navigation/native';
-import GroupsService from "../../src/endpoints/groups";
+import GroupsService from '../../src/endpoints/groups';
 
 const NewBet = () => {
   const navigation = useNavigation();
@@ -50,15 +50,15 @@ const NewBet = () => {
           // Redirect user to create group page if no groups
           Alert.alert(
             'No groups found for this user.',
-              'Join or create a group to start betting!',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => navigation.navigate('NewGroup'),
-                },
-              ],
-
+            'Join or create a group to start betting!',
+            [
+              {
+                text: 'OK',
+                onPress: () => navigation.navigate('NewGroup'),
+              },
+            ],
           );
+          navigation.navigate('Home');
         }
       } catch (error) {
         console.log('Error fetching session:', error);
@@ -128,27 +128,42 @@ const NewBet = () => {
       Alert.alert('Please enter a valid integer coin amount.');
       return;
     }
-    // submit the bet
+
+    setLoading(true);
     try {
-      await BetsService.createBet({
-        creatorId: session.userId,
-        question,
-        options,
-        endTime,
-        groupId: selectedGroup,
+      // Filter out any empty options and trim whitespace
+      const validOptions = options
+        .filter((opt) => opt.trim())
+        .map((opt) => opt.trim());
+
+      const betData = {
+        creatorId: session.uid, // Make sure to use uid from session
+        question: question.trim(),
         wagerAmount: parseInt(coinAmount, 10),
-      });
-      Alert.alert('Bet created successfully, let the betting begin!');
+        answerOptions: validOptions,
+        expiresAt: endTime.toISOString(),
+        groupId: selectedGroup,
+      };
+
+      const result = await BetsService.createBet(betData);
+
+      Alert.alert('Success', 'Bet created successfully!', [
+        {
+          text: 'View Bet',
+          onPress: () =>
+            navigation.navigate('BetDetails', { betId: result.id }),
+        },
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Home'),
+        },
+      ]);
     } catch (error) {
-      Alert.alert('Creating Bet Failed: ', error.message);
+      console.error('Error creating bet:', error);
+      Alert.alert('Error', error.message || 'Failed to create bet');
+    } finally {
+      setLoading(false);
     }
-    navigation.navigate('Home');
-    console.log({
-      selectedGroup,
-      question,
-      options,
-      endTime,
-    });
   };
 
   return (

@@ -11,19 +11,20 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
-import { hp } from '../../helpers/common';
+import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import AuthService from '../../src/endpoints/auth.cjs';
+import Avatar from '../../components/Avatar';
 import Button from '../../components/Button';
-import Camera from '../../assets/icons/Camera';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Dropdown } from 'react-native-element-dropdown';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import { useNavigation } from '@react-navigation/native';
 import Input from '../../components/Input';
 import User from '../../assets/icons/User';
-import * as ImagePicker from "expo-image-picker";
-import Avatar from "../../components/Avatar";
-import FriendService from "../../src/endpoints/friend.cjs";
+import * as ImagePicker from 'expo-image-picker';
+import Avatar from '../../components/Avatar';
+import FriendService from '../../src/endpoints/friend.cjs';
 
 const NewGroup = () => {
   const navigation = useNavigation();
@@ -40,11 +41,11 @@ const NewGroup = () => {
   const pickImage = async () => {
     try {
       const { status } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-            'Permission Required',
-            'Permission to access camera roll is required!',
+          'Permission Required',
+          'Permission to access camera roll is required!',
         );
         return;
       }
@@ -62,19 +63,19 @@ const NewGroup = () => {
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedImage = result.assets[0];
         const base64Size = selectedImage.base64
-            ? (selectedImage.base64.length * 3) / 4
-            : 0;
+          ? (selectedImage.base64.length * 3) / 4
+          : 0;
         if (base64Size > 900000) {
           Alert.alert(
-              'Image Too Large',
-              'Please choose a smaller image or try again with a different photo.',
+            'Image Too Large',
+            'Please choose a smaller image or try again with a different photo.',
           );
           return;
         }
 
         const base64Image = selectedImage.base64
-            ? `data:image/jpeg;base64,${selectedImage.base64}`
-            : selectedImage.uri;
+          ? `data:image/jpeg;base64,${selectedImage.base64}`
+          : selectedImage.uri;
 
         setGroupPhoto(base64Image);
       }
@@ -104,26 +105,21 @@ const NewGroup = () => {
         isPrivate: isPrivate,
       });
 
-      Alert.alert('Group Successfully Created!',
-          'Create Some Bets!',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate('Groups'),
-            },
-          ],
-      );
+      Alert.alert('Group Successfully Created!', 'Create Some Bets!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Groups'),
+        },
+      ]);
     } catch (error) {
-      Alert.alert('Group Creation Failed',error.message,
-          [
-            {
-              text: 'Try Again',
-              onPress: () => navigation.navigate('Home'),
-            },
-          ],);
+      Alert.alert('Group Creation Failed', error.message, [
+        {
+          text: 'Try Again',
+          onPress: () => navigation.navigate('Home'),
+        },
+      ]);
     }
   };
-
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -141,6 +137,16 @@ const NewGroup = () => {
     fetchSession();
   }, []);
 
+  // SEMILOGIC TO FETCH LIST OF USERS FRIENDS TO BE ABLE TO SELECT MEMBERS
+  const fetchFriends = async () => {
+    // Replace with actual API call to fetch friends
+    return [
+      { label: 'Friend 1', value: 'friend1' },
+      { label: 'Friend 2', value: 'friend2' },
+      { label: 'Friend 3', value: 'friend3' },
+    ];
+  };
+
   return (
     <ScreenWrapper bg="white">
       <View style={styles.container}>
@@ -148,13 +154,13 @@ const NewGroup = () => {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.avatarContainer}>
             <TouchableOpacity
-                onPress={pickImage}
-                style={styles.avatarContainer}
+              onPress={pickImage}
+              style={styles.avatarContainer}
             >
               <Avatar
-                  uri={groupPhoto || require('../../assets/images/icon.png')}
-                  size={hp(15)}
-                  rounded={theme.radius.xl}
+                uri={groupPhoto || require('../../assets/images/icon.png')}
+                size={hp(15)}
+                rounded={theme.radius.xl}
               />
               <View style={styles.editIcon}>
                 <Camera size={hp(2)} color={theme.colors.dark} />

@@ -173,26 +173,26 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
     textAlign: 'right',
   },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    emptyText: {
-        fontSize: hp(2),
-        color: theme.colors.text,
-        marginBottom: hp(2),
-    },
-    createButton: {
-        backgroundColor: theme.colors.primary,
-        paddingVertical: hp(1.5),
-        paddingHorizontal: wp(5),
-        borderRadius: 5,
-    },
-    createButtonText: {
-        color: 'white',
-        fontSize: hp(2),
-    }
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: hp(2),
+    color: theme.colors.text,
+    marginBottom: hp(2),
+  },
+  createButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: hp(1.5),
+    paddingHorizontal: wp(5),
+    borderRadius: 5,
+  },
+  createButtonText: {
+    color: 'white',
+    fontSize: hp(2),
+  },
 });
 
 export default Groups;
