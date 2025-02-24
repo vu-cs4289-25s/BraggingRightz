@@ -139,13 +139,15 @@ const Home = () => {
         />
 
         {/* My Groups Preview */}
+        {/* See all button now wired but the preview bubbles are still static */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>My Groups</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('MyGroups')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Groups')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -170,7 +172,7 @@ const Home = () => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Live & Upcoming Bets</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ActiveBets')}>
+            <TouchableOpacity onPress={() => navigation.navigate('MyBets')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>

@@ -11,18 +11,19 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
-import { hp, wp } from '../../helpers/common';
+import { hp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import AuthService from '../../src/endpoints/auth.cjs';
-import Avatar from '../../components/Avatar';
 import Button from '../../components/Button';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import Camera from '../../assets/icons/Camera';
 import { Dropdown } from 'react-native-element-dropdown';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import { useNavigation } from '@react-navigation/native';
 import Input from '../../components/Input';
 import User from '../../assets/icons/User';
-import BetsService from '../../src/endpoints/bets';
+import * as ImagePicker from 'expo-image-picker';
+import Avatar from '../../components/Avatar';
+import FriendService from '../../src/endpoints/friend.cjs';
 
 const NewGroup = () => {
   const navigation = useNavigation();
@@ -33,6 +34,55 @@ const NewGroup = () => {
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [isPrivate, setIsPrivate] = useState(true);
   const description = useRef('');
+  const [groupPhoto, setGroupPhoto] = useState(null);
+
+  // Group Profile Pic Starter Code
+  const pickImage = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Permission to access camera roll is required!',
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.2,
+        base64: true,
+        width: 300,
+        height: 300,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const selectedImage = result.assets[0];
+        const base64Size = selectedImage.base64
+          ? (selectedImage.base64.length * 3) / 4
+          : 0;
+        if (base64Size > 900000) {
+          Alert.alert(
+            'Image Too Large',
+            'Please choose a smaller image or try again with a different photo.',
+          );
+          return;
+        }
+
+        const base64Image = selectedImage.base64
+          ? `data:image/jpeg;base64,${selectedImage.base64}`
+          : selectedImage.uri;
+
+        setGroupPhoto(base64Image);
+      }
+    } catch (error) {
+      console.log('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
 
   const onSubmit = async () => {
     if (!groupName.current) {
@@ -40,10 +90,9 @@ const NewGroup = () => {
       return;
     }
 
-    if (selectedMembers.length === 0) {
-      // FOR NOW DO NOTHING
-      //Alert.alert("Create New Group", "Please select at least one member");
-    }
+    // if (selectedMembers.length === 0) {
+    //   Alert.alert("Create New Group", "Please select at least one member");
+    // }
     setLoading(true);
 
     try {
@@ -55,12 +104,20 @@ const NewGroup = () => {
         isPrivate: isPrivate,
       });
 
-      Alert.alert('Group Successfully Created!', 'Create Some Bets!');
+      Alert.alert('Group Successfully Created!', 'Create Some Bets!', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Groups'),
+        },
+      ]);
     } catch (error) {
-      Alert.alert('Group Creation Failed', error.message);
+      Alert.alert('Group Creation Failed', error.message, [
+        {
+          text: 'Try Again',
+          onPress: () => navigation.navigate('Home'),
+        },
+      ]);
     }
-
-    navigation.navigate('Home');
   };
 
   useEffect(() => {
@@ -69,9 +126,9 @@ const NewGroup = () => {
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
 
-        // SEMILOGIC TO FETCH LIST OF USERS FRIENDS
-        // const friendsList = await fetchFriends();
-        // setFriends(friendsList);
+        // Friends object populate, though waiting on username to not be null
+        const friendsList = await FriendService.getFriendList();
+        setFriends(friendsList);
       } catch (error) {
         console.log('Error fetching session:', error);
       }
@@ -79,21 +136,26 @@ const NewGroup = () => {
     fetchSession();
   }, []);
 
-  // SEMILOGIC TO FETCH LIST OF USERS FRIENDS TO BE ABLE TO SELECT MEMBERS
-  const fetchFriends = async () => {
-    // Replace with actual API call to fetch friends
-    return [
-      { label: 'Friend 1', value: 'friend1' },
-      { label: 'Friend 2', value: 'friend2' },
-      { label: 'Friend 3', value: 'friend3' },
-    ];
-  };
-
   return (
     <ScreenWrapper bg="white">
       <View style={styles.container}>
         <Header title="Create Group" showBackButton={true} />
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity
+              onPress={pickImage}
+              style={styles.avatarContainer}
+            >
+              <Avatar
+                uri={groupPhoto || require('../../assets/images/icon.png')}
+                size={hp(15)}
+                rounded={theme.radius.xl}
+              />
+              <View style={styles.editIcon}>
+                <Camera size={hp(2)} color={theme.colors.dark} />
+              </View>
+            </TouchableOpacity>
+          </View>
           {/*form*/}
           <View style={styles.form}>
             <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
@@ -175,6 +237,24 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingVertical: 20,
+  },
+  avatarContainer: {
+    height: hp(14),
+    width: hp(14),
+    alignSelf: 'center',
+  },
+  editIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: -10,
+    backgroundColor: 'white',
+    borderRadius: 50,
+    padding: 8,
+    shadowColor: theme.colors.textLight,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 7,
   },
   form: {
     marginVertical: 20,
