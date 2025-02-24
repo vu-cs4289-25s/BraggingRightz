@@ -33,6 +33,7 @@ export default function App() {
           <Stack.Screen name="Friends" component={Friends} />
           <Stack.Screen name="EditProfile" component={EditProfile} />
           <Stack.Screen name="Settings" component={Settings} />
+          <Stack.Screen name="Friends" component={Friends} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
