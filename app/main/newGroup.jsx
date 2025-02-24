@@ -16,15 +16,14 @@ import { theme } from '../../constants/theme';
 import AuthService from '../../src/endpoints/auth.cjs';
 import Avatar from '../../components/Avatar';
 import Button from '../../components/Button';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Dropdown } from 'react-native-element-dropdown';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import { useNavigation } from '@react-navigation/native';
 import Input from '../../components/Input';
 import User from '../../assets/icons/User';
 import * as ImagePicker from 'expo-image-picker';
-import Avatar from '../../components/Avatar';
 import FriendService from '../../src/endpoints/friend.cjs';
+import Camera from '../../assets/icons/Camera';
 
 const NewGroup = () => {
   const navigation = useNavigation();
@@ -111,6 +110,7 @@ const NewGroup = () => {
           onPress: () => navigation.navigate('Groups'),
         },
       ]);
+      navigation.navigate("Groups");
     } catch (error) {
       Alert.alert('Group Creation Failed', error.message, [
         {
@@ -118,6 +118,7 @@ const NewGroup = () => {
           onPress: () => navigation.navigate('Home'),
         },
       ]);
+      navigation.navigate('Home');
     }
   };
 
@@ -136,16 +137,6 @@ const NewGroup = () => {
     };
     fetchSession();
   }, []);
-
-  // SEMILOGIC TO FETCH LIST OF USERS FRIENDS TO BE ABLE TO SELECT MEMBERS
-  const fetchFriends = async () => {
-    // Replace with actual API call to fetch friends
-    return [
-      { label: 'Friend 1', value: 'friend1' },
-      { label: 'Friend 2', value: 'friend2' },
-      { label: 'Friend 3', value: 'friend3' },
-    ];
-  };
 
   return (
     <ScreenWrapper bg="white">
@@ -213,13 +204,18 @@ const NewGroup = () => {
             </Text>
             <View style={styles.inputContainer}>
               <Dropdown
-                data={friends}
+                data={friends.map(friend => ({
+                  label: friend.username,
+                  value: friend.userId,
+                }))}
                 labelField="label"
                 valueField="value"
                 placeholder="Select members"
                 value={selectedMembers}
                 onChange={(item) => {
-                  setSelectedMembers([...selectedMembers, item.value]);
+                  if (!selectedMembers.includes(item.value)) {
+                    setSelectedMembers([...selectedMembers, item.value]);
+                  }
                 }}
                 multiple={true}
                 style={styles.dropdown}
