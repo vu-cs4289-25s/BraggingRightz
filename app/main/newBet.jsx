@@ -21,6 +21,7 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Dropdown } from 'react-native-element-dropdown';
 import BetsService from '../../src/endpoints/bets.cjs';
 import { useNavigation } from '@react-navigation/native';
+import GroupsService from "../../src/endpoints/groups";
 
 const NewBet = () => {
   const navigation = useNavigation();
@@ -29,11 +30,7 @@ const NewBet = () => {
   const [options, setOptions] = useState(['', '']); // two default empty options
   const [endTime, setEndTime] = useState(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  // dummy data for groups; later replace with actual groups from session data
-  const [groups, setGroups] = useState([
-    { id: 'group1', name: 'Group 1' },
-    { id: 'group2', name: 'Group 2' },
-  ]);
+  const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   //const editorRef = useRef("");
   //const bodyRef = useRef("");
@@ -45,14 +42,23 @@ const NewBet = () => {
       try {
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
-        // when groups logic is implemented, update the groups state accordingly.
+
         if (sessionData.groups && sessionData.groups.length > 0) {
-          setGroups(sessionData.groups);
+          const tempGroups = await GroupsService.getUserGroups(sessionData.uid);
+          setGroups(tempGroups);
         } else {
+          // Redirect user to create group page if no groups
           Alert.alert(
-            'No groups found for this user. Join or create a group to start betting!',
+            'No groups found for this user.',
+              'Join or create a group to start betting!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.navigate('NewGroup'),
+                },
+              ],
+
           );
-          navigation.navigate('Groups');
         }
       } catch (error) {
         console.log('Error fetching session:', error);
