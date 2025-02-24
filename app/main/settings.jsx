@@ -44,7 +44,10 @@ const Settings = () => {
             title="Settings"
             showBackButton={true}
             rightComponent={
-              <TouchableOpacity onPress={handleLogout} style={styles.headerLogout}>
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={styles.headerLogout}
+              >
                 <Logout
                   style={styles.logoutButton}
                   strokeWidth={2}
