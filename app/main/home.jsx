@@ -19,9 +19,20 @@ import { hp, wp } from '../../helpers/common';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/Avatar';
+import AddFriendModal from '../../components/AddFriendModal';
+import FriendService from '../../src/endpoints/friend.cjs'
 
 const Home = () => {
   const navigation = useNavigation();
+
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const handleAddFriend = (username) => {
+    console.log('Adding friend:', username);
+    FriendService.addFriend({
+          user2username: username,
+    });
+  };
 
   const userBets = [
     {
@@ -108,7 +119,7 @@ const Home = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('LeaderBoard')}
+            onPress={() => setModalVisible(true)}
           >
             <Icon
               name="plus-square"
@@ -116,10 +127,18 @@ const Home = () => {
               strokeWidth={2}
               color={theme.colors.text}
             />{' '}
-            <Text style={styles.actionText}>Get More Coins</Text>
+            <Text style={styles.actionText}>Add a friend</Text>
           </TouchableOpacity>
         </View>
 
+        {/* AddFriendModal usage */}
+        <AddFriendModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onAdd={handleAddFriend}
+        />
+
+        {/* My Groups Preview */}
         {/* See all button now wired but the preview bubbles are still static */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>

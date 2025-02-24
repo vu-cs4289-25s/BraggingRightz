@@ -245,7 +245,7 @@ class UserService {
       where('username', '==', username),
     );
     const querySnapshot = await getDocs(userQuery);
-    return !userQuery.empty;
+    return !querySnapshot.empty;
   }
 
   // Helper method to check username availability
