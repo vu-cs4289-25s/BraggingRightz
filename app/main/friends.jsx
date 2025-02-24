@@ -33,7 +33,7 @@ const Friends = () => {
   const addFriend = async ({ username }) => {
     // Just an example with set username
     await FriendService.addFriend({
-      user2username: 'user1',
+      user2username: username,
     });
 
     // Refresh friend list after adding a friend
