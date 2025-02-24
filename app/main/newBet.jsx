@@ -21,7 +21,7 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Dropdown } from 'react-native-element-dropdown';
 import BetsService from '../../src/endpoints/bets.cjs';
 import { useNavigation } from '@react-navigation/native';
-import GroupsService from "../../src/endpoints/groups";
+import GroupsService from '../../src/endpoints/groups';
 
 const NewBet = () => {
   const navigation = useNavigation();
@@ -50,14 +50,13 @@ const NewBet = () => {
           // Redirect user to create group page if no groups
           Alert.alert(
             'No groups found for this user.',
-              'Join or create a group to start betting!',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => navigation.navigate('NewGroup'),
-                },
-              ],
-
+            'Join or create a group to start betting!',
+            [
+              {
+                text: 'OK',
+                onPress: () => navigation.navigate('NewGroup'),
+              },
+            ],
           );
           navigation.navigate('Home');
         }
