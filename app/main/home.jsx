@@ -120,19 +120,21 @@ const Home = () => {
           </TouchableOpacity>
         </View>
 
-        {/* My Groups Preview */}
+        {/* See all button now wired but the preview bubbles are still static */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>My Groups</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('MyGroups')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Groups')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.groupsScroll}
           >
+
             {['Sports Fans', 'Movie Buffs', 'Trivia Night'].map(
               (group, index) => (
                 <View style={styles.betsContainer}>
