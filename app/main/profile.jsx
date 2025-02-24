@@ -141,9 +141,14 @@ const Profile = () => {
           )}
           {session && (
             // TODO: live updates
-            <Pressable onPress={() => navigation.navigate('Friends')} style={styles.statItem}>
+            <Pressable
+              onPress={() => navigation.navigate('Friends')}
+              style={styles.statItem}
+            >
               <Icon name="chart-line" size={24} color="#FFD700" />
-              <Text style={styles.statValue}>{session.friends.length || 0}</Text>
+              <Text style={styles.statValue}>
+                {session.friends.length || 0}
+              </Text>
               <Text style={styles.statLabel}>Friends</Text>
             </Pressable>
           )}
