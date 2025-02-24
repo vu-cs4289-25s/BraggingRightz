@@ -48,52 +48,76 @@ const EditProfile = () => {
   }, []);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Permission to access camera roll is required!');
-      return;
-    }
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-    if (!result.cancelled) {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Permission to access camera roll is required!',
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.2,
+        base64: true,
+        width: 300,
+        height: 300,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const selectedImage = result.assets[0];
+        const base64Size = selectedImage.base64
+          ? (selectedImage.base64.length * 3) / 4
+          : 0;
+        if (base64Size > 900000) {
+          Alert.alert(
+            'Image Too Large',
+            'Please choose a smaller image or try again with a different photo.',
+          );
+          return;
+        }
+
+        const base64Image = selectedImage.base64
+          ? `data:image/jpeg;base64,${selectedImage.base64}`
+          : selectedImage.uri;
+
+        setProfileImage(base64Image);
+      }
+    } catch (error) {
+      console.log('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
   const handleUpdate = async () => {
     setLoading(true);
-    const updateData = {
-      fullName,
-      username,
-      email,
-      profilePicture: profileImage,
-    };
-    if (password) {
-      updateData.password = password;
-    }
-    console.log('updateData in frontend', updateData);
     try {
+      const updateData = {};
+
+      if (fullName) updateData.fullName = fullName;
+      if (username) updateData.username = username;
+      if (email) updateData.email = email;
+      if (password) updateData.password = password;
+      if (profileImage) updateData.profilePicture = profileImage;
+
       await UserService.updateUserProfile({
         userId: userId,
         updateData: updateData,
       });
-      console.log('Profile updated: ', updateData);
-      // reset everything
-      setFullName('');
-      setUsername('');
-      setEmail('');
-      setPassword('');
 
+      Alert.alert('Success', 'Profile updated successfully!');
       navigation.navigate('Profile');
     } catch (error) {
       console.log('Update error:', error);
-      Alert.alert('Update Failed:', error.message);
+      Alert.alert('Update Failed', error.message || 'Failed to update profile');
+    } finally {
       setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -123,22 +147,26 @@ const EditProfile = () => {
             <Input
               icon={<Icon name="user" />}
               placeholder="Enter your name"
+              value={fullName}
               onChangeText={setFullName}
             />
             <Input
               icon={<Icon name="user" />}
               placeholder="Enter your new username"
+              value={username}
               onChangeText={setUsername}
             />
             <Input
               icon={<Icon name="mail" />}
               placeholder="Enter your new email"
+              value={email}
               onChangeText={setEmail}
             />
             <Input
               icon={<Icon name="lock" />}
               placeholder="Enter your new password"
               secureTextEntry
+              value={password}
               onChangeText={setPassword}
             />
             <Button title="Update" loading={loading} onPress={handleUpdate} />
