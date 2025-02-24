@@ -5,10 +5,9 @@ Friends Functionality
 */
 
 const { doc, updateDoc, arrayUnion } = require('firebase/firestore');
-
 const { auth, db } = require('../firebase/config');
-
 const { getUid, getUserProfile, userExists } = require('./user.cjs');
+import { Alert } from 'react-native';
 
 class FriendService {
   // Add a new friend
@@ -35,9 +34,6 @@ class FriendService {
         '...',
       );
 
-      // Get user2 information
-      const user2uid = await getUid({ username: user2username });
-
       // Check if username exists
       const isValidUsername = await userExists({ username: user2username });
 
@@ -46,12 +42,19 @@ class FriendService {
       if (!isValidUsername) {
         // Invalid friend request
         console.log('Username does not exist');
+        Alert.alert('Error', 'Username does not exist');
         return;
       } else if (currUser.username == user2username) {
         console.log('Can not add yourself as a friend');
+        Alert.alert('Error', 'Can not add yourself as a friend');
+        return;
       } else {
         // Valid friend request
         // Add friend to current user's list
+
+        // Get user2 information
+        const user2uid = await getUid({ username: user2username });
+
         const currUserDocRef = doc(db, 'users', currUser.uid);
         await updateDoc(currUserDocRef, {
           friends: arrayUnion({ userId: user2uid, status: 'pending' }),
@@ -102,6 +105,11 @@ class FriendService {
 
           const profile = await getUserProfile(uid); // Fetch friend's profile
 
+          if (!profile){
+            console.error(`No profile found for UID: ${uid}`);
+            return null;
+          }
+          
           return {
             userId: uid,
             username: profile.username || 'Unknown', // Ensure a default value
@@ -111,7 +119,7 @@ class FriendService {
         }),
       );
 
-      return friendInfo;
+      return friendInfo.filter(friend => friend !== null);
     } catch (error) {
       console.log('ERROR GETTING FRIENDS LIST: ', error);
     }

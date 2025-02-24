@@ -4,17 +4,21 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Text } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { hp } from '../../helpers/common';
+import { theme } from '../../constants/theme';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
 
 import { useNavigation } from '@react-navigation/native';
-import { Button } from 'react-native';
+import AddFriendModal from '../../components/AddFriendModal';
 import FriendService from '../../src/endpoints/friend.cjs';
 
 const Friends = () => {
   const navigation = useNavigation();
   const [friendsList, setFriendsList] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
 
   // Fetch friends list when the component mounts
   useEffect(() => {
@@ -29,12 +33,19 @@ const Friends = () => {
   const addFriend = async ({ username }) => {
     // Just an example with set username
     await FriendService.addFriend({
-      user2username: 'user',
+      user2username: 'user1',
     });
 
     // Refresh friend list after adding a friend
     const updatedFriends = await FriendService.getFriendList();
     setFriendsList(updatedFriends);
+  };
+
+  const handleAddFriend = (username) => {
+    console.log('Adding friend:', username);
+    FriendService.addFriend({
+          user2username: username,
+    });
   };
 
   return (
@@ -54,7 +65,26 @@ const Friends = () => {
             ))
           )}
 
-          <Button onPress={addFriend} title="Add Friend" />
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setModalVisible(true)}
+          >
+            <Icon
+              name="plus-square"
+              size={hp(3.2)}
+              strokeWidth={2}
+              color={theme.colors.text}
+            />{' '}
+            <Text style={styles.actionText}>Add a friend</Text>
+          </TouchableOpacity>
+
+          {/* AddFriendModal usage */}
+          <AddFriendModal
+            visible={modalVisible}
+            onClose={() => setModalVisible(false)}
+            onAdd={handleAddFriend}
+          />
+
         </ScrollView>
       </View>
     </ScreenWrapper>
