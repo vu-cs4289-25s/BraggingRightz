@@ -152,6 +152,7 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             style={styles.groupsScroll}
           >
+
             {['Sports Fans', 'Movie Buffs', 'Trivia Night'].map(
               (group, index) => (
                 <View style={styles.betsContainer}>

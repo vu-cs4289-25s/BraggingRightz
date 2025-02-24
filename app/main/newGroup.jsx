@@ -11,19 +11,19 @@ import {
 import React, { useState, useEffect, useRef } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
-import { hp } from '../../helpers/common';
+import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import AuthService from '../../src/endpoints/auth.cjs';
+import Avatar from '../../components/Avatar';
 import Button from '../../components/Button';
-import Camera from '../../assets/icons/Camera';
 import { Dropdown } from 'react-native-element-dropdown';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import { useNavigation } from '@react-navigation/native';
 import Input from '../../components/Input';
 import User from '../../assets/icons/User';
 import * as ImagePicker from 'expo-image-picker';
-import Avatar from '../../components/Avatar';
 import FriendService from '../../src/endpoints/friend.cjs';
+import Camera from '../../assets/icons/Camera';
 
 const NewGroup = () => {
   const navigation = useNavigation();
@@ -110,6 +110,7 @@ const NewGroup = () => {
           onPress: () => navigation.navigate('Groups'),
         },
       ]);
+      navigation.navigate("Groups");
     } catch (error) {
       Alert.alert('Group Creation Failed', error.message, [
         {
@@ -117,6 +118,7 @@ const NewGroup = () => {
           onPress: () => navigation.navigate('Home'),
         },
       ]);
+      navigation.navigate('Home');
     }
   };
 
@@ -202,13 +204,18 @@ const NewGroup = () => {
             </Text>
             <View style={styles.inputContainer}>
               <Dropdown
-                data={friends}
+                data={friends.map(friend => ({
+                  label: friend.username,
+                  value: friend.userId,
+                }))}
                 labelField="label"
                 valueField="value"
                 placeholder="Select members"
                 value={selectedMembers}
                 onChange={(item) => {
-                  setSelectedMembers([...selectedMembers, item.value]);
+                  if (!selectedMembers.includes(item.value)) {
+                    setSelectedMembers([...selectedMembers, item.value]);
+                  }
                 }}
                 multiple={true}
                 style={styles.dropdown}

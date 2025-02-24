@@ -121,11 +121,11 @@ const NewBet = () => {
       return;
     }
     if (endTime.getTime() < Date.now()) {
-      Alert.alert('End time must be in the future.');
+      Alert.alert('Please specify when the voting ends.');
       return;
     }
-    if (!coinAmount || !/^\d+$/.test(coinAmount) || parseInt(coinAmount) <= 0) {
-      Alert.alert('Please enter a valid positive coin amount.');
+    if (!coinAmount || !/^\d+$/.test(coinAmount)) {
+      Alert.alert('Please enter a valid integer coin amount.');
       return;
     }
 
