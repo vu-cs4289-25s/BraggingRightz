@@ -181,7 +181,7 @@ const Profile = () => {
                 </Text>
               </View>
             </View>
-          </View>
+          </View>        
         ))}
         {/*<View style={styles.betsContainer}>*/}
         {/*  {session?.bets?.length > 0 ? (*/}
