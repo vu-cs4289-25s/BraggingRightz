@@ -13,8 +13,8 @@ import Settings from './app/main/settings';
 import BottomTabNavigator from './components/BottomTabNavigator';
 import Profile from './app/main/profile';
 import Friends from './app/main/friends';
-import MyBets from './app/main/MyBets';
-import BetDetails from './app/main/BetDetails';
+import MyBets from './app/main/myBets';
+import BetDetails from './app/main/betDetails';
 import NewBet from './app/main/newBet';
 import Groups from './app/main/groups';
 
