@@ -13,9 +13,15 @@
 //
 // const styles = StyleSheet.create({});
 
-
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Image } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+} from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 const Notifications = () => {
@@ -42,7 +48,6 @@ const Notifications = () => {
 
       {/* Scrollable Notifications List */}
       <ScrollView contentContainerStyle={styles.notificationsList}>
-
         {/* Follow Request Notification */}
         <TouchableOpacity style={styles.notificationItem}>
           <Image
@@ -65,7 +70,9 @@ const Notifications = () => {
             style={styles.avatar}
           />
           <View style={styles.notificationTextContainer}>
-            <Text style={styles.notificationTitle}>User123 added you as a friend </Text>
+            <Text style={styles.notificationTitle}>
+              User123 added you as a friend{' '}
+            </Text>
             <Text style={styles.notificationSubtitle}>Just now</Text>
           </View>
           <View style={styles.unreadDot} />
@@ -83,7 +90,6 @@ const Notifications = () => {
             <Text style={styles.notificationSubtitle}>2 hours ago</Text>
           </View>
         </TouchableOpacity>
-
       </ScrollView>
     </View>
   );
@@ -176,4 +182,3 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 });
-
