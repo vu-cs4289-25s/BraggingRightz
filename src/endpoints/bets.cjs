@@ -141,17 +141,46 @@ class BetsService {
   // Get user's bets
   async getUserBets(userId, status = null) {
     try {
-      let betQuery = query(
+      // First get bets where user is a participant
+      const participantQuery = query(
         collection(db, 'bets'),
         where('participants', 'array-contains', userId),
       );
+      const participantSnapshot = await getDocs(participantQuery);
 
+      // Then get bets where user is the creator
+      const creatorQuery = query(
+        collection(db, 'bets'),
+        where('creatorId', '==', userId),
+      );
+      const creatorSnapshot = await getDocs(creatorQuery);
+
+      // Combine results using a Map to remove duplicates
+      const betsMap = new Map();
+
+      participantSnapshot.docs.forEach((doc) => {
+        const data = { id: doc.id, ...doc.data() };
+        betsMap.set(doc.id, data);
+      });
+
+      creatorSnapshot.docs.forEach((doc) => {
+        const data = { id: doc.id, ...doc.data() };
+        betsMap.set(doc.id, data);
+      });
+
+      let results = Array.from(betsMap.values());
+
+      // Filter by status if provided
       if (status) {
-        betQuery = query(betQuery, where('status', '==', status));
+        results = results.filter((bet) => bet.status === status);
       }
 
-      const querySnapshot = await getDocs(betQuery);
-      return querySnapshot.docs.map((doc) => doc.data());
+      // Sort by createdAt in descending order (most recent first)
+      results.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      return results;
     } catch (error) {
       this._handleError(error);
     }
@@ -223,16 +252,27 @@ class BetsService {
         throw new Error('You have already placed a bet');
       }
 
-      // Get user's points balance
-      const pointsDoc = await getDoc(doc(db, 'points', userId));
-      const currentBalance = pointsDoc.exists() ? pointsDoc.data().balance : 0;
+      // Get user's points balance which is num coins in the user
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userData = userDoc.data();
+      const currentBalance = userData.numCoins;
+
+      console.log('Current balance:', currentBalance);
+      console.log('Wager amount:', betData.wagerAmount);
 
       // Check if user has enough points
       if (currentBalance < betData.wagerAmount) {
-        throw new Error('Insufficient points balance');
+        throw new Error(
+          `Insufficient points balance. You need ${betData.wagerAmount} points but have ${currentBalance}`,
+        );
       }
 
       const timestamp = new Date().toISOString();
+
+      // Deduct points from user first
+      await updateDoc(doc(db, 'users', userId), {
+        numCoins: increment(-betData.wagerAmount),
+      });
 
       // Update bet with new participant
       const updatedOptions = betData.answerOptions.map((opt) =>
@@ -244,12 +284,6 @@ class BetsService {
             }
           : opt,
       );
-
-      // Deduct points from user
-      await updateDoc(doc(db, 'points', userId), {
-        balance: increment(-betData.wagerAmount),
-        lastUpdated: timestamp,
-      });
 
       // Update bet document
       await updateDoc(betRef, {
@@ -543,14 +577,6 @@ class BetsService {
       const userData = userDoc.data();
       const timestamp = new Date().toISOString();
 
-      // Remove any existing reaction from this user
-      await updateDoc(betRef, {
-        reactions: arrayRemove({
-          userId,
-          username: userData.username,
-        }),
-      });
-
       // Add new reaction
       await updateDoc(betRef, {
         reactions: arrayUnion({
@@ -561,6 +587,60 @@ class BetsService {
         }),
         updatedAt: timestamp,
       });
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Remove reaction
+  async removeReaction(betId, userId, reaction) {
+    try {
+      const betRef = doc(db, 'bets', betId);
+      const userDoc = await getDoc(doc(db, 'users', userId));
+
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const userData = userDoc.data();
+
+      await updateDoc(betRef, {
+        reactions: arrayRemove({
+          userId,
+          username: userData.username,
+          reaction,
+        }),
+        updatedAt: new Date().toISOString(),
+      });
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Toggle reaction
+  async toggleReaction(groupId, betId, userId, reaction) {
+    try {
+      const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const betData = betDoc.data();
+      const existingReaction = betData.reactions?.find(
+        (r) => r.userId === userId && r.reaction === reaction,
+      );
+
+      if (existingReaction) {
+        await this.removeReaction(betId, userId, reaction);
+      } else {
+        await this.addReaction(groupId, betId, userId, reaction);
+      }
 
       return true;
     } catch (error) {

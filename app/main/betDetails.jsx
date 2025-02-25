@@ -16,7 +16,10 @@ import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import BetsService from '../../src/endpoints/bets.cjs';
 import AuthService from '../../src/endpoints/auth.cjs';
+import GroupsService from '../../src/endpoints/groups.cjs';
 import Button from '../../components/Button';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { sharedStyles } from '../styles/shared';
 
 const BetDetails = () => {
   const route = useRoute();
@@ -30,9 +33,9 @@ const BetDetails = () => {
   const [session, setSession] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
   const [commenting, setCommenting] = useState(false);
-
-  // Reactions available
-  const reactions = ['👍', '👎', '🤔', '😂', '🎉'];
+  const [submitting, setSubmitting] = useState(false);
+  const [reactions, setReactions] = useState(['👍', '👎', '🤔', '😂', '🎉']);
+  const [userReactions, setUserReactions] = useState({});
 
   useEffect(() => {
     loadData();
@@ -43,36 +46,69 @@ const BetDetails = () => {
       const sessionData = await AuthService.getSession();
       setSession(sessionData);
 
-      const [betDetails, betComments] = await Promise.all([
-        BetsService.getBet(betId),
-        BetsService.getBetComments(betId),
-      ]);
+      // Get bet details
+      const betDetails = await BetsService.getBet(betId);
+      if (!betDetails) {
+        Alert.alert('Error', 'Bet not found');
+        navigation.goBack();
+        return;
+      }
+
+      // If bet has a group, fetch group name
+      if (betDetails.groupId) {
+        const groupName = await GroupsService.getGroupName(betDetails.groupId);
+        betDetails.groupName = groupName;
+      }
+
+      // Process reactions
+      const reactionCounts = {};
+      const userReactionMap = {};
+      if (betDetails.reactions) {
+        betDetails.reactions.forEach((reaction) => {
+          reactionCounts[reaction.reaction] =
+            (reactionCounts[reaction.reaction] || 0) + 1;
+          if (reaction.userId === sessionData.uid) {
+            userReactionMap[reaction.reaction] = true;
+          }
+        });
+      }
+      betDetails.reactionCounts = reactionCounts;
+      setUserReactions(userReactionMap);
 
       setBetData(betDetails);
+
+      // Get comments
+      const betComments = await BetsService.getBetComments(betId);
       setComments(betComments);
     } catch (error) {
       console.error('Error loading bet details:', error);
       Alert.alert('Error', 'Failed to load bet details');
+      navigation.goBack();
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePlaceBet = async () => {
-    if (!selectedOption) {
-      Alert.alert('Please select an option');
+  const handleVote = async (optionId) => {
+    if (!session) {
+      Alert.alert('Error', 'Please log in to vote');
       return;
     }
 
     try {
-      setLoading(true);
-      await BetsService.placeBet(betId, session.uid, selectedOption);
-      Alert.alert('Success', 'Your bet has been placed!');
-      loadData(); // Reload data to show updated bet status
+      setSubmitting(true);
+      await BetsService.placeBet(betId, session.uid, optionId);
+
+      // Refresh bet data
+      const updatedBet = await BetsService.getBet(betId);
+      setBetData(updatedBet);
+
+      Alert.alert('Success', 'Your vote has been placed!');
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to place bet');
+      console.error('Error placing vote:', error);
+      Alert.alert('Error', error.message || 'Failed to place vote');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -97,16 +133,33 @@ const BetDetails = () => {
   };
 
   const handleReaction = async (reaction) => {
+    if (!session) {
+      Alert.alert('Error', 'Please log in to react');
+      return;
+    }
+
     try {
-      await BetsService.addReaction(
+      setSubmitting(true);
+      await BetsService.toggleReaction(
         betData.groupId,
         betId,
         session.uid,
         reaction,
       );
-      loadData(); // Reload to show updated reactions
+
+      // Update local state
+      setUserReactions((prev) => ({
+        ...prev,
+        [reaction]: !prev[reaction],
+      }));
+
+      // Refresh bet data
+      const updatedBet = await BetsService.getBet(betId);
+      setBetData(updatedBet);
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to add reaction');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -135,12 +188,22 @@ const BetDetails = () => {
     opt.participants.includes(session?.uid),
   );
 
+  const userVotedOption = betData.answerOptions.find((option) =>
+    option.participants.includes(session?.uid),
+  );
+
   return (
     <ScreenWrapper>
-      <ScrollView style={styles.container}>
+      <ScrollView style={sharedStyles.container}>
         <Header title="Bet Details" showBackButton={true} />
 
         <View style={styles.betInfo}>
+          <View style={sharedStyles.groupHeader}>
+            <Icon name="users" size={20} color={theme.colors.textLight} />
+            <Text style={sharedStyles.groupName}>
+              {betData.groupName || 'No Group'}
+            </Text>
+          </View>
           <Text style={styles.question}>{betData.question}</Text>
           <Text style={styles.wager}>Wager: {betData.wagerAmount} coins</Text>
           <Text style={styles.expires}>
@@ -157,12 +220,12 @@ const BetDetails = () => {
                 selectedOption === option.id && styles.selectedOption,
                 hasPlacedBet && styles.disabledOption,
               ]}
-              onPress={() => !hasPlacedBet && setSelectedOption(option.id)}
-              disabled={hasPlacedBet || isExpired}
+              onPress={() => !hasPlacedBet && handleVote(option.id)}
+              disabled={hasPlacedBet || isExpired || submitting}
             >
               <Text style={styles.optionText}>{option.text}</Text>
               <Text style={styles.participantCount}>
-                {option.participants.length} bets
+                {option.participants.length} votes
               </Text>
             </TouchableOpacity>
           ))}
@@ -171,8 +234,8 @@ const BetDetails = () => {
         {!hasPlacedBet && !isExpired && (
           <Button
             title="Place Bet"
-            onPress={handlePlaceBet}
-            disabled={!selectedOption}
+            onPress={() => selectedOption && handleVote(selectedOption)}
+            disabled={!selectedOption || submitting}
           />
         )}
 
@@ -182,10 +245,19 @@ const BetDetails = () => {
             {reactions.map((reaction) => (
               <TouchableOpacity
                 key={reaction}
-                style={styles.reactionButton}
+                style={[
+                  styles.reactionButton,
+                  userReactions[reaction] && styles.selectedReaction,
+                ]}
                 onPress={() => handleReaction(reaction)}
+                disabled={submitting}
               >
                 <Text style={styles.reactionEmoji}>{reaction}</Text>
+                {betData.reactionCounts?.[reaction] > 0 && (
+                  <Text style={styles.reactionCount}>
+                    {betData.reactionCounts[reaction]}
+                  </Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -201,18 +273,19 @@ const BetDetails = () => {
               placeholder="Add a comment..."
               multiline
             />
-            <Button
-              title="Post"
+            <TouchableOpacity
+              style={styles.sendButton}
               onPress={handleAddComment}
-              loading={commenting}
-              disabled={!newComment.trim()}
-            />
+              disabled={submitting || !newComment.trim()}
+            >
+              <Icon name="send" size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.commentsList}>
             {comments.map((comment) => (
               <View key={comment.id} style={styles.comment}>
-                <Text style={styles.commentUser}>{comment.userId}</Text>
+                <Text style={styles.commentUser}>{comment.username}</Text>
                 <Text style={styles.commentText}>{comment.content}</Text>
                 <Text style={styles.commentTime}>
                   {new Date(comment.createdAt).toLocaleString()}
@@ -335,6 +408,19 @@ const styles = StyleSheet.create({
   },
   commentTime: {
     fontSize: hp(1.6),
+    color: theme.colors.textLight,
+    marginTop: hp(0.5),
+  },
+  sendButton: {
+    padding: hp(1.5),
+  },
+  selectedReaction: {
+    backgroundColor: theme.colors.primary + '30',
+    borderColor: theme.colors.primary,
+    borderWidth: 1,
+  },
+  reactionCount: {
+    fontSize: hp(1.4),
     color: theme.colors.textLight,
     marginTop: hp(0.5),
   },
