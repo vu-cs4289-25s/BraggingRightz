@@ -285,6 +285,12 @@ class BetsService {
           : opt,
       );
 
+      // Deduct points from user
+      await updateDoc(doc(db, 'users', userId), {
+        numCoins: increment(-betData.wagerAmount),
+        totalSpent: increment(betData.wagerAmount),
+      });
+
       // Update bet document
       await updateDoc(betRef, {
         answerOptions: updatedOptions,
@@ -371,10 +377,10 @@ class BetsService {
 
         // Distribute winnings to winners
         const distributionPromises = winners.map(async (winnerId) => {
-          const userRef = doc(db, 'points', winnerId);
-          await updateDoc(userRef, {
-            balance: increment(winningsPerPerson),
-            lastUpdated: timestamp,
+          // add winnings to user's num coins
+          await updateDoc(doc(db, 'users', winnerId), {
+            numCoins: increment(winningsPerPerson),
+            totalEarned: increment(winningsPerPerson),
           });
 
           // Add to user's history
@@ -492,17 +498,33 @@ class BetsService {
       }
 
       const betData = betDoc.data();
+      const now = new Date();
+      const expiresAt = new Date(betData.expiresAt);
 
-      // If this is a group bet, update the group's bets array
-      if (betData.groupId) {
-        const groupRef = doc(db, 'groups', betData.groupId);
-        await updateDoc(groupRef, {
-          bets: arrayRemove(betId),
-          updatedAt: new Date().toISOString(),
-        });
+      // Check if bet has expired
+      if (now > expiresAt) {
+        throw new Error('Cannot delete an expired bet');
       }
 
+      // Process refunds for all participants
+      const refundPromises = [];
+      betData.answerOptions.forEach((option) => {
+        option.participants.forEach((userId) => {
+          const userPointsRef = doc(db, 'users', userId);
+          refundPromises.push(
+            updateDoc(userPointsRef, {
+              numCoins: increment(betData.wagerAmount),
+            }),
+          );
+        });
+      });
+
+      // Wait for all refunds to process
+      await Promise.all(refundPromises);
+
+      // Delete the bet
       await deleteDoc(betRef);
+
       return true;
     } catch (error) {
       this._handleError(error);
