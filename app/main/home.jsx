@@ -10,6 +10,7 @@ import {
   Alert,
   Pressable,
   ImageBackground,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -21,11 +22,56 @@ import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/Avatar';
 import AddFriendModal from '../../components/AddFriendModal';
 import FriendService from '../../src/endpoints/friend.cjs';
+import BetsService from '../../src/endpoints/bets';
+import GroupsService from '../../src/endpoints/groups';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../../src/firebase/config';
+import { sharedStyles } from '../styles/shared';
 
 const Home = () => {
   const navigation = useNavigation();
-
   const [modalVisible, setModalVisible] = useState(false);
+  const [bets, setBets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const sessionData = await AuthService.getSession();
+        setSession(sessionData);
+
+        // Fetch user's bets
+        const userBets = await BetsService.getUserBets(sessionData.uid);
+
+        // Fetch group names for each bet
+        const betsWithGroupNames = await Promise.all(
+          userBets.map(async (bet) => {
+            if (bet.groupId) {
+              const groupName = await GroupsService.getGroupName(bet.groupId);
+              return {
+                ...bet,
+                groupName,
+              };
+            }
+            return {
+              ...bet,
+              groupName: 'No Group',
+            };
+          }),
+        );
+
+        setBets(betsWithGroupNames);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        Alert.alert('Error', 'Failed to load bets');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleAddFriend = (username) => {
     console.log('Adding friend:', username);
@@ -34,35 +80,100 @@ const Home = () => {
     });
   };
 
-  const userBets = [
-    {
-      bet: 'Who will eat the most apples?',
-      date: '2/12',
-      group: 'Skibidi Toilets',
-      result: 'win',
-      coins: 30,
-    },
-    {
-      bet: 'What will Lolita wear tonight?',
-      date: '2/11',
-      group: 'Skibidi Toilets',
-      result: 'loss',
-      coins: -30,
-    },
-    {
-      bet: 'How many pies will Libby buy?',
-      date: '2/9',
-      group: 'Skibidi Toilets',
-      result: 'win',
-      coins: 30,
-    },
-  ];
+  // Define the getStatusColor function
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'open':
+        return theme.colors.primary;
+      case 'locked':
+        return '#FFA500'; // Orange color for locked status
+      case 'completed':
+        return '#4CAF50'; // Green color for completed status
+      default:
+        return theme.colors.textLight; // Default color for unknown status
+    }
+  };
+
+  // Format the date to a readable string
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+    });
+  };
+
+  // Calculate if user has won a bet
+  const calculateBetResult = (bet) => {
+    if (bet.status !== 'completed') return null;
+
+    const userOption = bet.answerOptions.find((opt) =>
+      opt.participants.includes(session?.uid),
+    );
+
+    if (!userOption) return null;
+
+    return userOption.id === bet.winningOptionId
+      ? {
+          result: 'win',
+          coins: bet.winningsPerPerson || 0,
+        }
+      : {
+          result: 'loss',
+          coins: -bet.wagerAmount,
+        };
+  };
+
+  // Update the group name display in the bet card
+  const renderBetCard = (bet) => {
+    const betResult = calculateBetResult(bet);
+    return (
+      <TouchableOpacity
+        key={bet.id}
+        style={styles.betCard}
+        onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
+      >
+        <View style={styles.betHeader}>
+          <Text style={styles.betDescription}>{bet.question}</Text>
+          <Text style={[styles.status, { color: getStatusColor(bet.status) }]}>
+            {bet.status.toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.betDetails}>
+          <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
+          {/* <View style={styles.groupInfo}> */}
+          {/* <Icon name="users" size={14} color={theme.colors.textLight} /> */}
+          <Text style={styles.groupName}>{bet.groupName || 'No Group'}</Text>
+          {/* </View> */}
+          <View style={styles.betResult}>
+            {betResult && (
+              <Text
+                style={[
+                  styles.betCoins,
+                  { color: betResult.result === 'win' ? '#4CAF50' : '#FF0000' },
+                ]}
+              >
+                {betResult.result === 'win' ? '+' : ''}
+                {betResult.coins}
+              </Text>
+            )}
+          </View>
+        </View>
+        <View style={styles.betStats}>
+          <Text style={styles.statsText}>
+            {bet.participants?.length || 0} participants
+          </Text>
+          <Text style={styles.statsText}>{bet.commentCount || 0} comments</Text>
+          <Text style={styles.statsText}>Pool: {bet.totalPool || 0} coins</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ScreenWrapper bg="white">
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>BraggingRightz</Text>
+      <View style={sharedStyles.header}>
+        <Text style={sharedStyles.title}>BraggingRightz</Text>
         <View style={styles.icons}>
           <Pressable onPress={() => navigation.navigate('Notifications')}>
             <Icon
@@ -176,31 +287,21 @@ const Home = () => {
             </TouchableOpacity>
           </View>
           <View style={styles.betsContainer}>
-            {userBets.map((bet, index) => (
-              <View key={index} style={styles.betItem}>
-                <Text style={styles.betDescription}>{bet.bet}</Text>
-                <View style={styles.betDetails}>
-                  <Text style={styles.betDate}>{bet.date}</Text>
-                  <Text style={styles.betGroup}>{bet.group}</Text>
-                  <View style={styles.betResult}>
-                    {/*<Icon*/}
-                    {/*  name={bet.result === 'win' ? 'trophy' : 'times-circle'}*/}
-                    {/*  size={18}*/}
-                    {/*  color={bet.result === 'win' ? '#FFD700' : '#FF0000'}*/}
-                    {/*/>*/}
-                    <Text
-                      style={[
-                        styles.betCoins,
-                        { color: bet.result === 'win' ? '#4CAF50' : '#FF0000' },
-                      ]}
-                    >
-                      {bet.result === 'win' ? '+' : ''}
-                      {bet.coins}
-                    </Text>
-                  </View>
-                </View>
+            {loading ? (
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            ) : bets.length > 0 ? (
+              bets.map((bet) => renderBetCard(bet))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No bets found</Text>
+                <TouchableOpacity
+                  style={styles.createButton}
+                  onPress={() => navigation.navigate('NewBet')}
+                >
+                  <Text style={styles.createButtonText}>Create a New Bet</Text>
+                </TouchableOpacity>
               </View>
-            ))}
+            )}
           </View>
         </View>
       </ScrollView>
@@ -352,6 +453,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  groupInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1),
+    justifyContent: 'center',
+  },
   betDate: {
     fontSize: 14,
     color: '#666',
@@ -359,8 +466,6 @@ const styles = StyleSheet.create({
   betGroup: {
     fontSize: 14,
     color: '#666',
-    flex: 1,
-    textAlign: 'center',
   },
   betResult: {
     flexDirection: 'row',
@@ -376,6 +481,62 @@ const styles = StyleSheet.create({
     marginLeft: wp(2),
     color: theme.colors.text,
     fontSize: hp(1.8),
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: hp(4),
+  },
+  emptyText: {
+    fontSize: hp(2),
+    color: theme.colors.textLight,
+    marginBottom: hp(2),
+  },
+  createButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
+    borderRadius: theme.radius.lg,
+  },
+  createButtonText: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '500',
+  },
+  betStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: hp(1),
+    paddingTop: hp(1),
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  statsText: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+  },
+  betCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  betHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp(1),
+  },
+  status: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 

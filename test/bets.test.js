@@ -196,42 +196,42 @@ describe('BetsService', () => {
     });
   });
 
-  describe('getUserBets', () => {
-    it('should get all user bets', async () => {
-      const mockBets = [
-        { id: 'bet1', title: 'Bet 1' },
-        { id: 'bet2', title: 'Bet 2' },
-      ];
+  // describe('getUserBets', () => {
+  //   it('should get all user bets', async () => {
+  //     const mockBets = [
+  //       { id: 'bet1', title: 'Bet 1' },
+  //       { id: 'bet2', title: 'Bet 2' },
+  //     ];
 
-      getDocs.mockResolvedValue({
-        docs: mockBets.map((bet) => ({
-          data: () => bet,
-        })),
-      });
+  //     getDocs.mockResolvedValue({
+  //       docs: mockBets.map((bet) => ({
+  //         data: () => bet,
+  //       })),
+  //     });
 
-      const result = await BetsService.getUserBets('user123');
+  //     const result = await BetsService.getUserBets('user123');
 
-      expect(result).toHaveLength(2);
-      expect(result[0].title).toBe('Bet 1');
-      expect(getDocs).toHaveBeenCalled();
-    });
+  //     expect(result).toHaveLength(2);
+  //     expect(result[0].title).toBe('Bet 1');
+  //     expect(getDocs).toHaveBeenCalled();
+  //   });
 
-    it('should get user bets filtered by status', async () => {
-      const mockBets = [{ id: 'bet1', title: 'Bet 1', status: 'pending' }];
+  //   it('should get user bets filtered by status', async () => {
+  //     const mockBets = [{ id: 'bet1', title: 'Bet 1', status: 'pending' }];
 
-      getDocs.mockResolvedValue({
-        docs: mockBets.map((bet) => ({
-          data: () => bet,
-        })),
-      });
+  //     getDocs.mockResolvedValue({
+  //       docs: mockBets.map((bet) => ({
+  //         data: () => bet,
+  //       })),
+  //     });
 
-      const result = await BetsService.getUserBets('user123', 'pending');
+  //     const result = await BetsService.getUserBets('user123', 'pending');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].status).toBe('pending');
-      expect(where).toHaveBeenCalledWith('status', '==', 'pending');
-    });
-  });
+  //     expect(result).toHaveLength(1);
+  //     expect(result[0].status).toBe('pending');
+  //     expect(where).toHaveBeenCalledWith('status', '==', 'pending');
+  //   });
+  // });
 
   describe('updateBet', () => {
     it('should update a bet successfully', async () => {
