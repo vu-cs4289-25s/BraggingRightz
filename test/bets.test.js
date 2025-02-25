@@ -38,12 +38,6 @@ jest.mock('../src/firebase/config', () => ({
   db: {},
 }));
 
-// Mock PointsService
-jest.mock('../src/endpoints/points', () => ({
-  deductPoints: jest.fn(),
-  addPoints: jest.fn(),
-}));
-
 describe('BetsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -271,7 +265,6 @@ describe('BetsService', () => {
   describe('placeBet', () => {
     it('should place a bet successfully', async () => {
       const mockBetRef = doc(db, 'bets', 'bet123');
-      const mockPointsRef = doc(db, 'points', 'user123');
 
       // Mock the bet document with proper status and data
       const mockBetDoc = {
@@ -288,15 +281,8 @@ describe('BetsService', () => {
         }),
       };
 
-      // Mock points document with sufficient balance
-      const mockPointsDoc = {
-        exists: () => true,
-        data: () => ({ balance: 1000 }),
-      };
-
       getDoc.mockImplementation((ref) => {
         if (ref === mockBetRef) return Promise.resolve(mockBetDoc);
-        if (ref === mockPointsRef) return Promise.resolve(mockPointsDoc);
         return Promise.resolve({ exists: () => false });
       });
 

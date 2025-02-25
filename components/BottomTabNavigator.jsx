@@ -8,10 +8,25 @@ import Location from '../assets/icons/Location';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { hp } from '../helpers/common';
 import Avatar from './Avatar';
+import LeaderboardScreen from '../app/main/leaderboard';
+import { FriendsService } from '../src/endpoints/friend';
+import { useState, useEffect } from 'react';
+import { auth } from '../src/firebase/config';
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabNavigator = () => {
+  const [friends, setFriends] = useState([]);
+  const currentUser = auth.currentUser;
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      const friends = await FriendsService.getFriendList();
+      setFriends(friends);
+    };
+    fetchFriends();
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -43,6 +58,16 @@ const BottomTabNavigator = () => {
             <Icon name="plus" color={color} size={size} />
           ),
           tabBarLabel: 'Create',
+        }}
+      />
+      <Tab.Screen
+        name="LeaderboardTab"
+        component={LeaderboardScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="trophy" color={color} size={size} />
+          ),
+          tabBarLabel: 'Leaderboard',
         }}
       />
       <Tab.Screen
