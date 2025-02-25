@@ -174,27 +174,37 @@ class GroupsService {
 
       const groupData = groupDoc.data();
 
-      // Check if admin is the creator
-      if (groupData.creatorId !== adminId) {
-        throw new Error('Only group creator can remove members');
+      // Check if admin is an admin or if user is removing themselves
+      if (!groupData.admins.includes(adminId) && adminId !== memberId) {
+        throw new Error('Not authorized to remove members');
       }
 
       if (!groupData.members.includes(memberId)) {
         throw new Error('User is not a member of this group');
       }
 
+      // Allow users to remove themselves
       if (memberId === adminId) {
-        throw new Error('Cannot remove yourself from the group');
+        // Check if they're the last admin
+        if (
+          groupData.admins.length === 1 &&
+          groupData.admins.includes(memberId)
+        ) {
+          throw new Error('Cannot remove the last admin');
+        }
       }
 
       // Get removed member's name
       const userDoc = await getDoc(doc(db, 'users', memberId));
       const userName = userDoc.data().username;
 
+      const timestamp = new Date().toISOString();
+
       // Remove member from group
       await updateDoc(groupRef, {
         members: arrayRemove(memberId),
-        updatedAt: new Date().toISOString(),
+        admins: arrayRemove(memberId),
+        updatedAt: timestamp,
       });
 
       // Notify removed member

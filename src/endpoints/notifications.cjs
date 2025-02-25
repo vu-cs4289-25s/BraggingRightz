@@ -93,6 +93,7 @@ class NotificationsService {
   // Create a new notification
   async createNotification({ userId, type, title, message, data = {} }) {
     try {
+      const timestamp = new Date().toISOString();
       const notification = {
         userId,
         type,
@@ -100,8 +101,8 @@ class NotificationsService {
         message,
         data,
         read: false,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
       };
 
       const docRef = await addDoc(

@@ -19,11 +19,20 @@ class SettingsService {
 
       const defaultSettings = {
         userId,
-        pushNotifications: true,
-        emailNotifications: true,
-        privateProfile: false,
-        showOnlineStatus: true,
-        darkMode: false,
+        notifications: {
+          betInvites: true,
+          groupInvites: true,
+          betResults: true,
+          pointsUpdates: true,
+        },
+        privacy: {
+          profileVisibility: 'public',
+          showPoints: true,
+          showGroups: true,
+          showBets: true,
+        },
+        theme: 'light',
+        language: 'en',
         createdAt: timestamp,
         updatedAt: timestamp,
       };
@@ -48,18 +57,61 @@ class SettingsService {
     }
   }
 
-  // Update a single setting
-  async updateSetting(userId, key, value) {
+  // Update notification settings
+  async updateNotificationSettings(userId, updates) {
     try {
       const settingsRef = doc(db, 'settings', userId);
-      const timestamp = new Date().toISOString();
+      const settingsDoc = await getDoc(settingsRef);
+
+      if (!settingsDoc.exists()) {
+        throw new Error('Settings not found');
+      }
+
+      const currentSettings = settingsDoc.data();
+      const updatedNotifications = {
+        ...currentSettings.notifications,
+        ...updates,
+      };
 
       await updateDoc(settingsRef, {
-        [key]: value,
-        updatedAt: timestamp,
+        notifications: updatedNotifications,
+        updatedAt: new Date().toISOString(),
       });
 
-      return { [key]: value };
+      return {
+        ...currentSettings,
+        notifications: updatedNotifications,
+      };
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Update privacy settings
+  async updatePrivacySettings(userId, updates) {
+    try {
+      const settingsRef = doc(db, 'settings', userId);
+      const settingsDoc = await getDoc(settingsRef);
+
+      if (!settingsDoc.exists()) {
+        throw new Error('Settings not found');
+      }
+
+      const currentSettings = settingsDoc.data();
+      const updatedPrivacy = {
+        ...currentSettings.privacy,
+        ...updates,
+      };
+
+      await updateDoc(settingsRef, {
+        privacy: updatedPrivacy,
+        updatedAt: new Date().toISOString(),
+      });
+
+      return {
+        ...currentSettings,
+        privacy: updatedPrivacy,
+      };
     } catch (error) {
       this._handleError(error);
     }
@@ -68,7 +120,65 @@ class SettingsService {
   // Update theme
   async updateTheme(userId, theme) {
     try {
-      return await this.updateSetting(userId, 'darkMode', theme === 'dark');
+      const settingsRef = doc(db, 'settings', userId);
+      const settingsDoc = await getDoc(settingsRef);
+
+      if (!settingsDoc.exists()) {
+        throw new Error('Settings not found');
+      }
+
+      if (theme !== 'light' && theme !== 'dark') {
+        throw new Error('Invalid theme');
+      }
+
+      const currentSettings = settingsDoc.data();
+      await updateDoc(settingsRef, {
+        theme,
+        updatedAt: new Date().toISOString(),
+      });
+
+      return {
+        ...currentSettings,
+        theme,
+      };
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Update language
+  async updateLanguage(userId, language) {
+    try {
+      const settingsRef = doc(db, 'settings', userId);
+      const settingsDoc = await getDoc(settingsRef);
+
+      if (!settingsDoc.exists()) {
+        throw new Error('Settings not found');
+      }
+
+      if (language !== 'en' && language !== 'es') {
+        throw new Error('Unsupported language');
+      }
+
+      const currentSettings = settingsDoc.data();
+      await updateDoc(settingsRef, {
+        language,
+        updatedAt: new Date().toISOString(),
+      });
+
+      return {
+        ...currentSettings,
+        language,
+      };
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Reset settings
+  async resetSettings(userId) {
+    try {
+      return await this.initializeSettings(userId);
     } catch (error) {
       this._handleError(error);
     }

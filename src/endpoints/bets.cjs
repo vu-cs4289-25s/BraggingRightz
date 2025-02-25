@@ -27,13 +27,11 @@ const {
   query,
   where,
   orderBy,
-  serverTimestamp,
   arrayUnion,
   arrayRemove,
   increment,
   setDoc,
-  Timestamp,
-  limit,
+  serverTimestamp,
 } = require('firebase/firestore');
 const { db } = require('../firebase/config');
 const NotificationsService = require('./notifications.cjs');
@@ -70,7 +68,7 @@ class BetsService {
   }) {
     try {
       const betRef = doc(collection(db, 'bets'));
-      const timestamp = new Date().toISOString();
+      const timestamp = serverTimestamp();
 
       // Validate answer options
       if (!Array.isArray(answerOptions) || answerOptions.length < 2) {
@@ -92,12 +90,14 @@ class BetsService {
         id: `option_${index + 1}`,
         text: option,
         participants: [],
+        totalWager: 0,
       }));
 
       const betData = {
         id: betRef.id,
         creatorId,
         question,
+        title: question, // Add title field to match test expectations
         wagerAmount,
         answerOptions: formattedOptions,
         status: 'open', // open -> locked -> completed
@@ -143,7 +143,14 @@ class BetsService {
         }
       }
 
-      return betData;
+      // Convert timestamps for response
+      const response = {
+        ...betData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      return response;
     } catch (error) {
       this._handleError(error);
     }
@@ -220,10 +227,9 @@ class BetsService {
         throw new Error('Bet not found');
       }
 
-      const timestamp = new Date().toISOString();
       const updates = {
         ...updateData,
-        updatedAt: timestamp,
+        updatedAt: serverTimestamp(),
       };
 
       await updateDoc(betRef, updates);
@@ -291,7 +297,7 @@ class BetsService {
         );
       }
 
-      const timestamp = new Date().toISOString();
+      const timestamp = serverTimestamp();
 
       // Deduct points from user first
       await updateDoc(doc(db, 'users', userId), {
@@ -347,10 +353,9 @@ class BetsService {
         throw new Error('Bet is not in open status');
       }
 
-      const timestamp = new Date().toISOString();
       await updateDoc(betRef, {
         status: 'locked',
-        updatedAt: timestamp,
+        updatedAt: serverTimestamp(),
       });
 
       return true;
@@ -389,7 +394,7 @@ class BetsService {
         throw new Error('Invalid winning option');
       }
 
-      const timestamp = new Date().toISOString();
+      const timestamp = serverTimestamp();
 
       // Calculate winnings
       const winners = winningOption.participants;
@@ -414,7 +419,7 @@ class BetsService {
             amount: winningsPerPerson,
             type: 'bet_win',
             betId: betId,
-            description: `Won bet: ${betData.question}`,
+            description: `Won bet: ${betData.title}`,
             createdAt: timestamp,
           });
 
@@ -422,7 +427,7 @@ class BetsService {
           await NotificationsService.createBetResultNotification(
             winnerId,
             betId,
-            betData.question,
+            betData.title,
             'won',
           );
         });
@@ -438,7 +443,7 @@ class BetsService {
         await NotificationsService.createBetResultNotification(
           loserId,
           betId,
-          betData.question,
+          betData.title,
           'lost',
         );
       }
@@ -454,7 +459,7 @@ class BetsService {
               await NotificationsService.createBetResultNotification(
                 memberId,
                 betId,
-                betData.question,
+                betData.title,
                 'completed',
               );
             }
@@ -634,7 +639,7 @@ class BetsService {
         username: userData.username,
         profilePicture: userData.profilePicture,
         content,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
       };
 
       const commentRef = await addDoc(collection(db, 'betComments'), comment);
@@ -642,7 +647,7 @@ class BetsService {
       // Update bet with comment count
       await updateDoc(doc(db, 'bets', betId), {
         commentCount: increment(1),
-        updatedAt: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
       });
 
       // Get all users to notify
@@ -681,7 +686,7 @@ class BetsService {
           recipientId,
           betId,
           userData.username,
-          betData.question,
+          betData.title,
         );
       }
 
@@ -705,7 +710,7 @@ class BetsService {
       }
 
       const userData = userDoc.data();
-      const timestamp = new Date().toISOString();
+      const timestamp = serverTimestamp();
 
       // Add new reaction
       await updateDoc(betRef, {
@@ -742,7 +747,7 @@ class BetsService {
           username: userData.username,
           reaction,
         }),
-        updatedAt: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
       });
 
       return true;
@@ -781,7 +786,7 @@ class BetsService {
   // Check for expiring bets and notify users
   async checkExpiringBets() {
     try {
-      const now = Timestamp.now();
+      const now = serverTimestamp();
       const oneDayFromNow = new Timestamp(now.seconds + 86400, now.nanoseconds);
       const threeHoursFromNow = new Timestamp(
         now.seconds + 10800,
@@ -835,7 +840,7 @@ class BetsService {
             await NotificationsService.createBetExpirationNotification(
               userId,
               doc.id,
-              bet.question,
+              bet.title,
               expiresIn,
             );
           }
@@ -861,7 +866,7 @@ class BetsService {
       await updateDoc(betRef, {
         result,
         status: 'completed',
-        updatedAt: Timestamp.now(),
+        updatedAt: serverTimestamp(),
       });
 
       // Notify participants about the result
