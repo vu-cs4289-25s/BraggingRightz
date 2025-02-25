@@ -26,8 +26,10 @@ const {
   arrayRemove,
   increment,
   setDoc,
+  Timestamp,
 } = require('firebase/firestore');
 const { db } = require('../firebase/config');
+const NotificationsService = require('./notifications.cjs');
 
 class GroupsService {
   // Create a new group
@@ -161,7 +163,7 @@ class GroupsService {
   }
 
   // Remove member from group
-  async removeMember(groupId, userId, removerId) {
+  async removeMember(groupId, adminId, memberId) {
     try {
       const groupRef = doc(db, 'groups', groupId);
       const groupDoc = await getDoc(groupRef);
@@ -172,31 +174,50 @@ class GroupsService {
 
       const groupData = groupDoc.data();
 
-      // Check if remover is admin or the user themselves
-      if (!groupData.admins.includes(removerId) && removerId !== userId) {
-        throw new Error('Not authorized to remove members');
+      // Check if admin is the creator
+      if (groupData.creatorId !== adminId) {
+        throw new Error('Only group creator can remove members');
       }
 
-      // Cannot remove the last admin
-      if (groupData.admins.includes(userId) && groupData.admins.length === 1) {
-        throw new Error('Cannot remove the last admin');
+      if (!groupData.members.includes(memberId)) {
+        throw new Error('User is not a member of this group');
       }
 
-      const timestamp = new Date().toISOString();
+      if (memberId === adminId) {
+        throw new Error('Cannot remove yourself from the group');
+      }
 
-      // Remove user from group
+      // Get removed member's name
+      const userDoc = await getDoc(doc(db, 'users', memberId));
+      const userName = userDoc.data().username;
+
+      // Remove member from group
       await updateDoc(groupRef, {
-        members: arrayRemove(userId),
-        admins: arrayRemove(userId),
-        updatedAt: timestamp,
+        members: arrayRemove(memberId),
+        updatedAt: new Date().toISOString(),
       });
 
-      // Remove group from user's groups
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        groups: arrayRemove(groupId),
-        updatedAt: timestamp,
+      // Notify removed member
+      await NotificationsService.createNotification({
+        userId: memberId,
+        type: 'groups',
+        title: `Removed from ${groupData.name}`,
+        message: 'You have been removed from the group',
+        data: { groupId },
       });
+
+      // Notify remaining members
+      for (const remainingMemberId of groupData.members) {
+        if (remainingMemberId !== memberId && remainingMemberId !== adminId) {
+          await NotificationsService.createNotification({
+            userId: remainingMemberId,
+            type: 'groups',
+            title: `${userName} was removed from ${groupData.name}`,
+            message: 'A member has been removed from your group',
+            data: { groupId },
+          });
+        }
+      }
 
       return true;
     } catch (error) {
@@ -259,6 +280,165 @@ class GroupsService {
     } catch (error) {
       this._handleError(error);
       return 'No Group';
+    }
+  }
+
+  // Invite user to group
+  async inviteToGroup(groupId, inviterId, inviteeId) {
+    try {
+      const groupRef = doc(db, 'groups', groupId);
+      const groupDoc = await getDoc(groupRef);
+
+      if (!groupDoc.exists()) {
+        throw new Error('Group not found');
+      }
+
+      const groupData = groupDoc.data();
+
+      // Check if inviter is a member
+      if (!groupData.members.includes(inviterId)) {
+        throw new Error('Only group members can invite others');
+      }
+
+      // Check if invitee is already a member
+      if (groupData.members.includes(inviteeId)) {
+        throw new Error('User is already a member of this group');
+      }
+
+      // Get inviter's name
+      const inviterDoc = await getDoc(doc(db, 'users', inviterId));
+      const inviterName = inviterDoc.data().username;
+
+      // Create invitation
+      const invitationRef = doc(collection(db, 'groupInvitations'));
+      await setDoc(invitationRef, {
+        id: invitationRef.id,
+        groupId,
+        inviterId,
+        inviteeId,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      });
+
+      // Send notification to invitee
+      await NotificationsService.createGroupInviteNotification(
+        inviteeId,
+        groupId,
+        groupData.name,
+        inviterName,
+      );
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Accept group invitation
+  async acceptInvitation(invitationId, userId) {
+    try {
+      const invitationRef = doc(db, 'groupInvitations', invitationId);
+      const invitationDoc = await getDoc(invitationRef);
+
+      if (!invitationDoc.exists()) {
+        throw new Error('Invitation not found');
+      }
+
+      const invitation = invitationDoc.data();
+
+      if (invitation.inviteeId !== userId) {
+        throw new Error('Not authorized to accept this invitation');
+      }
+
+      if (invitation.status !== 'pending') {
+        throw new Error('Invitation is no longer pending');
+      }
+
+      const groupRef = doc(db, 'groups', invitation.groupId);
+      const groupDoc = await getDoc(groupRef);
+      const groupData = groupDoc.data();
+
+      // Add member to group
+      await updateDoc(groupRef, {
+        members: arrayUnion(userId),
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Update invitation status
+      await updateDoc(invitationRef, {
+        status: 'accepted',
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Get new member's name
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userName = userDoc.data().username;
+
+      // Notify group members about new member
+      for (const memberId of groupData.members) {
+        if (memberId !== userId) {
+          await NotificationsService.createNotification({
+            userId: memberId,
+            type: 'groups',
+            title: `${userName} joined ${groupData.name}`,
+            message: 'A new member has joined your group',
+            data: { groupId: invitation.groupId },
+          });
+        }
+      }
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Leave group
+  async leaveGroup(groupId, userId) {
+    try {
+      const groupRef = doc(db, 'groups', groupId);
+      const groupDoc = await getDoc(groupRef);
+
+      if (!groupDoc.exists()) {
+        throw new Error('Group not found');
+      }
+
+      const groupData = groupDoc.data();
+
+      if (groupData.creatorId === userId) {
+        throw new Error('Group creator cannot leave the group');
+      }
+
+      if (!groupData.members.includes(userId)) {
+        throw new Error('User is not a member of this group');
+      }
+
+      // Get leaving member's name
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userName = userDoc.data().username;
+
+      // Remove member from group
+      await updateDoc(groupRef, {
+        members: arrayRemove(userId),
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Notify remaining members
+      for (const memberId of groupData.members) {
+        if (memberId !== userId) {
+          await NotificationsService.createNotification({
+            userId: memberId,
+            type: 'groups',
+            title: `${userName} left ${groupData.name}`,
+            message: 'A member has left your group',
+            data: { groupId },
+          });
+        }
+      }
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
     }
   }
 

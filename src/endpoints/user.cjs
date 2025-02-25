@@ -23,6 +23,7 @@ const {
   orderBy,
   limit,
   getDocs,
+  arrayRemove,
 } = require('firebase/firestore');
 const { deleteUser } = require('firebase/auth');
 const {
@@ -343,6 +344,66 @@ class UserService {
     const totalBets = (userData.totalWins || 0) + (userData.totalLosses || 0);
     if (totalBets === 0) return 0;
     return Math.round(((userData.totalWins || 0) * 100) / totalBets);
+  }
+
+  async deleteAccount(userId) {
+    try {
+      // Get user data first for cleanup
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+      const userData = userDoc.data();
+
+      // Delete user's bets
+      const betsQuery = query(
+        collection(db, 'bets'),
+        where('creatorId', '==', userId),
+      );
+      const betsSnapshot = await getDocs(betsQuery);
+      for (const betDoc of betsSnapshot.docs) {
+        await deleteDoc(betDoc.ref);
+      }
+
+      // Delete user's notifications
+      const notificationsQuery = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+      );
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      for (const notifDoc of notificationsSnapshot.docs) {
+        await deleteDoc(notifDoc.ref);
+      }
+
+      // Remove user from groups
+      if (userData.groups) {
+        for (const groupId of userData.groups) {
+          const groupRef = doc(db, 'groups', groupId);
+          await updateDoc(groupRef, {
+            members: arrayRemove(userId),
+          });
+        }
+      }
+
+      // Delete user's settings
+      await deleteDoc(doc(db, 'settings', userId));
+
+      // Delete user's points
+      await deleteDoc(doc(db, 'points', userId));
+
+      // Delete user document
+      await deleteDoc(doc(db, 'users', userId));
+
+      // Delete user from authentication
+      const user = auth.currentUser;
+      if (user) {
+        await deleteUser(user);
+      }
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
   }
 }
 

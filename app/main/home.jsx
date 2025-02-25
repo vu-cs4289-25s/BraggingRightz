@@ -24,6 +24,7 @@ import AddFriendModal from '../../components/AddFriendModal';
 import FriendService from '../../src/endpoints/friend.cjs';
 import BetsService from '../../src/endpoints/bets';
 import GroupsService from '../../src/endpoints/groups';
+import NotificationsService from '../../src/endpoints/notifications.cjs';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
 import { sharedStyles } from '../styles/shared';
@@ -34,6 +35,8 @@ const Home = () => {
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,9 +65,21 @@ const Home = () => {
         );
 
         setBets(betsWithGroupNames);
+
+        // Fetch recent notifications
+        const recentNotifs = await NotificationsService.getNotifications(
+          sessionData.uid,
+        );
+        setNotifications(recentNotifs.slice(0, 3)); // Show top 3 notifications
+
+        // Get unread count
+        const unreadCountData = await NotificationsService.getUnreadCount(
+          sessionData.uid,
+        );
+        setUnreadCount(unreadCountData);
       } catch (error) {
         console.error('Error fetching data:', error);
-        Alert.alert('Error', 'Failed to load bets');
+        Alert.alert('Error', 'Failed to load data');
       } finally {
         setLoading(false);
       }
@@ -170,24 +185,74 @@ const Home = () => {
     );
   };
 
+  const renderNotificationItem = (notification) => {
+    let icon = 'bell';
+    let color = theme.colors.primary;
+
+    switch (notification.type) {
+      case 'bets':
+        icon = 'trophy';
+        color = '#FFD700';
+        break;
+      case 'comments':
+        icon = 'comment';
+        color = '#4CAF50';
+        break;
+      case 'follows':
+        icon = 'user-plus';
+        color = '#2196F3';
+        break;
+      case 'expiring':
+        icon = 'clock-o';
+        color = '#FF5722';
+        break;
+    }
+
+    return (
+      <TouchableOpacity
+        key={notification.id}
+        style={styles.notificationItem}
+        onPress={() => navigation.navigate('Notifications')}
+      >
+        <Icon name={icon} size={hp(2.5)} color={color} />
+        <Text style={styles.notificationText} numberOfLines={1}>
+          {notification.title}
+        </Text>
+        {!notification.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <ScreenWrapper bg="white">
       <View style={sharedStyles.header}>
         <Text style={sharedStyles.title}>BraggingRightz</Text>
         <View style={styles.icons}>
-          <Pressable onPress={() => navigation.navigate('Notifications')}>
-            <Icon
-              name="heart"
-              size={hp(3.2)}
-              strokeWidth={2}
-              color={theme.colors.text}
-            />
+          <Pressable
+            onPress={() => navigation.navigate('Notifications')}
+            style={styles.notificationIcon}
+          >
+            <Icon name="bell" size={hp(3.2)} color={theme.colors.text} />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </Pressable>
           <Pressable onPress={() => navigation.navigate('Profile')}>
             <Avatar />
           </Pressable>
         </View>
       </View>
+
+      {notifications.length > 0 && (
+        <View style={styles.notificationsContainer}>
+          {notifications.map(renderNotificationItem)}
+        </View>
+      )}
+
       <View style={styles.sectionDivider} />
       <ScrollView style={styles.container}>
         {/* Coins Display */}
@@ -537,6 +602,44 @@ const styles = StyleSheet.create({
   status: {
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  notificationIcon: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    padding: 2,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: hp(1.2),
+    fontWeight: 'bold',
+  },
+  notificationsContainer: {
+    padding: hp(2),
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: hp(1),
+  },
+  notificationText: {
+    marginLeft: hp(1),
+    color: theme.colors.text,
+    fontSize: hp(1.6),
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.primary,
+    position: 'absolute',
+    top: 5,
+    right: 5,
   },
 });
 
