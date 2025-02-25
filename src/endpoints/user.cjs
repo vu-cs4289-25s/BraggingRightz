@@ -4,8 +4,8 @@ GET /users/{user_id} → Retrieve user profile info
 PUT /users/{user_id} → Update user profile (username, email, etc.)
 DELETE /users/{user_id} → Delete user account
 GET /users/{user_id}/points → Retrieve current points balance
-GET /users/{user_id}/leaderboard-rank → Get user’s rank on the leaderboard
-GET /users/{user_id}/history → Get user’s betting history
+GET /users/{user_id}/leaderboard-rank → Get user's rank on the leaderboard
+GET /users/{user_id}/history → Get user's betting history
 GET /users/{user_id}/notifications → Retrieve unread notifications
 GET /users/{username} -> Retrieve uid from username
 we are using firebase for the db
@@ -313,6 +313,36 @@ class UserService {
       querySnapshot.empty ||
       (querySnapshot.size === 1 && querySnapshot.docs[0].id === userId)
     );
+  }
+
+  // Get global leaderboard
+  async getGlobalLeaderboard() {
+    try {
+      // Query all users, ordered by trophies in descending order
+      const usersQuery = query(
+        collection(db, 'users'),
+        orderBy('trophies', 'desc'),
+        limit(100), // Limit to top 100 users for performance
+      );
+
+      const usersSnapshot = await getDocs(usersQuery);
+
+      return usersSnapshot.docs.map((doc) => ({
+        userId: doc.id,
+        username: doc.data().username,
+        trophies: doc.data().trophies || 0,
+        winRate: this._calculateWinRate(doc.data()),
+      }));
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Helper method to calculate win rate
+  _calculateWinRate(userData) {
+    const totalBets = (userData.totalWins || 0) + (userData.totalLosses || 0);
+    if (totalBets === 0) return 0;
+    return Math.round(((userData.totalWins || 0) * 100) / totalBets);
   }
 }
 

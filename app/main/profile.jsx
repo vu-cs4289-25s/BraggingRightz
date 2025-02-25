@@ -7,6 +7,7 @@ import {
   View,
   Touchable,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -98,7 +99,7 @@ const Profile = () => {
         <View style={styles.profileContainer}>
           <View style={styles.avatarContainer}>
             <Avatar
-              uri={profileImage || require('../../assets/images/icon.png')}
+              uri={profileImage || Image.resolveAssetSource(require('../../assets/images/default-avatar.png')).uri}
               size={hp(15)}
               rounded={theme.radius.xl}
             />

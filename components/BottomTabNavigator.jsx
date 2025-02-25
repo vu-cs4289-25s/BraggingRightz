@@ -8,10 +8,25 @@ import Location from '../assets/icons/Location';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { hp } from '../helpers/common';
 import Avatar from './Avatar';
+import LeaderboardScreen from '../app/main/leaderboard';
+import { FriendsService } from '../src/endpoints/friend';
+import { useState, useEffect } from 'react';
+import { auth } from '../src/firebase/config';
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabNavigator = () => {
+  const [friends, setFriends] = useState([]);
+  const currentUser = auth.currentUser;
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      const friends = await FriendsService.getFriendList();
+      setFriends(friends);
+    };
+    fetchFriends();
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -46,14 +61,20 @@ const BottomTabNavigator = () => {
         }}
       />
       <Tab.Screen
+        name="LeaderboardTab"
+        component={LeaderboardScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="trophy" color={color} size={size} />
+          ),
+          tabBarLabel: 'Leaderboard',
+        }}
+      />
+      <Tab.Screen
         name="Profile"
         component={Profile}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            // You can use your Avatar component or an icon for Profile here.
-            // Using a font icon example:
-            <Avatar />
-          ),
+          tabBarIcon: ({ color, size }) => <Avatar size={hp(3)} />,
           tabBarLabel: 'Profile',
         }}
       />

@@ -4,7 +4,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { hp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
@@ -44,7 +50,7 @@ const Friends = () => {
   const handleAddFriend = (username) => {
     console.log('Adding friend:', username);
     FriendService.addFriend({
-          user2username: username,
+      user2username: username,
     });
   };
 
@@ -84,7 +90,6 @@ const Friends = () => {
             onClose={() => setModalVisible(false)}
             onAdd={handleAddFriend}
           />
-
         </ScrollView>
       </View>
     </ScreenWrapper>

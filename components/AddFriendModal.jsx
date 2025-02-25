@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Modal, StyleSheet, Text, Pressable, View, TextInput } from 'react-native';
+import {
+  Modal,
+  StyleSheet,
+  Text,
+  Pressable,
+  View,
+  TextInput,
+} from 'react-native';
 
 const AddFriendModal = ({ visible, onClose, onAdd }) => {
   const [friendUsername, setFriendUsername] = useState('');
@@ -23,7 +30,7 @@ const AddFriendModal = ({ visible, onClose, onAdd }) => {
           <TextInput
             style={styles.input}
             placeholder="Username"
-            value={friendUsername}
+            value={friendUsername.toLowerCase()}
             onChangeText={setFriendUsername}
           />
           <Pressable

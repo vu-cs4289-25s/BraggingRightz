@@ -248,6 +248,20 @@ class GroupsService {
     return code;
   }
 
+  // Get group name by ID
+  async getGroupName(groupId) {
+    try {
+      const groupDoc = await getDoc(doc(db, 'groups', groupId));
+      if (!groupDoc.exists()) {
+        return 'No Group';
+      }
+      return groupDoc.data().name;
+    } catch (error) {
+      this._handleError(error);
+      return 'No Group';
+    }
+  }
+
   // Error handler
   _handleError(error) {
     console.error('GroupsService Error:', error);

@@ -74,6 +74,16 @@ class BetsService {
         throw new Error('Bet must have at least 2 answer options');
       }
 
+      // validate wager amount is a number
+      if (typeof wagerAmount !== 'number' || wagerAmount <= 0) {
+        throw new Error('Wager amount must be a positive number');
+      }
+
+      // validate expiresAt is a date and in the future
+      if (typeof expiresAt !== 'string' || new Date(expiresAt) < new Date()) {
+        throw new Error('Expires at must be a future date');
+      }
+
       // Format answer options with IDs
       const formattedOptions = answerOptions.map((option, index) => ({
         id: `option_${index + 1}`,
@@ -131,17 +141,46 @@ class BetsService {
   // Get user's bets
   async getUserBets(userId, status = null) {
     try {
-      let betQuery = query(
+      // First get bets where user is a participant
+      const participantQuery = query(
         collection(db, 'bets'),
         where('participants', 'array-contains', userId),
       );
+      const participantSnapshot = await getDocs(participantQuery);
 
+      // Then get bets where user is the creator
+      const creatorQuery = query(
+        collection(db, 'bets'),
+        where('creatorId', '==', userId),
+      );
+      const creatorSnapshot = await getDocs(creatorQuery);
+
+      // Combine results using a Map to remove duplicates
+      const betsMap = new Map();
+
+      participantSnapshot.docs.forEach((doc) => {
+        const data = { id: doc.id, ...doc.data() };
+        betsMap.set(doc.id, data);
+      });
+
+      creatorSnapshot.docs.forEach((doc) => {
+        const data = { id: doc.id, ...doc.data() };
+        betsMap.set(doc.id, data);
+      });
+
+      let results = Array.from(betsMap.values());
+
+      // Filter by status if provided
       if (status) {
-        betQuery = query(betQuery, where('status', '==', status));
+        results = results.filter((bet) => bet.status === status);
       }
 
-      const querySnapshot = await getDocs(betQuery);
-      return querySnapshot.docs.map((doc) => doc.data());
+      // Sort by createdAt in descending order (most recent first)
+      results.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      return results;
     } catch (error) {
       this._handleError(error);
     }
@@ -191,7 +230,9 @@ class BetsService {
       }
 
       // Check if bet has expired
-      if (betData.expiresAt && new Date(betData.expiresAt) < new Date()) {
+      if (new Date(betData.expiresAt) < new Date()) {
+        // Auto-lock the bet if it has expired
+        await this.lockBet(betId);
         throw new Error('Bet has expired');
       }
 
@@ -208,35 +249,60 @@ class BetsService {
         opt.participants.includes(userId),
       );
       if (hasExistingBet) {
-        throw new Error('User has already placed a bet');
+        throw new Error('You have already placed a bet');
       }
 
-      // Deduct points from user
-      const pointsService = require('./points');
-      await pointsService.deductPoints(
-        userId,
-        betData.stake,
-        `Bet stake for ${betId}`,
-      );
+      // Get user's points balance which is num coins in the user
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userData = userDoc.data();
+      const currentBalance = userData.numCoins;
+
+      console.log('Current balance:', currentBalance);
+      console.log('Wager amount:', betData.wagerAmount);
+
+      // Check if user has enough points
+      if (currentBalance < betData.wagerAmount) {
+        throw new Error(
+          `Insufficient points balance. You need ${betData.wagerAmount} points but have ${currentBalance}`,
+        );
+      }
 
       const timestamp = new Date().toISOString();
 
-      // Update bet with new participant and total pool
+      // Deduct points from user first
+      await updateDoc(doc(db, 'users', userId), {
+        numCoins: increment(-betData.wagerAmount),
+      });
+
+      // Update bet with new participant
       const updatedOptions = betData.answerOptions.map((opt) =>
         opt.id === optionId
-          ? { ...opt, participants: [...opt.participants, userId] }
+          ? {
+              ...opt,
+              participants: [...opt.participants, userId],
+              totalWager: (opt.totalWager || 0) + betData.wagerAmount,
+            }
           : opt,
       );
 
+      // Deduct points from user
+      await updateDoc(doc(db, 'users', userId), {
+        numCoins: increment(-betData.wagerAmount),
+        totalSpent: increment(betData.wagerAmount),
+      });
+
+      // Update bet document
       await updateDoc(betRef, {
         answerOptions: updatedOptions,
-        totalPool: increment(betData.stake),
+        totalPool: increment(betData.wagerAmount),
+        participants: arrayUnion(userId),
         updatedAt: timestamp,
       });
 
-      // Get updated bet data
-      const updatedDoc = await getDoc(betRef);
-      return updatedDoc.data();
+      return {
+        success: true,
+        message: 'Bet placed successfully',
+      };
     } catch (error) {
       this._handleError(error);
     }
@@ -269,7 +335,7 @@ class BetsService {
     }
   }
 
-  // Release result (only creator can do this)
+  // Release result and distribute points
   async releaseResult(betId, creatorId, winningOptionId) {
     try {
       const betRef = doc(db, 'bets', betId);
@@ -304,19 +370,31 @@ class BetsService {
       // Calculate winnings
       const winners = winningOption.participants;
       const totalWinners = winners.length;
+      const totalPool = betData.totalPool;
 
       if (totalWinners > 0) {
-        const winningsPerPerson = Math.floor(betData.totalPool / totalWinners);
+        const winningsPerPerson = Math.floor(totalPool / totalWinners);
 
         // Distribute winnings to winners
-        const pointsService = require('./points');
-        const distributionPromises = winners.map((winnerId) =>
-          pointsService.addPoints(
-            winnerId,
-            winningsPerPerson,
-            `Won bet ${betId} - ${betData.title}`,
-          ),
-        );
+        const distributionPromises = winners.map(async (winnerId) => {
+          // add winnings to user's num coins
+          await updateDoc(doc(db, 'users', winnerId), {
+            numCoins: increment(winningsPerPerson),
+            totalEarned: increment(winningsPerPerson),
+          });
+
+          // Add to user's history
+          const historyRef = doc(collection(db, 'pointHistory'));
+          await setDoc(historyRef, {
+            userId: winnerId,
+            amount: winningsPerPerson,
+            type: 'bet_win',
+            betId: betId,
+            description: `Won bet: ${betData.question}`,
+            createdAt: timestamp,
+          });
+        });
+
         await Promise.all(distributionPromises);
       }
 
@@ -326,11 +404,14 @@ class BetsService {
         winningOptionId,
         resultReleasedAt: timestamp,
         updatedAt: timestamp,
+        winningsPerPerson:
+          totalWinners > 0 ? Math.floor(totalPool / totalWinners) : 0,
       });
 
-      // Get updated bet data
-      const updatedDoc = await getDoc(betRef);
-      return updatedDoc.data();
+      return {
+        success: true,
+        message: 'Results released and points distributed',
+      };
     } catch (error) {
       this._handleError(error);
     }
@@ -417,25 +498,41 @@ class BetsService {
       }
 
       const betData = betDoc.data();
+      const now = new Date();
+      const expiresAt = new Date(betData.expiresAt);
 
-      // If this is a group bet, update the group's bets array
-      if (betData.groupId) {
-        const groupRef = doc(db, 'groups', betData.groupId);
-        await updateDoc(groupRef, {
-          bets: arrayRemove(betId),
-          updatedAt: new Date().toISOString(),
-        });
+      // Check if bet has expired
+      if (now > expiresAt) {
+        throw new Error('Cannot delete an expired bet');
       }
 
+      // Process refunds for all participants
+      const refundPromises = [];
+      betData.answerOptions.forEach((option) => {
+        option.participants.forEach((userId) => {
+          const userPointsRef = doc(db, 'users', userId);
+          refundPromises.push(
+            updateDoc(userPointsRef, {
+              numCoins: increment(betData.wagerAmount),
+            }),
+          );
+        });
+      });
+
+      // Wait for all refunds to process
+      await Promise.all(refundPromises);
+
+      // Delete the bet
       await deleteDoc(betRef);
+
       return true;
     } catch (error) {
       this._handleError(error);
     }
   }
 
-  // Get bet comments
-  async getBetComments(groupId, betId) {
+  // Get bet comments with user details
+  async getBetComments(betId) {
     try {
       const commentsQuery = query(
         collection(db, 'betComments'),
@@ -453,17 +550,33 @@ class BetsService {
     }
   }
 
-  // Add comment
+  // Add comment with user details
   async addComment(groupId, betId, userId, content) {
     try {
+      // Get user details
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+      const userData = userDoc.data();
+
       const comment = {
         betId,
         userId,
+        username: userData.username,
+        profilePicture: userData.profilePicture,
         content,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       };
 
       const commentRef = await addDoc(collection(db, 'betComments'), comment);
+
+      // Update bet with comment count
+      await updateDoc(doc(db, 'bets', betId), {
+        commentCount: increment(1),
+        updatedAt: new Date().toISOString(),
+      });
+
       return {
         id: commentRef.id,
         ...comment,
@@ -473,17 +586,84 @@ class BetsService {
     }
   }
 
-  // Add reaction
+  // Add reaction with user details
   async addReaction(groupId, betId, userId, reaction) {
     try {
       const betRef = doc(db, 'bets', betId);
+      const userDoc = await getDoc(doc(db, 'users', userId));
+
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const userData = userDoc.data();
+      const timestamp = new Date().toISOString();
+
+      // Add new reaction
       await updateDoc(betRef, {
         reactions: arrayUnion({
           userId,
+          username: userData.username,
           reaction,
-          createdAt: serverTimestamp(),
+          createdAt: timestamp,
         }),
+        updatedAt: timestamp,
       });
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Remove reaction
+  async removeReaction(betId, userId, reaction) {
+    try {
+      const betRef = doc(db, 'bets', betId);
+      const userDoc = await getDoc(doc(db, 'users', userId));
+
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const userData = userDoc.data();
+
+      await updateDoc(betRef, {
+        reactions: arrayRemove({
+          userId,
+          username: userData.username,
+          reaction,
+        }),
+        updatedAt: new Date().toISOString(),
+      });
+
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Toggle reaction
+  async toggleReaction(groupId, betId, userId, reaction) {
+    try {
+      const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const betData = betDoc.data();
+      const existingReaction = betData.reactions?.find(
+        (r) => r.userId === userId && r.reaction === reaction,
+      );
+
+      if (existingReaction) {
+        await this.removeReaction(betId, userId, reaction);
+      } else {
+        await this.addReaction(groupId, betId, userId, reaction);
+      }
+
       return true;
     } catch (error) {
       this._handleError(error);

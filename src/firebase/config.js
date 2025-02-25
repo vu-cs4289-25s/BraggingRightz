@@ -10,13 +10,13 @@ const { getFirestore } = require('firebase/firestore');
 const { getStorage } = require('firebase/storage');
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyCSixS0TPhJ8AplsJG-YCjK7pkPzTK8iIg',
-  authDomain: 'bragging-rightz.firebaseapp.com',
-  projectId: 'bragging-rightz',
-  storageBucket: 'bragging-rightz.firebasestorage.app',
-  messagingSenderId: '983478005100',
-  appId: '1:983478005100:web:53d6b5a42a6c92c4795749',
-  measurementId: 'G-E1C4ELL8D0',
+  apiKey: "AIzaSyBE3YhVpe2354Ie2nlPNQjIYc8XepMRTXI",
+  authDomain: "bragging-rightz-local.firebaseapp.com",
+  projectId: "bragging-rightz-local",
+  storageBucket: "bragging-rightz-local.firebasestorage.app",
+  messagingSenderId: "855992163704",
+  appId: "1:855992163704:web:b781bedd655d79882cfc8d",
+  measurementId: "G-LDT9KQ6TDY"
 };
 
 // Initialize Firebase
