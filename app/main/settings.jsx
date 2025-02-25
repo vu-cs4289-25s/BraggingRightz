@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
-  Animated
+  Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../constants/theme';
@@ -48,7 +48,11 @@ const Settings = () => {
   };
 
   const SettingOption = ({ icon, label, onPress }) => (
-    <TouchableOpacity style={styles.option} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.option}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.iconContainer}>
         <FontAwesome5 name={icon} size={18} color="#1E293B" />
       </View>
@@ -59,13 +63,23 @@ const Settings = () => {
   return (
     <ScreenWrapper bg="white">
       <Animated.View style={[styles.fadeIn, { opacity: fadeAnim }]}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           <Header
             title="Settings"
             showBackButton={true}
             rightComponent={
-              <TouchableOpacity onPress={handleLogout} style={styles.headerLogout}>
-                <LogoutIcon strokeWidth={2} size={hp(2.5)} color={theme.colors.roseLight} />
+              <TouchableOpacity
+                onPress={handleLogout}
+                style={styles.headerLogout}
+              >
+                <LogoutIcon
+                  strokeWidth={2}
+                  size={hp(2.5)}
+                  color={theme.colors.roseLight}
+                />
               </TouchableOpacity>
             }
           />
@@ -89,7 +103,11 @@ const Settings = () => {
             <View style={styles.section}>
               <SettingOption icon="flag" label="Report a problem" />
               <SettingOption icon="user-plus" label="Add account" />
-              <SettingOption icon="sign-out-alt" label="Log out" onPress={handleLogout} />
+              <SettingOption
+                icon="sign-out-alt"
+                label="Log out"
+                onPress={handleLogout}
+              />
             </View>
           </View>
         </ScrollView>
@@ -155,4 +173,3 @@ const styles = StyleSheet.create({
     padding: 8,
   },
 });
-

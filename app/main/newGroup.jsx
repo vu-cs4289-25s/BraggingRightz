@@ -110,7 +110,7 @@ const NewGroup = () => {
           onPress: () => navigation.navigate('Groups'),
         },
       ]);
-      navigation.navigate("Groups");
+      navigation.navigate('Groups');
     } catch (error) {
       Alert.alert('Group Creation Failed', error.message, [
         {
@@ -204,7 +204,7 @@ const NewGroup = () => {
             </Text>
             <View style={styles.inputContainer}>
               <Dropdown
-                data={friends.map(friend => ({
+                data={friends.map((friend) => ({
                   label: friend.username,
                   value: friend.userId,
                 }))}

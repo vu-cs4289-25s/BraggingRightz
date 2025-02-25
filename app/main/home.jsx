@@ -20,7 +20,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/Avatar';
 import AddFriendModal from '../../components/AddFriendModal';
-import FriendService from '../../src/endpoints/friend.cjs'
+import FriendService from '../../src/endpoints/friend.cjs';
 
 const Home = () => {
   const navigation = useNavigation();
@@ -30,7 +30,7 @@ const Home = () => {
   const handleAddFriend = (username) => {
     console.log('Adding friend:', username);
     FriendService.addFriend({
-          user2username: username,
+      user2username: username,
     });
   };
 
@@ -60,24 +60,24 @@ const Home = () => {
 
   return (
     <ScreenWrapper bg="white">
-       {/* Header */}
-       <View style={styles.header}>
-          <Text style={styles.title}>BraggingRightz</Text>
-          <View style={styles.icons}>
-            <Pressable onPress={() => navigation.navigate('Notifications')}>
-              <Icon
-                name="heart"
-                size={hp(3.2)}
-                strokeWidth={2}
-                color={theme.colors.text}
-              />
-            </Pressable>
-            <Pressable onPress={() => navigation.navigate('Profile')}>
-              <Avatar />
-            </Pressable>
-          </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>BraggingRightz</Text>
+        <View style={styles.icons}>
+          <Pressable onPress={() => navigation.navigate('Notifications')}>
+            <Icon
+              name="heart"
+              size={hp(3.2)}
+              strokeWidth={2}
+              color={theme.colors.text}
+            />
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate('Profile')}>
+            <Avatar />
+          </Pressable>
         </View>
-        <View style={styles.sectionDivider} />
+      </View>
+      <View style={styles.sectionDivider} />
       <ScrollView style={styles.container}>
         {/* Coins Display */}
         <View style={styles.coinsSection}>
@@ -152,7 +152,6 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             style={styles.groupsScroll}
           >
-
             {['Sports Fans', 'Movie Buffs', 'Trivia Night'].map(
               (group, index) => (
                 <View style={styles.betsContainer}>
