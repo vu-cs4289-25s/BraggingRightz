@@ -49,9 +49,7 @@ const BottomTabNavigator = () => {
         name="Profile"
         component={Profile}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Avatar size={hp(3)}/>
-          ),
+          tabBarIcon: ({ color, size }) => <Avatar size={hp(3)} />,
           tabBarLabel: 'Profile',
         }}
       />

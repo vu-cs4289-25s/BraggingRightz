@@ -105,11 +105,11 @@ class FriendService {
 
           const profile = await getUserProfile(uid); // Fetch friend's profile
 
-          if (!profile){
+          if (!profile) {
             console.error(`No profile found for UID: ${uid}`);
             return null;
           }
-          
+
           return {
             userId: uid,
             username: profile.username || 'Unknown', // Ensure a default value
@@ -119,7 +119,7 @@ class FriendService {
         }),
       );
 
-      return friendInfo.filter(friend => friend !== null);
+      return friendInfo.filter((friend) => friend !== null);
     } catch (error) {
       console.log('ERROR GETTING FRIENDS LIST: ', error);
     }

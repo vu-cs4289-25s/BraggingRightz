@@ -18,7 +18,6 @@ import BetDetails from './app/main/betDetails';
 import NewBet from './app/main/newBet';
 import Groups from './app/main/groups';
 
-
 const Stack = createStackNavigator();
 
 export default function App() {
