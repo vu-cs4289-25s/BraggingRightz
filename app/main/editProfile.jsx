@@ -133,7 +133,12 @@ const EditProfile = () => {
                 style={styles.avatarContainer}
               >
                 <Avatar
-                  uri={profileImage || Image.resolveAssetSource(require('../../assets/images/default-avatar.png')).uri}
+                  uri={
+                    profileImage ||
+                    Image.resolveAssetSource(
+                      require('../../assets/images/default-avatar.png'),
+                    ).uri
+                  }
                   size={hp(15)}
                   rounded={theme.radius.xl}
                 />

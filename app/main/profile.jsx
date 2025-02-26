@@ -99,7 +99,12 @@ const Profile = () => {
         <View style={styles.profileContainer}>
           <View style={styles.avatarContainer}>
             <Avatar
-              uri={profileImage || Image.resolveAssetSource(require('../../assets/images/default-avatar.png')).uri}
+              uri={
+                profileImage ||
+                Image.resolveAssetSource(
+                  require('../../assets/images/default-avatar.png'),
+                ).uri
+              }
               size={hp(15)}
               rounded={theme.radius.xl}
             />
@@ -182,7 +187,7 @@ const Profile = () => {
                 </Text>
               </View>
             </View>
-          </View>        
+          </View>
         ))}
         {/*<View style={styles.betsContainer}>*/}
         {/*  {session?.bets?.length > 0 ? (*/}

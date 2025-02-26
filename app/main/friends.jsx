@@ -57,8 +57,8 @@ const Friends = () => {
   return (
     <ScreenWrapper bg="white">
       <View style={styles.container}>
-        <Header 
-          title="Friends page" 
+        <Header
+          title="Friends page"
           showBackButton={true}
           rightComponent={
             <TouchableOpacity
