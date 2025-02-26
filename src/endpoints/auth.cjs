@@ -159,7 +159,6 @@ class AuthService {
       }
 
       const userData = userDoc.data();
-      console.log('userData', userData);
 
       return {
         uid: user.uid,

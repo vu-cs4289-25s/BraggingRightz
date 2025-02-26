@@ -17,7 +17,7 @@ class SettingsService {
       const settingsRef = doc(db, 'settings', userId);
       const timestamp = new Date().toISOString();
 
-      const settingsData = {
+      const defaultSettings = {
         userId,
         notifications: {
           betInvites: true,
@@ -26,19 +26,19 @@ class SettingsService {
           pointsUpdates: true,
         },
         privacy: {
-          profileVisibility: 'public', // public, friends, private
+          profileVisibility: 'public',
           showPoints: true,
           showGroups: true,
           showBets: true,
         },
-        theme: 'light', // light, dark, system
-        language: 'en', // en, es, fr, etc.
+        theme: 'light',
+        language: 'en',
         createdAt: timestamp,
         updatedAt: timestamp,
       };
 
-      await setDoc(settingsRef, settingsData);
-      return settingsData;
+      await setDoc(settingsRef, defaultSettings);
+      return defaultSettings;
     } catch (error) {
       this._handleError(error);
     }
@@ -58,7 +58,7 @@ class SettingsService {
   }
 
   // Update notification settings
-  async updateNotificationSettings(userId, notificationSettings) {
+  async updateNotificationSettings(userId, updates) {
     try {
       const settingsRef = doc(db, 'settings', userId);
       const settingsDoc = await getDoc(settingsRef);
@@ -67,26 +67,28 @@ class SettingsService {
         throw new Error('Settings not found');
       }
 
-      const timestamp = new Date().toISOString();
-      const updates = {
-        notifications: {
-          ...settingsDoc.data().notifications,
-          ...notificationSettings,
-        },
-        updatedAt: timestamp,
+      const currentSettings = settingsDoc.data();
+      const updatedNotifications = {
+        ...currentSettings.notifications,
+        ...updates,
       };
 
-      await updateDoc(settingsRef, updates);
+      await updateDoc(settingsRef, {
+        notifications: updatedNotifications,
+        updatedAt: new Date().toISOString(),
+      });
 
-      const updatedDoc = await getDoc(settingsRef);
-      return updatedDoc.data();
+      return {
+        ...currentSettings,
+        notifications: updatedNotifications,
+      };
     } catch (error) {
       this._handleError(error);
     }
   }
 
   // Update privacy settings
-  async updatePrivacySettings(userId, privacySettings) {
+  async updatePrivacySettings(userId, updates) {
     try {
       const settingsRef = doc(db, 'settings', userId);
       const settingsDoc = await getDoc(settingsRef);
@@ -95,19 +97,21 @@ class SettingsService {
         throw new Error('Settings not found');
       }
 
-      const timestamp = new Date().toISOString();
-      const updates = {
-        privacy: {
-          ...settingsDoc.data().privacy,
-          ...privacySettings,
-        },
-        updatedAt: timestamp,
+      const currentSettings = settingsDoc.data();
+      const updatedPrivacy = {
+        ...currentSettings.privacy,
+        ...updates,
       };
 
-      await updateDoc(settingsRef, updates);
+      await updateDoc(settingsRef, {
+        privacy: updatedPrivacy,
+        updatedAt: new Date().toISOString(),
+      });
 
-      const updatedDoc = await getDoc(settingsRef);
-      return updatedDoc.data();
+      return {
+        ...currentSettings,
+        privacy: updatedPrivacy,
+      };
     } catch (error) {
       this._handleError(error);
     }
@@ -116,10 +120,6 @@ class SettingsService {
   // Update theme
   async updateTheme(userId, theme) {
     try {
-      if (!['light', 'dark', 'system'].includes(theme)) {
-        throw new Error('Invalid theme');
-      }
-
       const settingsRef = doc(db, 'settings', userId);
       const settingsDoc = await getDoc(settingsRef);
 
@@ -127,16 +127,20 @@ class SettingsService {
         throw new Error('Settings not found');
       }
 
-      const timestamp = new Date().toISOString();
-      const updates = {
+      if (theme !== 'light' && theme !== 'dark') {
+        throw new Error('Invalid theme');
+      }
+
+      const currentSettings = settingsDoc.data();
+      await updateDoc(settingsRef, {
         theme,
-        updatedAt: timestamp,
+        updatedAt: new Date().toISOString(),
+      });
+
+      return {
+        ...currentSettings,
+        theme,
       };
-
-      await updateDoc(settingsRef, updates);
-
-      const updatedDoc = await getDoc(settingsRef);
-      return updatedDoc.data();
     } catch (error) {
       this._handleError(error);
     }
@@ -145,11 +149,6 @@ class SettingsService {
   // Update language
   async updateLanguage(userId, language) {
     try {
-      const supportedLanguages = ['en', 'es', 'fr']; // Add more as needed
-      if (!supportedLanguages.includes(language)) {
-        throw new Error('Unsupported language');
-      }
-
       const settingsRef = doc(db, 'settings', userId);
       const settingsDoc = await getDoc(settingsRef);
 
@@ -157,26 +156,29 @@ class SettingsService {
         throw new Error('Settings not found');
       }
 
-      const timestamp = new Date().toISOString();
-      const updates = {
+      if (language !== 'en' && language !== 'es') {
+        throw new Error('Unsupported language');
+      }
+
+      const currentSettings = settingsDoc.data();
+      await updateDoc(settingsRef, {
         language,
-        updatedAt: timestamp,
+        updatedAt: new Date().toISOString(),
+      });
+
+      return {
+        ...currentSettings,
+        language,
       };
-
-      await updateDoc(settingsRef, updates);
-
-      const updatedDoc = await getDoc(settingsRef);
-      return updatedDoc.data();
     } catch (error) {
       this._handleError(error);
     }
   }
 
-  // Reset settings to default
+  // Reset settings
   async resetSettings(userId) {
     try {
-      await this.initializeSettings(userId);
-      return await this.getSettings(userId);
+      return await this.initializeSettings(userId);
     } catch (error) {
       this._handleError(error);
     }
