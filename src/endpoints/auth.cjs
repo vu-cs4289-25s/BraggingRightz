@@ -75,6 +75,8 @@ class AuthService {
         updatedAt: new Date().toISOString(),
         trophies: 0,
         numCoins: 100,
+        totalEarned: 0,
+        totalSpent: 0,
         friends: [],
         groups: [],
         profilePicture,
@@ -157,7 +159,6 @@ class AuthService {
       }
 
       const userData = userDoc.data();
-      console.log('userData', userData);
 
       return {
         uid: user.uid,

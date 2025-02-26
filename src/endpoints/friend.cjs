@@ -35,7 +35,9 @@ class FriendService {
       );
 
       // Check if username exists
-      const isValidUsername = await userExists({ username: user2username });
+      const isValidUsername = await userExists({
+        username: user2username.toLowerCase(),
+      });
 
       // TODO: add alert
       // TODO: try again logic
@@ -53,7 +55,9 @@ class FriendService {
         // Add friend to current user's list
 
         // Get user2 information
-        const user2uid = await getUid({ username: user2username });
+        const user2uid = await getUid({
+          username: user2username.toLowerCase(),
+        });
 
         const currUserDocRef = doc(db, 'users', currUser.uid);
         await updateDoc(currUserDocRef, {
