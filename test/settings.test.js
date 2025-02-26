@@ -102,22 +102,10 @@ describe('SettingsService', () => {
         },
       };
 
-      getDoc
-        .mockResolvedValueOnce({
-          exists: () => true,
-          data: () => ({
-            notifications: {
-              betInvites: true,
-              groupInvites: true,
-              betResults: true,
-              pointsUpdates: true,
-            },
-          }),
-        })
-        .mockResolvedValueOnce({
-          exists: () => true,
-          data: () => mockSettingsData,
-        });
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => mockSettingsData,
+      });
 
       const result = await SettingsService.updateNotificationSettings(
         'user123',
@@ -136,6 +124,7 @@ describe('SettingsService', () => {
     it('should throw error if settings not found', async () => {
       getDoc.mockResolvedValue({
         exists: () => false,
+        data: () => null,
       });
 
       await expect(
@@ -156,22 +145,10 @@ describe('SettingsService', () => {
         },
       };
 
-      getDoc
-        .mockResolvedValueOnce({
-          exists: () => true,
-          data: () => ({
-            privacy: {
-              profileVisibility: 'public',
-              showPoints: true,
-              showGroups: true,
-              showBets: true,
-            },
-          }),
-        })
-        .mockResolvedValueOnce({
-          exists: () => true,
-          data: () => mockSettingsData,
-        });
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => mockSettingsData,
+      });
 
       const result = await SettingsService.updatePrivacySettings('user123', {
         profileVisibility: 'private',
@@ -187,6 +164,7 @@ describe('SettingsService', () => {
     it('should throw error if settings not found', async () => {
       getDoc.mockResolvedValue({
         exists: () => false,
+        data: () => null,
       });
 
       await expect(
@@ -202,14 +180,10 @@ describe('SettingsService', () => {
         theme: 'dark',
       };
 
-      getDoc
-        .mockResolvedValueOnce({
-          exists: () => true,
-        })
-        .mockResolvedValueOnce({
-          exists: () => true,
-          data: () => mockSettingsData,
-        });
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => mockSettingsData,
+      });
 
       const result = await SettingsService.updateTheme('user123', 'dark');
 
@@ -218,6 +192,11 @@ describe('SettingsService', () => {
     });
 
     it('should throw error for invalid theme', async () => {
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ theme: 'light' }),
+      });
+
       await expect(
         SettingsService.updateTheme('user123', 'invalid'),
       ).rejects.toThrow('Invalid theme');
@@ -226,6 +205,7 @@ describe('SettingsService', () => {
     it('should throw error if settings not found', async () => {
       getDoc.mockResolvedValue({
         exists: () => false,
+        data: () => null,
       });
 
       await expect(
@@ -241,14 +221,10 @@ describe('SettingsService', () => {
         language: 'es',
       };
 
-      getDoc
-        .mockResolvedValueOnce({
-          exists: () => true,
-        })
-        .mockResolvedValueOnce({
-          exists: () => true,
-          data: () => mockSettingsData,
-        });
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => mockSettingsData,
+      });
 
       const result = await SettingsService.updateLanguage('user123', 'es');
 
@@ -257,6 +233,11 @@ describe('SettingsService', () => {
     });
 
     it('should throw error for unsupported language', async () => {
+      getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ language: 'en' }),
+      });
+
       await expect(
         SettingsService.updateLanguage('user123', 'invalid'),
       ).rejects.toThrow('Unsupported language');
@@ -265,6 +246,7 @@ describe('SettingsService', () => {
     it('should throw error if settings not found', async () => {
       getDoc.mockResolvedValue({
         exists: () => false,
+        data: () => null,
       });
 
       await expect(
