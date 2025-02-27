@@ -289,7 +289,7 @@ const Home = () => {
               size={hp(3.2)}
               strokeWidth={2}
               color={theme.colors.text}
-            />{' '}
+            />
             <Text style={styles.actionText}>Something</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -301,7 +301,7 @@ const Home = () => {
               size={hp(3.2)}
               strokeWidth={2}
               color={theme.colors.text}
-            />{' '}
+            />
             <Text style={styles.actionText}>Add a friend</Text>
           </TouchableOpacity>
         </View>
@@ -330,9 +330,9 @@ const Home = () => {
           >
             {['Sports Fans', 'Movie Buffs', 'Trivia Night'].map(
               (group, index) => (
-                <View style={styles.betsContainer}>
+                <View key={index} style={styles.betsContainer}>
                   <View style={styles.betItem}>
-                    <TouchableOpacity key={index} style={styles.groupItem}>
+                    <TouchableOpacity style={styles.groupItem}>
                       {/*<Icon name="users" size={hp(3)} color={theme.colors.primary} />*/}
                       <Text style={styles.betDescription}>{group}</Text>
                     </TouchableOpacity>
