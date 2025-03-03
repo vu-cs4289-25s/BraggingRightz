@@ -139,6 +139,14 @@ const Home = () => {
         };
   };
 
+  const groups = [
+    { id: "new", name: "Create New", icon: "plus" },
+    { id: "1", name: "Family" },
+    { id: "2", name: "Besties" },
+    { id: "3", name: "College" },
+    { id: "4", name: "Highschool" },
+  ]
+
   // Update the group name display in the bet card
   const renderBetCard = (bet) => {
     const betResult = calculateBetResult(bet);
@@ -241,9 +249,9 @@ const Home = () => {
               </View>
             )}
           </Pressable>
-          <Pressable onPress={() => navigation.navigate('Profile')}>
-            <Avatar />
-          </Pressable>
+          <View style={styles.pointsContainer}>
+            <Text style={styles.points}>7.4K</Text>
+          </View>
         </View>
       </View>
 
@@ -255,15 +263,6 @@ const Home = () => {
 
       <View style={styles.sectionDivider} />
       <ScrollView style={styles.container}>
-        {/* Coins Display */}
-        <View style={styles.coinsSection}>
-          <Ionicons
-            name="logo-bitcoin"
-            size={hp(4)}
-            color={theme.colors.primary}
-          />
-          <Text style={styles.coinsText}>785 coins</Text>
-        </View>
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
@@ -280,18 +279,7 @@ const Home = () => {
             />
             <Text style={styles.actionText}>Join Group</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('FindFriends')}
-          >
-            <Icon
-              name="thumbs-o-up"
-              size={hp(3.2)}
-              strokeWidth={2}
-              color={theme.colors.text}
-            />{' '}
-            <Text style={styles.actionText}>Something</Text>
-          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setModalVisible(true)}
@@ -323,24 +311,19 @@ const Home = () => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.groupsScroll}
-          >
-            {['Sports Fans', 'Movie Buffs', 'Trivia Night'].map(
-              (group, index) => (
-                <View style={styles.betsContainer}>
-                  <View style={styles.betItem}>
-                    <TouchableOpacity key={index} style={styles.groupItem}>
-                      {/*<Icon name="users" size={hp(3)} color={theme.colors.primary} />*/}
-                      <Text style={styles.betDescription}>{group}</Text>
-                    </TouchableOpacity>
-                  </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupsScroll}>
+            {groups.map((group) => (
+              <TouchableOpacity key={group.id} style={styles.groupItem}>
+                <View style={styles.groupAvatar}>
+                  {group.icon ? <Icon name={group.icon} size={24} color="black" /> : null}
                 </View>
-              ),
-            )}
+                <Text style={styles.groupName}>{group.name}</Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
+
+
+
         </View>
 
         {/* Active Bets Preview */}
@@ -402,6 +385,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 20,
+  },
+  pointsContainer: {
+    backgroundColor: "black",
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: 4,
+  },
+  points: {
+    color: "white",
+    fontWeight: "500",
   },
   profileSection: {
     alignItems: 'center',
@@ -470,15 +463,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   groupItem: {
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: wp(4),
-    backgroundColor: theme.colors.card,
-    padding: hp(2),
-    borderRadius: hp(1.5),
+  },
+  groupAvatar: {
+    width: hp(8),
+    height: hp(8),
+    borderRadius: hp(4),
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: hp(1),
   },
   groupName: {
-    marginTop: hp(1),
-    color: theme.colors.text,
     fontSize: hp(1.6),
   },
   // betItem: {
