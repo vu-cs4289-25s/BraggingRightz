@@ -140,12 +140,12 @@ const Home = () => {
   };
 
   const groups = [
-    { id: "new", name: "Create New", icon: "plus" },
-    { id: "1", name: "Family" },
-    { id: "2", name: "Besties" },
-    { id: "3", name: "College" },
-    { id: "4", name: "Highschool" },
-  ]
+    { id: 'new', name: 'Create New', icon: 'plus' },
+    { id: '1', name: 'Family' },
+    { id: '2', name: 'Besties' },
+    { id: '3', name: 'College' },
+    { id: '4', name: 'Highschool' },
+  ];
 
   // Update the group name display in the bet card
   const renderBetCard = (bet) => {
@@ -263,7 +263,6 @@ const Home = () => {
 
       <View style={styles.sectionDivider} />
       <ScrollView style={styles.container}>
-
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
@@ -311,19 +310,22 @@ const Home = () => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupsScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.groupsScroll}
+          >
             {groups.map((group) => (
               <TouchableOpacity key={group.id} style={styles.groupItem}>
                 <View style={styles.groupAvatar}>
-                  {group.icon ? <Icon name={group.icon} size={24} color="black" /> : null}
+                  {group.icon ? (
+                    <Icon name={group.icon} size={24} color="black" />
+                  ) : null}
                 </View>
                 <Text style={styles.groupName}>{group.name}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
-
-
-
         </View>
 
         {/* Active Bets Preview */}
@@ -387,14 +389,14 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   pointsContainer: {
-    backgroundColor: "black",
+    backgroundColor: 'black',
     paddingHorizontal: wp(2),
     paddingVertical: hp(0.5),
     borderRadius: 4,
   },
   points: {
-    color: "white",
-    fontWeight: "500",
+    color: 'white',
+    fontWeight: '500',
   },
   profileSection: {
     alignItems: 'center',
@@ -463,16 +465,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   groupItem: {
-    alignItems: "center",
+    alignItems: 'center',
     marginRight: wp(4),
   },
   groupAvatar: {
     width: hp(8),
     height: hp(8),
     borderRadius: hp(4),
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: hp(1),
   },
   groupName: {
