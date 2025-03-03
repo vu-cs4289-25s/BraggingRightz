@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "React Native Firebase",
-    "slug": "react-native-firebase",
+    "name": "Bragging Rightz App",
+    "slug": "bragging-rightz-app",
     "platforms": ["ios", "android", "web"],
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/trophy.png",
+    "icon": "./assets/images/trophy.png",
     "splash": {
-      "image": "./assets/trophy.png",
+      "image": "./assets/images/trophy.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,8 +18,8 @@
     "ios": {
       "supportsTablet": true
     },
-    "description": "Built by the team behind https://www.instamobile.io https://www.iosapptemplates.com https://www.instaflutter.com and https://www.instakotlin.com",
-    "githubUrl": "https://github.com/instamobile/react-native-firebase",
+    "description": "Betting app with friends",
+    "githubUrl": "https://github.com/vu-cs4289-25s/BraggingRightz",
     "newArchEnabled": true
   }
 }
