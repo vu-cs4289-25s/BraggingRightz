@@ -188,4 +188,4 @@ buck-out/
 web-build/
 
 # Firebase Config
-/src/firebase/config.js
+src/firebase/config.js
