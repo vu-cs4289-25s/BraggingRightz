@@ -53,12 +53,6 @@ class FriendService {
       } else {
         // Valid friend request
         // Add friend to current user's list
-
-        // Get user2 information
-        const user2uid = await getUid({
-          username: user2username.toLowerCase(),
-        });
-
         const currUserDocRef = doc(db, 'users', currUser.uid);
         await updateDoc(currUserDocRef, {
           friends: arrayUnion({ userId: user2uid, status: 'pending' }),
@@ -109,11 +103,6 @@ class FriendService {
 
           const profile = await getUserProfile(uid); // Fetch friend's profile
 
-          if (!profile) {
-            console.error(`No profile found for UID: ${uid}`);
-            return null;
-          }
-
           return {
             userId: uid,
             username: profile.username || 'Unknown', // Ensure a default value
@@ -123,7 +112,7 @@ class FriendService {
         }),
       );
 
-      return friendInfo.filter((friend) => friend !== null);
+      return friendInfo;
     } catch (error) {
       console.log('ERROR GETTING FRIENDS LIST: ', error);
     }

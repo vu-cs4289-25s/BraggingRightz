@@ -278,7 +278,6 @@ const Home = () => {
             />
             <Text style={styles.actionText}>Join Group</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setModalVisible(true)}
@@ -288,7 +287,7 @@ const Home = () => {
               size={hp(3.2)}
               strokeWidth={2}
               color={theme.colors.text}
-            />{' '}
+            />
             <Text style={styles.actionText}>Add a friend</Text>
           </TouchableOpacity>
         </View>

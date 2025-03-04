@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
@@ -132,7 +133,12 @@ const EditProfile = () => {
                 style={styles.avatarContainer}
               >
                 <Avatar
-                  uri={profileImage || require('../../assets/images/icon.png')}
+                  uri={
+                    profileImage ||
+                    Image.resolveAssetSource(
+                      require('../../assets/images/default-avatar.png'),
+                    ).uri
+                  }
                   size={hp(15)}
                   rounded={theme.radius.xl}
                 />
