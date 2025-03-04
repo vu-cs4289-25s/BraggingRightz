@@ -18,6 +18,7 @@ import BetDetails from './app/main/betDetails';
 import NewBet from './app/main/newBet';
 import Groups from './app/main/groups';
 import Leaderboard from './app/main/leaderboard';
+import GroupBets from './app/main/groupBets';
 
 const Stack = createStackNavigator();
 
@@ -43,6 +44,7 @@ export default function App() {
           <Stack.Screen name="NewBet" component={NewBet} />
           <Stack.Screen name="Groups" component={Groups} />
           <Stack.Screen name="Leaderboard" component={Leaderboard} />
+          <Stack.Screen name="GroupBets" component={GroupBets} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
