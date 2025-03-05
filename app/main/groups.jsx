@@ -10,6 +10,7 @@ import {
   Alert,
   Pressable,
   ImageBackground,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import GroupsService from '../../src/endpoints/groups.cjs';
@@ -48,10 +49,21 @@ const Groups = () => {
   }, []);
 
   const formatDate = (date) => {
+    if (!date) return 'Unknown Date';
+
+    let dateObj;
+
+    if (date.seconds) {
+      dateObj = new Date(date.seconds * 1000);
+    } else {
+      dateObj = new Date(date);
+    }
+
+    if (isNaN(dateObj)) return 'Invalid Date';
+
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
-    const dateObj = new Date(date);
 
     const options = { hour: 'numeric', minute: 'numeric', hour12: true };
     const dayOptions = { weekday: 'long' };
@@ -107,7 +119,9 @@ const Groups = () => {
           {groups.map((group, index) => (
             <Pressable
               key={index}
-              // onPress={() => navigation.navigate('GroupDetails', { groupId: group.id })}
+              onPress={() =>
+                navigation.navigate('GroupBets', { groupId: group.id })
+              }
               style={styles.groupContainer}
             >
               <View style={styles.groupInfo}>
