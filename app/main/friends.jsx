@@ -36,22 +36,15 @@ const Friends = () => {
     fetchFriends();
   }, []);
 
-  const addFriend = async ({ username }) => {
-    // Just an example with set username
-    await FriendService.addFriend({
+  const handleAddFriend = async ({ username }) => {
+    console.log('Adding friend:', username);
+    FriendService.addFriend({
       user2username: username,
     });
 
     // Refresh friend list after adding a friend
     const updatedFriends = await FriendService.getFriendList();
     setFriendsList(updatedFriends);
-  };
-
-  const handleAddFriend = (username) => {
-    console.log('Adding friend:', username);
-    FriendService.addFriend({
-      user2username: username,
-    });
   };
 
   return (

@@ -104,7 +104,7 @@ const Groups = () => {
             }
           />
           <View style={styles.sectionDivider} />
-          {groups.length === 0 && (
+          {groups.length == 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>You have no groups yet.</Text>
               <TouchableOpacity
@@ -114,8 +114,7 @@ const Groups = () => {
                 <Text style={styles.createButtonText}>Create a New Group</Text>
               </TouchableOpacity>
             </View>
-          )}
-          :
+          ): null}
           {groups.map((group, index) => (
             <Pressable
               key={index}

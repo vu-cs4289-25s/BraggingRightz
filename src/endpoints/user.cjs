@@ -230,9 +230,13 @@ class UserService {
       }
 
       const userDoc = querySnapshot.docs[0]; // Assuming username is unique
-      console.log('User found:', userDoc.id, userDoc.data());
+      const userId = userDoc.id;
 
-      return userDoc.id;
+      //TODO: DELETE -- just for debugging purposes
+      console.log('User found... userID =', userId);
+
+      return userId;
+
     } catch (error) {
       console.error('Error fetching UID:', error);
       return null;

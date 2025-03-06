@@ -39,7 +39,6 @@ class FriendService {
         username: user2username.toLowerCase(),
       });
 
-      // TODO: add alert
       // TODO: try again logic
       if (!isValidUsername) {
         // Invalid friend request
@@ -52,6 +51,9 @@ class FriendService {
         return;
       } else {
         // Valid friend request
+        // Get uid of new friend
+        const user2uid = await getUid({username: user2username});
+
         // Add friend to current user's list
         const currUserDocRef = doc(db, 'users', currUser.uid);
         await updateDoc(currUserDocRef, {
