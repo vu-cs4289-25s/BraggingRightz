@@ -91,10 +91,14 @@ const NewGroup = () => {
       return;
     }
 
-    // if (selectedMembers.length === 0) {
-    //   Alert.alert("Create New Group", "Please select at least one member");
-    // }
+    if (selectedMembers.length === 0) {
+      Alert.alert('Create New Group', 'Please select at least one member');
+      return;
+    }
+
     setLoading(true);
+
+    console.log(`Creating group with members: ${selectedMembers}`);
 
     try {
       await GroupsService.createGroup({
@@ -129,7 +133,6 @@ const NewGroup = () => {
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
 
-        // Friends object populate, though waiting on username to not be null
         const friendsList = await FriendService.getFriendList();
         setFriends(friendsList);
       } catch (error) {
@@ -138,6 +141,14 @@ const NewGroup = () => {
     };
     fetchSession();
   }, []);
+
+  const toggleSelection = (userId) => {
+    if (selectedMembers.includes(userId)) {
+      setSelectedMembers(selectedMembers.filter((id) => id !== userId));
+    } else {
+      setSelectedMembers([...selectedMembers, userId]);
+    }
+  };
 
   return (
     <ScreenWrapper bg="white">
@@ -208,26 +219,23 @@ const NewGroup = () => {
             <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
               Add Members
             </Text>
-            <View style={styles.inputContainer}>
-              <Dropdown
-                data={friends.map((friend) => ({
-                  label: friend.username,
-                  value: friend.userId,
-                }))}
-                labelField="label"
-                valueField="value"
-                placeholder="Select members"
-                value={selectedMembers}
-                onChange={(item) => {
-                  if (!selectedMembers.includes(item.value)) {
-                    setSelectedMembers([...selectedMembers, item.value]);
-                  }
-                }}
-                multiple={true}
-                style={styles.dropdown}
-              />
-            </View>
-            {/*button*/}
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              <View style={styles.inputContainer}>
+                {friends.map((friend) => (
+                  <TouchableOpacity
+                    key={friend.userId}
+                    style={[
+                      styles.friendItem,
+                      selectedMembers.includes(friend.userId) &&
+                        styles.selectedFriendItem,
+                    ]}
+                    onPress={() => toggleSelection(friend.userId)}
+                  >
+                    <Text style={styles.friendName}>{friend.username}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
             <Button
               title={'Create Group'}
               loading={loading}
@@ -288,5 +296,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
+  },
+  friendItem: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 5,
+    backgroundColor: 'white',
+  },
+  selectedFriendItem: {
+    borderColor: theme.colors.primary,
+  },
+  friendName: {
+    fontSize: 16,
   },
 });
