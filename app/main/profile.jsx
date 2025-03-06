@@ -95,7 +95,98 @@ const Profile = () => {
         };
   };
 
+  // Define the getStatusColor function
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'open':
+        return theme.colors.primary;
+      case 'locked':
+        return '#FFA500'; // Orange color for locked status
+      case 'completed':
+        return '#4CAF50'; // Green color for completed status
+      default:
+        return theme.colors.textLight; // Default color for unknown status
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return 'Unknown Date';
+
+    let dateObj;
+
+    if (date.seconds) {
+      dateObj = new Date(date.seconds * 1000);
+    } else {
+      dateObj = new Date(date);
+    }
+
+    if (isNaN(dateObj)) return 'Invalid Date';
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const options = { hour: 'numeric', minute: 'numeric', hour12: true };
+    const dayOptions = { weekday: 'long' };
+    const fullDateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+
+    if (dateObj.toDateString() === today.toDateString()) {
+      return new Intl.DateTimeFormat('en-US', options).format(dateObj);
+    } else if (dateObj.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else if (dateObj > new Date(today.setDate(today.getDate() - 7))) {
+      return new Intl.DateTimeFormat('en-US', dayOptions).format(dateObj);
+    } else {
+      return new Intl.DateTimeFormat('en-US', fullDateOptions).format(dateObj);
+    }
+  };
+
   // Update the group name display in the bet card
+  // const renderBetCard = (bet) => {
+  //   const betResult = calculateBetResult(bet);
+  //   return (
+  //     <TouchableOpacity
+  //       key={bet.id}
+  //       style={styles.betCard}
+  //       onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
+  //     >
+  //       <View style={styles.betHeader}>
+  //         <Text style={styles.betDescription}>{bet.question}</Text>
+  //         <Text style={[styles.status, { color: getStatusColor(bet.status) }]}>
+  //           {bet.status.toUpperCase()}
+  //         </Text>
+  //       </View>
+  //       <View style={styles.betDetails}>
+  //         <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
+  //         {/* <View style={styles.groupInfo}> */}
+  //         {/* <Icon name="users" size={14} color={theme.colors.textLight} /> */}
+  //         <Text style={styles.groupName}>{bet.groupName || 'No Group'}</Text>
+  //         {/* </View> */}
+  //         <View style={styles.betResult}>
+  //           {betResult && (
+  //             <Text
+  //               style={[
+  //                 styles.betCoins,
+  //                 { color: betResult.result === 'win' ? '#4CAF50' : '#FF0000' },
+  //               ]}
+  //             >
+  //               {betResult.result === 'win' ? '+' : ''}
+  //               {betResult.coins}
+  //             </Text>
+  //           )}
+  //         </View>
+  //       </View>
+  //       <View style={styles.betStats}>
+  //         <Text style={styles.statsText}>
+  //           {bet.participants?.length || 0} participants
+  //         </Text>
+  //         <Text style={styles.statsText}>{bet.commentCount || 0} comments</Text>
+  //         <Text style={styles.statsText}>Pool: {bet.totalPool || 0} coins</Text>
+  //       </View>
+  //     </TouchableOpacity>
+  //   );
+  // };
+
   const renderBetCard = (bet) => {
     const betResult = calculateBetResult(bet);
     return (
@@ -105,40 +196,152 @@ const Profile = () => {
         onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
       >
         <View style={styles.betHeader}>
-          <Text style={styles.betDescription}>{bet.question}</Text>
-          <Text style={[styles.status, { color: getStatusColor(bet.status) }]}>
-            {bet.status.toUpperCase()}
+          <Text
+            style={styles.betQuestion}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {bet.question}
           </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColorBackground(bet.status) },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusColorText(bet.status) },
+              ]}
+            >
+              {bet.status.toUpperCase()}
+            </Text>
+          </View>
         </View>
+
         <View style={styles.betDetails}>
-          <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
-          {/* <View style={styles.groupInfo}> */}
-          {/* <Icon name="users" size={14} color={theme.colors.textLight} /> */}
-          <Text style={styles.groupName}>{bet.groupName || 'No Group'}</Text>
-          {/* </View> */}
-          <View style={styles.betResult}>
+          <View style={styles.betInfoRow}>
+            <View style={styles.dateGroupContainer}>
+              <View style={styles.dateContainer}>
+                <Icon
+                  name="calendar"
+                  size={14}
+                  color={theme.colors.textLight}
+                  style={styles.infoIcon}
+                />
+                <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
+              </View>
+              <View style={styles.groupContainer}>
+                <Icon
+                  name="users"
+                  size={14}
+                  color={theme.colors.textLight}
+                  style={styles.infoIcon}
+                />
+                <Text
+                  style={styles.groupName}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {bet.groupName || 'No Group'}
+                </Text>
+              </View>
+            </View>
+
             {betResult && (
-              <Text
+              <View
                 style={[
-                  styles.betCoins,
-                  { color: betResult.result === 'win' ? '#4CAF50' : '#FF0000' },
+                  styles.resultBadge,
+                  {
+                    backgroundColor:
+                      betResult.result === 'win'
+                        ? 'rgba(76, 175, 80, 0.1)'
+                        : 'rgba(255, 0, 0, 0.1)',
+                  },
                 ]}
               >
-                {betResult.result === 'win' ? '+' : ''}
-                {betResult.coins}
-              </Text>
+                <Icon
+                  name={betResult.result === 'win' ? 'trophy' : 'times-circle'}
+                  size={14}
+                  color={betResult.result === 'win' ? '#4CAF50' : '#FF0000'}
+                  style={styles.resultIcon}
+                />
+                <Text
+                  style={[
+                    styles.betCoins,
+                    {
+                      color: betResult.result === 'win' ? '#4CAF50' : '#FF0000',
+                    },
+                  ]}
+                >
+                  {betResult.result === 'win' ? '+' : ''}
+                  {betResult.coins}
+                </Text>
+              </View>
             )}
           </View>
         </View>
+
         <View style={styles.betStats}>
-          <Text style={styles.statsText}>
-            {bet.participants?.length || 0} participants
-          </Text>
-          <Text style={styles.statsText}>{bet.commentCount || 0} comments</Text>
-          <Text style={styles.statsText}>Pool: {bet.totalPool || 0} coins</Text>
+          <View style={styles.statBadge}>
+            <Icon
+              name="user"
+              size={12}
+              color={theme.colors.primary}
+              style={styles.statIcon}
+            />
+            <Text style={styles.statsText}>
+              {bet.participants?.length || 0}
+            </Text>
+          </View>
+          <View style={styles.statBadge}>
+            <Icon
+              name="comment"
+              size={12}
+              color={theme.colors.primary}
+              style={styles.statIcon}
+            />
+            <Text style={styles.statsText}>{bet.commentCount || 0}</Text>
+          </View>
+          <View style={styles.statBadge}>
+            <Icon
+              name="money"
+              size={12}
+              color={theme.colors.primary}
+              style={styles.statIcon}
+            />
+            <Text style={styles.statsText}>{bet.totalPool || 0}</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
+  };
+
+  const getStatusColorBackground = (status) => {
+    switch (status) {
+      case 'open':
+        return 'rgba(33, 150, 243, 0.1)'; // Light blue background
+      case 'locked':
+        return 'rgba(255, 165, 0, 0.1)'; // Light orange background
+      case 'completed':
+        return 'rgba(76, 175, 80, 0.1)'; // Light green background
+      default:
+        return 'rgba(158, 158, 158, 0.1)'; // Light gray background
+    }
+  };
+
+  const getStatusColorText = (status) => {
+    switch (status) {
+      case 'open':
+        return '#2196F3'; // Blue text
+      case 'locked':
+        return '#FFA500'; // Orange text
+      case 'completed':
+        return '#4CAF50'; // Green text
+      default:
+        return theme.colors.textLight; // Default text color
+    }
   };
 
   const userBets = [
@@ -497,6 +700,108 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 10,
   },
+  betCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  betHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  betQuestion: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  betDetails: {
+    marginBottom: 12,
+  },
+  betInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateGroupContainer: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  groupContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '80%',
+  },
+  infoIcon: {
+    marginRight: 4,
+  },
+  betDate: {
+    fontSize: 12,
+    color: theme.colors.textLight,
+  },
+  groupName: {
+    fontSize: 12,
+    color: theme.colors.textLight,
+    maxWidth: '90%',
+  },
+  resultBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  resultIcon: {
+    marginRight: 4,
+  },
+  betCoins: {
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  betStats: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(33, 150, 243, 0.05)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
   betItem: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -516,29 +821,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
   },
-  betDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  betDate: {
-    fontSize: 14,
-    color: '#666',
-  },
   betGroup: {
     fontSize: 14,
     color: '#666',
-    flex: 1,
-    textAlign: 'center',
   },
   betResult: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  betCoins: {
-    marginLeft: 5,
-    fontWeight: 'bold',
-    fontSize: 16,
+  statIcon: {
+    marginRight: 4,
+  },
+  statsText: {
+    fontSize: 12,
+    color: theme.colors.text,
+    fontWeight: '500',
   },
 });
 
