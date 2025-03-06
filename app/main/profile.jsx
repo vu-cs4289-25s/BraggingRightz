@@ -7,7 +7,7 @@ import {
   View,
   Touchable,
   TouchableOpacity,
-  Image,
+  Image, Alert, ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -19,6 +19,9 @@ import Edit from '../../assets/icons/Edit';
 import AuthService from '../../src/endpoints/auth.cjs';
 import BetsService from '../../src/endpoints/bets.cjs';
 import Header from '../../components/Header';
+import GroupsService from '../../src/endpoints/groups';
+import NotificationsService from '../../src/endpoints/notifications';
+import loading from '../../components/Loading';
 
 const Profile = () => {
   const navigation = useNavigation();
@@ -28,6 +31,114 @@ const Profile = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [birthdate, setBirthdate] = useState('');
+  const [bets, setBets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const sessionData = await AuthService.getSession();
+        setSession(sessionData);
+
+        // Fetch user's bets
+        const userBets = await BetsService.getUserBets(sessionData.uid);
+
+        // Fetch group names for each bet
+        const betsWithGroupNames = await Promise.all(
+          userBets.map(async (bet) => {
+            if (bet.groupId) {
+              const groupName = await GroupsService.getGroupName(bet.groupId);
+              return {
+                ...bet,
+                groupName,
+              };
+            }
+            return {
+              ...bet,
+              groupName: 'No Group',
+            };
+          }),
+        );
+
+        setBets(betsWithGroupNames);
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        Alert.alert('Error', 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Calculate if user has won a bet
+  const calculateBetResult = (bet) => {
+    if (bet.status !== 'completed') return null;
+
+    const userOption = bet.answerOptions.find((opt) =>
+      opt.participants.includes(session?.uid),
+    );
+
+    if (!userOption) return null;
+
+    return userOption.id === bet.winningOptionId
+      ? {
+        result: 'win',
+        coins: bet.winningsPerPerson || 0,
+      }
+      : {
+        result: 'loss',
+        coins: -bet.wagerAmount,
+      };
+  };
+
+  // Update the group name display in the bet card
+  const renderBetCard = (bet) => {
+    const betResult = calculateBetResult(bet);
+    return (
+      <TouchableOpacity
+        key={bet.id}
+        style={styles.betCard}
+        onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
+      >
+        <View style={styles.betHeader}>
+          <Text style={styles.betDescription}>{bet.question}</Text>
+          <Text style={[styles.status, { color: getStatusColor(bet.status) }]}>
+            {bet.status.toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.betDetails}>
+          <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
+          {/* <View style={styles.groupInfo}> */}
+          {/* <Icon name="users" size={14} color={theme.colors.textLight} /> */}
+          <Text style={styles.groupName}>{bet.groupName || 'No Group'}</Text>
+          {/* </View> */}
+          <View style={styles.betResult}>
+            {betResult && (
+              <Text
+                style={[
+                  styles.betCoins,
+                  { color: betResult.result === 'win' ? '#4CAF50' : '#FF0000' },
+                ]}
+              >
+                {betResult.result === 'win' ? '+' : ''}
+                {betResult.coins}
+              </Text>
+            )}
+          </View>
+        </View>
+        <View style={styles.betStats}>
+          <Text style={styles.statsText}>
+            {bet.participants?.length || 0} participants
+          </Text>
+          <Text style={styles.statsText}>{bet.commentCount || 0} comments</Text>
+          <Text style={styles.statsText}>Pool: {bet.totalPool || 0} coins</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const userBets = [
     {
@@ -129,66 +240,67 @@ const Profile = () => {
 
         <View style={styles.sectionDivider} />
 
-        <Text style={styles.sectionTitle}>My Stats</Text>
-        <View style={styles.statsContainer}>
-          {session && (
-            <View style={styles.statItem}>
-              <Icon name="trophy" size={24} color="#FFD700" />
-              <Text style={styles.statValue}>{session.trophies}</Text>
-              <Text style={styles.statLabel}>Trophies</Text>
-            </View>
-          )}
-          {session && (
-            <View style={styles.statItem}>
-              <Icon name="coins" size={24} color="#FFD700" />
-              <Text style={styles.statValue}>{session.numCoins || 0}</Text>
-              <Text style={styles.statLabel}>Coins</Text>
-            </View>
-          )}
-          {session && (
-            // TODO: live updates
-            <Pressable
-              onPress={() => navigation.navigate('Friends')}
-              style={styles.statItem}
-            >
-              <Icon name="chart-line" size={24} color="#FFD700" />
-              <Text style={styles.statValue}>
-                {session.friends.length || 0}
-              </Text>
-              <Text style={styles.statLabel}>Friends</Text>
-            </Pressable>
-          )}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>My Stats</Text>
+          <View style={styles.statsContainer}>
+            {session && (
+              <View style={styles.statItem}>
+                <Icon name="trophy" size={24} color="#FFD700" />
+                <Text style={styles.statValue}>{session.trophies}</Text>
+                <Text style={styles.statLabel}>Trophies</Text>
+              </View>
+            )}
+            {session && (
+              <View style={styles.statItem}>
+                <Icon name="star-o" size={24} color="#FFD700" />
+                <Text style={styles.statValue}>{session.numCoins || 0}</Text>
+                <Text style={styles.statLabel}>Coins</Text>
+              </View>
+            )}
+            {session && (
+              // TODO: live updates
+              <Pressable
+                onPress={() => navigation.navigate('Friends')}
+                style={styles.statItem}
+              >
+                <Icon name="group" size={24} color="#FFD700" />
+                <Text style={styles.statValue}>
+                  {session.friends.length || 0}
+                </Text>
+                <Text style={styles.statLabel}>Friends</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         <View style={styles.sectionDivider} />
 
-        <Text style={styles.sectionTitle}>My Bet History</Text>
         {/*TODO replace the following with the comment below once bets are made (wired code)*/}
-        {userBets.map((bet, index) => (
-          <View key={index} style={styles.betItem}>
-            <Text style={styles.betDescription}>{bet.bet}</Text>
-            <View style={styles.betDetails}>
-              <Text style={styles.betDate}>{bet.date}</Text>
-              <Text style={styles.betGroup}>{bet.group}</Text>
-              <View style={styles.betResult}>
-                <Icon
-                  name={bet.result === 'win' ? 'trophy' : 'times-circle'}
-                  size={18}
-                  color={bet.result === 'win' ? '#FFD700' : '#FF0000'}
-                />
-                <Text
-                  style={[
-                    styles.betCoins,
-                    { color: bet.result === 'win' ? '#4CAF50' : '#FF0000' },
-                  ]}
-                >
-                  {bet.result === 'win' ? '+' : ''}
-                  {bet.coins}
-                </Text>
-              </View>
-            </View>
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Bet History</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('MyBets')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
           </View>
-        ))}
+          <View style={styles.betsContainer}>
+            {loading ? (
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            ) : bets.length > 0 ? (
+              bets.map((bet) => renderBetCard(bet))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No bets found</Text>
+                <TouchableOpacity
+                  style={styles.createButton}
+                  onPress={() => navigation.navigate('NewBet')}
+                >
+                  <Text style={styles.createButtonText}>Create a New Bet</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
         {/*<View style={styles.betsContainer}>*/}
         {/*  {session?.bets?.length > 0 ? (*/}
         {/*    session.bets.map((bet, index) => (*/}
@@ -313,18 +425,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp(2),
+  },
+  sectionTitle: {
+    fontSize: hp(2.2),
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  sectionContainer: {
+    marginBottom: hp(3),
+    paddingHorizontal: wp(4),
+  },
   sectionDivider: {
     height: 1,
     backgroundColor: '#e0e0e0',
     marginVertical: 20,
     marginHorizontal: 10,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginLeft: 20,
-    marginBottom: 15,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -347,6 +467,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  seeAllText: {
+    color: theme.colors.primary,
+    fontSize: hp(1.8),
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: hp(4),
+  },
+  emptyText: {
+    fontSize: hp(2),
+    color: theme.colors.textLight,
+    marginBottom: hp(2),
+  },
+  createButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
+    borderRadius: theme.radius.lg,
+  },
+  createButtonText: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '500',
   },
   betsContainer: {
     marginTop: 10,
