@@ -73,7 +73,7 @@ const Profile = () => {
   useFocusEffect(
     useCallback(() => {
       fetchSession(); // Fetch updated data when navigating to Profile screen
-    }, [])
+    }, []),
   );
 
   return (
@@ -158,9 +158,7 @@ const Profile = () => {
               style={styles.statItem}
             >
               <Icon name="users" size={24} color="#FFD700" />
-              <Text style={styles.statValue}>
-                {frindCount || 0}
-              </Text>
+              <Text style={styles.statValue}>{frindCount || 0}</Text>
               <Text style={styles.statLabel}>Friends</Text>
             </Pressable>
           )}

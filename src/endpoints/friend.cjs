@@ -52,7 +52,7 @@ class FriendService {
       } else {
         // Valid friend request
         // Get uid of new friend
-        const user2uid = await getUid({username: user2username});
+        const user2uid = await getUid({ username: user2username });
 
         // Add friend to current user's list
         const currUserDocRef = doc(db, 'users', currUser.uid);

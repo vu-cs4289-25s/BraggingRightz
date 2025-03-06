@@ -236,7 +236,6 @@ class UserService {
       console.log('User found... userID =', userId);
 
       return userId;
-
     } catch (error) {
       console.error('Error fetching UID:', error);
       return null;

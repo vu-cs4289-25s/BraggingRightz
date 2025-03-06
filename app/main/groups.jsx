@@ -114,7 +114,7 @@ const Groups = () => {
                 <Text style={styles.createButtonText}>Create a New Group</Text>
               </TouchableOpacity>
             </View>
-          ): null}
+          ) : null}
           {groups.map((group, index) => (
             <Pressable
               key={index}
