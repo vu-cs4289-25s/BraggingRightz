@@ -7,7 +7,9 @@ import {
   View,
   Touchable,
   TouchableOpacity,
-  Image, Alert, ActivityIndicator,
+  Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -61,7 +63,6 @@ const Profile = () => {
         );
 
         setBets(betsWithGroupNames);
-
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert('Error', 'Failed to load data');
@@ -85,13 +86,13 @@ const Profile = () => {
 
     return userOption.id === bet.winningOptionId
       ? {
-        result: 'win',
-        coins: bet.winningsPerPerson || 0,
-      }
+          result: 'win',
+          coins: bet.winningsPerPerson || 0,
+        }
       : {
-        result: 'loss',
-        coins: -bet.wagerAmount,
-      };
+          result: 'loss',
+          coins: -bet.wagerAmount,
+        };
   };
 
   // Update the group name display in the bet card
