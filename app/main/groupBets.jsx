@@ -223,7 +223,9 @@ const GroupBets = () => {
             rightComponent={
               <TouchableOpacity
                 /* Click to edit group */
-                onPress={() => navigation.navigate('EditGroup',{ groupId: group })}
+                onPress={() =>
+                  navigation.navigate('EditGroup', { groupId: group })
+                }
                 style={styles.header}
                 paddingRight={wp(4)}
               >

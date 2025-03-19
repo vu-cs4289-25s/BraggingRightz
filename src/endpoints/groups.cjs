@@ -33,7 +33,13 @@ const NotificationsService = require('./notifications.cjs');
 
 class GroupsService {
   // Create a new group
-  async createGroup({ name, description, creatorId, members, isPrivate = false }) {
+  async createGroup({
+    name,
+    description,
+    creatorId,
+    members,
+    isPrivate = false,
+  }) {
     try {
       const groupRef = doc(collection(db, 'groups'));
       const timestamp = new Date().toISOString();
