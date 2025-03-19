@@ -222,8 +222,8 @@ const GroupBets = () => {
             showBackButton={true}
             rightComponent={
               <TouchableOpacity
-                /* Eventually will be edit group but for now create new bet*/
-                onPress={() => navigation.navigate('NewBet')}
+                /* Click to edit group */
+                onPress={() => navigation.navigate('EditGroup',{ groupId: group })}
                 style={styles.header}
                 paddingRight={wp(4)}
               >
