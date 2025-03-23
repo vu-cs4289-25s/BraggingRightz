@@ -221,6 +221,13 @@ const NewGroup = () => {
             </Text>
             <ScrollView contentContainerStyle={styles.scrollContent}>
               <View style={styles.inputContainer}>
+                {friends.length == 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      You have no friends yet.
+                    </Text>
+                  </View>
+                ) : null}
                 {friends.map((friend) => (
                   <TouchableOpacity
                     key={friend.userId}
