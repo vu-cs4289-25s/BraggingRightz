@@ -37,7 +37,7 @@ class GroupsService {
     name,
     description,
     creatorId,
-    members,
+    members = [],
     isPrivate = false,
   }) {
     try {
