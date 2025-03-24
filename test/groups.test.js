@@ -47,6 +47,7 @@ describe('GroupsService', () => {
         name: 'Test Group',
         description: 'Test Description',
         creatorId: 'user123',
+        members: ['member1', 'member2'],
         isPrivate: false,
       };
 
@@ -62,7 +63,7 @@ describe('GroupsService', () => {
         name: 'Test Group',
         description: 'Test Description',
         creatorId: 'user123',
-        members: ['user123'],
+        members: expect.arrayContaining(['user123', 'member1', 'member2']),
         admins: ['user123'],
         isPrivate: false,
       });
@@ -75,6 +76,7 @@ describe('GroupsService', () => {
         name: 'Private Group',
         description: 'Test Description',
         creatorId: 'user123',
+        members: [],
         isPrivate: true,
       };
 
@@ -88,6 +90,7 @@ describe('GroupsService', () => {
       expect(result.isPrivate).toBe(true);
       expect(result.inviteCode).toBeDefined();
       expect(result.inviteCode).toHaveLength(6);
+      expect(result.members).toEqual(['user123']);
     });
   });
 

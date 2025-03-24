@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -160,7 +161,12 @@ const NewGroup = () => {
               style={styles.avatarContainer}
             >
               <Avatar
-                uri={groupPhoto || require('../../assets/images/icon.png')}
+                uri={
+                  groupPhoto ||
+                  Image.resolveAssetSource(
+                    require('../../assets/images/default-avatar.png'),
+                  ).uri
+                }
                 size={hp(15)}
                 rounded={theme.radius.xl}
               />
@@ -215,6 +221,13 @@ const NewGroup = () => {
             </Text>
             <ScrollView contentContainerStyle={styles.scrollContent}>
               <View style={styles.inputContainer}>
+                {friends.length == 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      You have no friends yet.
+                    </Text>
+                  </View>
+                ) : null}
                 {friends.map((friend) => (
                   <TouchableOpacity
                     key={friend.userId}

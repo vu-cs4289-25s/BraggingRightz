@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -11,7 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
@@ -33,6 +33,7 @@ const Profile = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [birthdate, setBirthdate] = useState('');
+
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -344,6 +345,7 @@ const Profile = () => {
     }
   };
 
+
   const userBets = [
     {
       bet: 'Who will eat the most apples?',
@@ -368,22 +370,27 @@ const Profile = () => {
     },
   ];
 
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        const sessionData = await AuthService.getSession();
-        setSession(sessionData);
-        setUsername(sessionData.username);
-        setFullName(sessionData.fullName);
-        setEmail(sessionData.email);
-        setBirthdate(new Date(sessionData.birthdate).toLocaleDateString());
-        setProfileImage(sessionData.profilePicture);
-      } catch (error) {
-        console.log('Error fetching session:', error);
-      }
-    };
-    fetchSession();
-  }, []);
+  const fetchSession = async () => {
+    try {
+      const sessionData = await AuthService.getSession();
+      setSession(sessionData);
+      setUsername(sessionData.username);
+      setFullName(sessionData.fullName);
+      setEmail(sessionData.email);
+      setBirthdate(new Date(sessionData.birthdate).toLocaleDateString());
+      setProfileImage(sessionData.profilePicture);
+      setFriendCount(sessionData.friends.length);
+    } catch (error) {
+      console.log('Error fetching session:', error);
+    }
+  };
+
+  // Use `useFocusEffect` to update friend count dynamically when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      fetchSession(); // Fetch updated data when navigating to Profile screen
+    }, []),
+  );
 
   return (
     <ScreenWrapper bg="white">
@@ -443,6 +450,7 @@ const Profile = () => {
         </View>
 
         <View style={styles.sectionDivider} />
+
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>My Stats</Text>
