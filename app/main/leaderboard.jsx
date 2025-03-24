@@ -79,7 +79,11 @@ const LeaderboardScreen = () => {
       >
         <View style={styles.leftSection}>
           {isTopThree ? (
-            <Ionicons name="medal-outline" size={24} color={medalColors[index]} />
+            <Ionicons
+              name="medal-outline"
+              size={24}
+              color={medalColors[index]}
+            />
           ) : (
             <Text style={styles.rankText}>{index + 1}</Text>
           )}
