@@ -112,7 +112,7 @@ const EditProfile = () => {
       });
 
       Alert.alert('Success', 'Profile updated successfully!');
-      navigation.navigate('Profile');
+      navigation.navigate('Main', { screen: 'Profile' });
     } catch (error) {
       console.log('Update error:', error);
       Alert.alert('Update Failed', error.message || 'Failed to update profile');
