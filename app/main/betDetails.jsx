@@ -130,21 +130,38 @@ const BetDetails = () => {
       return;
     }
 
-    try {
-      setSubmitting(true);
-      await BetsService.placeBet(betId, session.uid, optionId);
+    // Show confirmation alert
+    Alert.alert(
+      'Confirm Vote',
+      'Are you sure? You cannot change your vote after submitting.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: async () => {
+            try {
+              setSubmitting(true);
+              await BetsService.placeBet(betId, session.uid, optionId);
 
-      // Refresh bet data
-      const updatedBet = await BetsService.getBet(betId);
-      setBetData(updatedBet);
+              // Refresh bet data
+              const updatedBet = await BetsService.getBet(betId);
+              setBetData(updatedBet);
 
-      Alert.alert('Success', 'Your vote has been placed!');
-    } catch (error) {
-      console.error('Error placing vote:', error);
-      Alert.alert('Error', error.message || 'Failed to place vote');
-    } finally {
-      setSubmitting(false);
-    }
+              Alert.alert('Success', 'Your vote has been placed!');
+            } catch (error) {
+              console.error('Error placing vote:', error);
+              Alert.alert('Error', error.message || 'Failed to place vote');
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ],
+      { cancelable: true },
+    );
   };
 
   const handleAddComment = async () => {
@@ -231,34 +248,42 @@ const BetDetails = () => {
       );
       const totalPool = betData.wagerAmount * totalParticipants;
       const winnersCount = winningOption.participants.length;
+
+      if (winnersCount === 0) {
+        throw new Error('No participants in the winning option');
+      }
+
       const winningsPerPerson = Math.floor(totalPool / winnersCount);
 
       // Release result and distribute coins
-      await BetsService.releaseResult(
+      const result = await BetsService.releaseResult(
         betId,
         session.uid,
         optionId,
         winningsPerPerson,
       );
 
+      if (!result.success) {
+        throw new Error('Failed to distribute winnings');
+      }
+
       // Send notifications to all participants
       const notificationPromises = betData.answerOptions.flatMap((option) =>
         option.participants.map(async (participantId) => {
           const isWinner = option.id === optionId;
-          const notificationData = {
+          return NotificationsService.createNotification({
             userId: participantId,
-            type: 'bets',
-            title: `Results are in for "${betData.question}"`,
+            type: 'bet_result',
+            title: `Results for "${betData.question}"`,
             message: isWinner
               ? `Congratulations! You won ${winningsPerPerson} coins!`
               : 'Better luck next time!',
             data: {
               betId,
               result: isWinner ? 'won' : 'lost',
-              winningsPerPerson: isWinner ? winningsPerPerson : 0,
+              winnings: isWinner ? winningsPerPerson : 0,
             },
-          };
-          return NotificationsService.createNotification(notificationData);
+          });
         }),
       );
 
@@ -266,17 +291,22 @@ const BetDetails = () => {
 
       Alert.alert(
         'Success',
-        `Winner selected and ${winningsPerPerson} coins distributed to each winner!`,
+        `Winner selected! ${winningsPerPerson} coins distributed to each winner.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowResultModal(false);
+              loadData(); // Refresh bet data to show updated state
+            },
+          },
+        ],
       );
-
-      // Refresh bet data to show updated state
-      loadData();
     } catch (error) {
       console.error('Error selecting winner:', error);
       Alert.alert('Error', error.message || 'Failed to select winner');
     } finally {
       setSubmitting(false);
-      setShowResultModal(false);
     }
   };
 
@@ -431,29 +461,6 @@ const BetDetails = () => {
               </View>
             </View>
           )}
-
-        {/* Vote Button - Only show if user hasn't voted at all */}
-        {!hasVoted && !isExpired && !betData.winningOptionId && (
-          <TouchableOpacity
-            style={styles.voteButton}
-            onPress={() => handleVote(option.id)}
-          >
-            <Text style={styles.voteButtonText}>Vote</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Select Winner Button - Only show for creator when bet is locked */}
-        {isCreator &&
-          betData.status === 'locked' &&
-          !betData.winningOptionId && (
-            <TouchableOpacity
-              style={styles.selectWinnerButton}
-              onPress={() => setShowResultModal(true)}
-            >
-              <Icon name="trophy" size={20} color="#FFD700" />
-              <Text style={styles.selectWinnerText}>Select Winner</Text>
-            </TouchableOpacity>
-          )}
       </View>
     );
   };
@@ -506,6 +513,52 @@ const BetDetails = () => {
         <View style={styles.options}>
           {betData.answerOptions.map((option) => renderVotingOption(option))}
         </View>
+
+        {/* Vote Button - Only show if user hasn't voted at all */}
+        {!hasPlacedBet && !isExpired && !betData.winningOptionId && (
+          <View style={styles.actionButtonsContainer}>
+            <Text style={styles.actionTitle}>Cast Your Vote</Text>
+            {betData.answerOptions.map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={styles.voteButton}
+                onPress={() => handleVote(option.id)}
+              >
+                <Text style={styles.voteButtonText}>{option.text}</Text>
+                <Text style={styles.voteCount}>
+                  {option.participants?.length || 0} votes
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Select Winner Button - Only show for creator when bet is locked */}
+        {session?.uid === betData.creatorId &&
+          betData.status === 'locked' &&
+          !betData.winningOptionId && (
+            <View style={styles.actionButtonsContainer}>
+              <Text style={styles.actionTitle}>Select Winner</Text>
+              {betData.answerOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[
+                    styles.selectWinnerButton,
+                    selectedOption === option.id && styles.selectedWinnerButton,
+                  ]}
+                  onPress={() => {
+                    setSelectedOption(option.id);
+                    handleSelectWinner(option.id);
+                  }}
+                >
+                  <Text style={styles.selectWinnerText}>{option.text}</Text>
+                  <Text style={styles.voteCount}>
+                    {option.participants?.length || 0} votes
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
         <View style={styles.reactionsContainer}>
           <Text style={styles.sectionTitle}>Reactions</Text>
@@ -964,17 +1017,21 @@ const styles = StyleSheet.create({
   },
   selectWinnerButton: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: hp(1.5),
     paddingHorizontal: wp(4),
-    paddingVertical: hp(1.2),
     borderRadius: hp(1),
-    alignSelf: 'center',
-    marginTop: hp(2),
-    gap: wp(2),
+    marginBottom: hp(1),
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  selectedWinnerButton: {
+    backgroundColor: '#FFD700',
   },
   selectWinnerText: {
-    color: 'white',
+    color: '#92400E',
     fontSize: hp(1.8),
     fontWeight: '600',
   },
@@ -1075,6 +1132,63 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: hp(1.8),
     fontWeight: '600',
+  },
+  actionButtonsContainer: {
+    marginTop: hp(2),
+    marginBottom: hp(2),
+    padding: wp(4),
+    backgroundColor: 'white',
+    borderRadius: hp(1.5),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionTitle: {
+    fontSize: hp(2.2),
+    fontWeight: 'bold',
+    marginBottom: hp(2),
+    color: theme.colors.text,
+  },
+  voteButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingVertical: hp(1.5),
+    paddingHorizontal: wp(4),
+    borderRadius: hp(1),
+    marginBottom: hp(1),
+  },
+  voteButtonText: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '600',
+  },
+  selectWinnerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingVertical: hp(1.5),
+    paddingHorizontal: wp(4),
+    borderRadius: hp(1),
+    marginBottom: hp(1),
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  selectedWinnerButton: {
+    backgroundColor: '#FFD700',
+  },
+  selectWinnerText: {
+    color: '#92400E',
+    fontSize: hp(1.8),
+    fontWeight: '600',
+  },
+  voteCount: {
+    fontSize: hp(1.6),
+    color: 'rgba(255, 255, 255, 0.8)',
   },
 });
 
