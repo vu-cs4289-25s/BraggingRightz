@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
-import AuthService from '../../src/endpoints/auth';
+import AuthService from '../../src/endpoints/auth.cjs';
 import { theme } from '../../constants/theme';
 import { hp, wp } from '../../helpers/common';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -23,7 +23,7 @@ import Avatar from '../../components/Avatar';
 import AddFriendModal from '../../components/AddFriendModal';
 import FriendService from '../../src/endpoints/friend.cjs';
 import BetsService from '../../src/endpoints/bets';
-import GroupsService from '../../src/endpoints/groups';
+import GroupsService from '../../src/endpoints/groups.cjs';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
@@ -35,58 +35,57 @@ const Home = () => {
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [userGroups, setUserGroups] = useState([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const sessionData = await AuthService.getSession();
-        setSession(sessionData);
+    loadData();
+  }, []);
 
-        // Fetch user's bets
-        const userBets = await BetsService.getUserBets(sessionData.uid);
+  const loadData = async () => {
+    try {
+      const sessionData = await AuthService.getSession();
+      setSession(sessionData);
 
-        // Fetch group names for each bet
-        const betsWithGroupNames = await Promise.all(
-          userBets.map(async (bet) => {
-            if (bet.groupId) {
-              const groupName = await GroupsService.getGroupName(bet.groupId);
-              return {
-                ...bet,
-                groupName,
-              };
-            }
+      // Fetch user's bets
+      const userBets = await BetsService.getUserBets(sessionData.uid);
+
+      // Fetch group names for each bet
+      const betsWithGroupNames = await Promise.all(
+        userBets.map(async (bet) => {
+          if (bet.groupId) {
+            const groupName = await GroupsService.getGroupName(bet.groupId);
             return {
               ...bet,
-              groupName: 'No Group',
+              groupName,
             };
-          }),
-        );
+          }
+          return {
+            ...bet,
+            groupName: 'No Group',
+          };
+        }),
+      );
 
-        setBets(betsWithGroupNames);
+      setBets(betsWithGroupNames);
 
-        // Fetch recent notifications
-        const recentNotifs = await NotificationsService.getNotifications(
-          sessionData.uid,
-        );
-        setNotifications(recentNotifs.slice(0, 3)); // Show top 3 notifications
+      // Load groups
+      const groups = await GroupsService.getUserGroups(sessionData.uid);
+      const sortedGroups = groups.sort(
+        (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
+      );
+      setUserGroups(sortedGroups);
 
-        // Get unread count
-        const unreadCountData = await NotificationsService.getUnreadCount(
-          sessionData.uid,
-        );
-        setUnreadCount(unreadCountData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        Alert.alert('Error', 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+      // Load unread notifications count
+      const count = await NotificationsService.getUnreadCount(sessionData.uid);
+      setUnreadNotifications(count);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      Alert.alert('Error', 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddFriend = (username) => {
     console.log('Adding friend:', username);
@@ -111,11 +110,21 @@ const Home = () => {
 
   // Format the date to a readable string
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'numeric',
-      day: 'numeric',
-    });
+    const now = new Date();
+    const diff = now - date;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) {
+      return 'Today';
+    } else if (days === 1) {
+      return 'Yesterday';
+    } else if (days < 7) {
+      return `${days} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   };
 
   // Calculate if user has won a bet
@@ -231,6 +240,14 @@ const Home = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <ScreenWrapper bg="white">
       <View style={sharedStyles.header}>
@@ -241,66 +258,22 @@ const Home = () => {
             style={styles.notificationIcon}
           >
             <Icon name="bell" size={hp(3.2)} color={theme.colors.text} />
-            {unreadCount > 0 && (
+            {unreadNotifications > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </Text>
               </View>
             )}
           </Pressable>
           <View style={styles.pointsContainer}>
-            <Text style={styles.points}>7.4K</Text>
+            <Text style={styles.points}>🪙 {session?.numCoins || 0}</Text>
           </View>
         </View>
       </View>
 
-      {notifications.length > 0 && (
-        <View style={styles.notificationsContainer}>
-          {notifications.map(renderNotificationItem)}
-        </View>
-      )}
-
-      <View style={styles.sectionDivider} />
       <ScrollView style={styles.container}>
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('NewBet')}
-          >
-            {/*<Icon name="plus-circle" size={hp(3)} color={theme.colors.primary} />*/}
-            <Icon
-              name="heart"
-              size={hp(3.2)}
-              strokeWidth={2}
-              color={theme.colors.text}
-            />
-            <Text style={styles.actionText}>Join Group</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setModalVisible(true)}
-          >
-            <Icon
-              name="plus-square"
-              size={hp(3.2)}
-              strokeWidth={2}
-              color={theme.colors.text}
-            />
-            <Text style={styles.actionText}>Add a friend</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* AddFriendModal usage */}
-        <AddFriendModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          onAdd={handleAddFriend}
-        />
-
         {/* My Groups Preview */}
-        {/* See all button now wired but the preview bubbles are still static */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>My Groups</Text>
@@ -314,16 +287,35 @@ const Home = () => {
             showsHorizontalScrollIndicator={false}
             style={styles.groupsScroll}
           >
-            {groups.map((group) => (
-              <TouchableOpacity key={group.id} style={styles.groupItem}>
-                <View style={styles.groupAvatar}>
-                  {group.icon ? (
-                    <Icon name={group.icon} size={24} color="black" />
-                  ) : null}
+            {userGroups.length > 0 ? (
+              userGroups.map((group) => (
+                <TouchableOpacity
+                  key={group.id}
+                  style={styles.groupItem}
+                  onPress={() =>
+                    navigation.navigate('GroupBets', { groupId: group.id })
+                  }
+                >
+                  <Avatar size={hp(6)} source={{ uri: group.avatar }} />
+                  <Text style={styles.groupName} numberOfLines={1}>
+                    {group.name}
+                  </Text>
+                  <Text style={styles.lastActive}>
+                    {formatDate(group.updatedAt)}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <TouchableOpacity
+                style={styles.createGroupButton}
+                onPress={() => navigation.navigate('Groups')}
+              >
+                <View style={styles.plusIconContainer}>
+                  <Icon name="plus" size={hp(4)} color={theme.colors.primary} />
                 </View>
-                <Text style={styles.groupName}>{group.name}</Text>
+                <Text style={styles.createGroupText}>New Group</Text>
               </TouchableOpacity>
-            ))}
+            )}
           </ScrollView>
         </View>
 
@@ -638,6 +630,36 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
+  },
+  lastActive: {
+    fontSize: hp(1.4),
+    color: theme.colors.textLight,
+    marginTop: hp(0.5),
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createGroupButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: wp(4),
+  },
+  plusIconContainer: {
+    width: hp(8),
+    height: hp(8),
+    borderRadius: hp(4),
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(1),
+  },
+  createGroupText: {
+    fontSize: hp(1.6),
+    color: theme.colors.primary,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
 

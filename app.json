@@ -20,6 +20,7 @@
     },
     "description": "Betting app with friends",
     "githubUrl": "https://github.com/vu-cs4289-25s/BraggingRightz",
-    "newArchEnabled": true
+    "newArchEnabled": true,
+    "plugins": ["expo-router"]
   }
 }

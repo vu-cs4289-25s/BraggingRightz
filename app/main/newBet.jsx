@@ -1,145 +1,133 @@
+import React, { useState, useEffect } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
   View,
-  TextInput,
+  Text,
+  StyleSheet,
+  ScrollView,
   TouchableOpacity,
   Alert,
+  Keyboard,
 } from 'react-native';
-import React, { useState, useEffect, useRef } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
 import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
-import AuthService from '../../src/endpoints/auth.cjs';
-import Avatar from '../../components/Avatar';
+import Input from '../../components/Input';
 import Button from '../../components/Button';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import { Dropdown } from 'react-native-element-dropdown';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import BetsService from '../../src/endpoints/bets.cjs';
-import { useNavigation } from '@react-navigation/native';
-import GroupsService from '../../src/endpoints/groups';
+import AuthService from '../../src/endpoints/auth.cjs';
+import GroupsService from '../../src/endpoints/groups.cjs';
+import { Dropdown } from 'react-native-element-dropdown';
 
 const NewBet = () => {
   const navigation = useNavigation();
-  const [session, setSession] = useState(null);
-  const [question, setQuestion] = useState('');
-  const [options, setOptions] = useState(['', '']); // two default empty options
-  const [endTime, setEndTime] = useState(new Date());
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [groups, setGroups] = useState([]);
-  const [selectedGroup, setSelectedGroup] = useState('');
-  //const editorRef = useRef("");
-  //const bodyRef = useRef("");
+  const route = useRoute();
+  const { groupId } = route.params || {};
+
   const [loading, setLoading] = useState(false);
-  const [coinAmount, setCoinAmount] = useState('');
+  const [question, setQuestion] = useState('');
+  const [options, setOptions] = useState(['', '']);
+  const [wagerAmount, setWagerAmount] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [endTime, setEndTime] = useState(new Date());
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [session, setSession] = useState(null);
 
   useEffect(() => {
-    const fetchSession = async () => {
+    const loadData = async () => {
       try {
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
 
-        if (sessionData.groups && sessionData.groups.length > 0) {
-          const tempGroups = await GroupsService.getUserGroups(sessionData.uid);
-          setGroups(tempGroups);
-        } else {
-          // Redirect user to create group page if no groups
-          Alert.alert(
-            'No groups found for this user.',
-            'Join or create a group to start betting!',
-            [
-              {
-                text: 'OK',
-                onPress: () => navigation.navigate('NewGroup'),
-              },
-            ],
-          );
-          navigation.navigate('Home');
+        const userGroups = await GroupsService.getUserGroups(sessionData.uid);
+        const groupOptions = userGroups.map((group) => ({
+          label: group.name,
+          value: group.id,
+        }));
+        setGroups(groupOptions);
+
+        // Auto-select group if provided in navigation params
+        if (groupId) {
+          setSelectedGroup(groupId);
         }
       } catch (error) {
-        console.log('Error fetching session:', error);
+        console.error('Error loading data:', error);
       }
     };
-    fetchSession();
-  }, []);
+    loadData();
+  }, [groupId]);
+
+  const handleConfirm = (event, selectedDate) => {
+    const currentDate = selectedDate || endTime;
+    setShowDatePicker(false);
+
+    // Ensure selected date is in the future
+    if (currentDate <= new Date()) {
+      Alert.alert('Invalid Date', 'Please select a future date and time');
+      return;
+    }
+
+    setEndTime(currentDate);
+  };
 
   const addOption = () => {
     setOptions([...options, '']);
   };
 
   const updateOption = (text, index) => {
-    let newOptions = [...options];
+    const newOptions = [...options];
     newOptions[index] = text;
     setOptions(newOptions);
   };
 
   const removeOption = (index) => {
-    // ensure at least two options remain
-    if (options.length <= 2) return;
+    if (options.length <= 2) {
+      Alert.alert('Error', 'A bet must have at least 2 options');
+      return;
+    }
     const newOptions = options.filter((_, i) => i !== index);
     setOptions(newOptions);
   };
 
-  const showDatePicker = () => {
-    setDatePickerVisibility(true);
-  };
-
-  const hideDatePicker = () => {
-    setDatePickerVisibility(false);
-  };
-
-  const handleConfirm = (date) => {
-    setEndTime(date);
-    hideDatePicker();
-  };
-
-  const formattedEndTime = endTime.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true,
-  });
-
   const submitBet = async () => {
-    // validate inputs
-    if (!selectedGroup) {
-      Alert.alert('Please select a group.');
-      return;
-    }
-    if (!question.trim()) {
-      Alert.alert('Please enter your bet question.');
-      return;
-    }
-    if (options.some((opt) => !opt.trim())) {
-      Alert.alert('Please fill in all vote options.');
-      return;
-    }
-    if (endTime.getTime() < Date.now()) {
-      Alert.alert('Please specify when the voting ends.');
-      return;
-    }
-    if (!coinAmount || !/^\d+$/.test(coinAmount)) {
-      Alert.alert('Please enter a valid integer coin amount.');
-      return;
-    }
-
-    setLoading(true);
     try {
-      // Filter out any empty options and trim whitespace
-      const validOptions = options
-        .filter((opt) => opt.trim())
-        .map((opt) => opt.trim());
+      if (!selectedGroup) {
+        Alert.alert('Error', 'Please select a group');
+        return;
+      }
+
+      if (!question.trim()) {
+        Alert.alert('Error', 'Please enter a question');
+        return;
+      }
+
+      const validOptions = options.filter((opt) => opt.trim());
+      if (validOptions.length < 2) {
+        Alert.alert('Error', 'Please enter at least 2 valid options');
+        return;
+      }
+
+      const wager = parseInt(wagerAmount);
+      if (isNaN(wager) || wager <= 0) {
+        Alert.alert('Error', 'Please enter a valid wager amount');
+        return;
+      }
+
+      // Check if end time is in the future
+      if (endTime <= new Date()) {
+        Alert.alert('Error', 'Please select a future date and time');
+        return;
+      }
+
+      setLoading(true);
 
       const betData = {
-        creatorId: session.uid, // Make sure to use uid from session
+        creatorId: session.uid,
         question: question.trim(),
-        wagerAmount: parseInt(coinAmount, 10),
+        wagerAmount: wager,
         answerOptions: validOptions,
         expiresAt: endTime.toISOString(),
         groupId: selectedGroup,
@@ -147,17 +135,39 @@ const NewBet = () => {
 
       const result = await BetsService.createBet(betData);
 
-      Alert.alert('Success', 'Bet created successfully!', [
-        {
-          text: 'View Bet',
-          onPress: () =>
-            navigation.navigate('BetDetails', { betId: result.id }),
-        },
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('Home'),
-        },
-      ]);
+      Alert.alert(
+        'Success',
+        'Bet created successfully!',
+        [
+          {
+            text: 'View Bet',
+            onPress: () => {
+              // Reset navigation stack to prevent going back to create bet
+              navigation.reset({
+                index: 0,
+                routes: [
+                  { name: 'Home' },
+                  { name: 'BetDetails', params: { betId: result.id } },
+                ],
+              });
+            },
+          },
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate back to the group
+              navigation.reset({
+                index: 0,
+                routes: [
+                  { name: 'Home' },
+                  { name: 'GroupDetails', params: { groupId: selectedGroup } },
+                ],
+              });
+            },
+          },
+        ],
+        { cancelable: false },
+      );
     } catch (error) {
       console.error('Error creating bet:', error);
       Alert.alert('Error', error.message || 'Failed to create bet');
@@ -167,230 +177,165 @@ const NewBet = () => {
   };
 
   return (
-    <ScreenWrapper bg="white">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <View style={styles.container}>
-          <Header title="Create Bet" showBackButton={true} />
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
+    <ScreenWrapper>
+      <ScrollView style={styles.container}>
+        <Header title="Create New Bet" showBackButton={true} />
+
+        <View style={styles.form}>
+          <Text style={styles.label}>Select Group</Text>
+          <Dropdown
+            style={styles.dropdown}
+            data={groups}
+            labelField="label"
+            valueField="value"
+            placeholder="Select a group"
+            value={selectedGroup}
+            onChange={(item) => setSelectedGroup(item.value)}
+          />
+
+          <Text style={styles.label}>Question</Text>
+          <Input
+            placeholder="What's your bet?"
+            value={question}
+            onChangeText={setQuestion}
+            returnKeyType="done"
+            blurOnSubmit={true}
+          />
+
+          <Text style={styles.label}>Options</Text>
+          {options.map((option, index) => (
+            <View key={index} style={styles.optionContainer}>
+              <Input
+                style={styles.optionInput}
+                placeholder={`Option ${index + 1}`}
+                value={option}
+                onChangeText={(text) => updateOption(text, index)}
+                returnKeyType="done"
+                blurOnSubmit={true}
+              />
+              {options.length > 2 && (
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => removeOption(index)}
+                >
+                  <Text style={styles.removeButtonText}>×</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+
+          <TouchableOpacity style={styles.addButton} onPress={addOption}>
+            <Text style={styles.addButtonText}>+ Add Option</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.label}>Wager Amount (coins)</Text>
+          <Input
+            placeholder="Enter wager amount"
+            value={wagerAmount}
+            onChangeText={setWagerAmount}
+            keyboardType="numeric"
+            returnKeyType="done"
+            blurOnSubmit={true}
+          />
+
+          <Text style={styles.label}>Voting Ends</Text>
+          <TouchableOpacity
+            style={styles.dateButton}
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowDatePicker(true);
+            }}
           >
-            {/* Bet Question */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>What are you betting on?</Text>
-              <TextInput
-                style={[styles.textInput, { height: hp(8) }]}
-                placeholder="Type your bet question here..."
-                placeholderTextColor={theme.colors.textLight} // darker placeholder
-                value={question}
-                onChangeText={setQuestion}
-                multiline
-              />
-            </View>
+            <Text style={styles.dateButtonText}>
+              {endTime.toLocaleString()}
+            </Text>
+          </TouchableOpacity>
 
-            {/* Vote Options */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Vote Options</Text>
-              {options.map((option, index) => (
-                <View key={index} style={styles.optionRow}>
-                  <TextInput
-                    style={[styles.textInput, { flex: 1 }]}
-                    placeholder={`Option ${index + 1}`}
-                    placeholderTextColor={theme.colors.textLight}
-                    value={option}
-                    onChangeText={(text) => updateOption(text, index)}
-                  />
-                  {options.length > 2 && (
-                    <TouchableOpacity
-                      onPress={() => removeOption(index)}
-                      style={styles.removeButton}
-                    >
-                      <Text style={styles.removeButtonText}>X</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-              <TouchableOpacity
-                onPress={addOption}
-                style={styles.addOptionButton}
-              >
-                <Text style={styles.addOptionText}>+ Add Option</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Voting End Time */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Voting Ends At</Text>
-              <TouchableOpacity
-                onPress={showDatePicker}
-                style={styles.dateInput}
-              >
-                <Text style={styles.dateText}>{formattedEndTime}</Text>
-              </TouchableOpacity>
-              <DateTimePickerModal
-                isVisible={isDatePickerVisible}
-                mode="datetime"
-                onConfirm={handleConfirm}
-                onCancel={hideDatePicker}
-              />
-            </View>
-
-            {/* Group Selection */}
-            <View style={[styles.section, { zIndex: 10 }]}>
-              <Text style={styles.sectionTitle}>Select Group</Text>
-              <Dropdown
-                style={[pickerDropdownStyle.dropdown, { zIndex: 10 }]}
-                placeholderStyle={pickerDropdownStyle.placeholderStyle}
-                selectedTextStyle={pickerDropdownStyle.selectedTextStyle}
-                iconStyle={pickerDropdownStyle.iconStyle}
-                data={groups}
-                maxHeight={300}
-                labelField="name"
-                valueField="id"
-                placeholder="Select a group"
-                value={selectedGroup}
-                onChange={(item) => {
-                  console.log('Selected Group:', item);
-                  setSelectedGroup(item.id);
-                }}
-                dropDownStyle={[pickerDropdownStyle.dropdown, { zIndex: 20 }]}
-              />
-            </View>
-
-            {/* Wager Amount */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Wager Amount (coins)</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Enter coin amount"
-                placeholderTextColor={theme.colors.textLight}
-                value={coinAmount}
-                onChangeText={setCoinAmount}
-                keyboardType="numeric"
-              />
-            </View>
-            <Button
-              buttionStyle={{ height: hp(6.2) }}
-              title="Create Bet"
-              loading={loading}
-              hasShadow={true}
-              onPress={submitBet}
+          {showDatePicker && (
+            <DateTimePicker
+              value={endTime}
+              mode="datetime"
+              display="default"
+              onChange={handleConfirm}
+              minimumDate={new Date()}
             />
-          </ScrollView>
+          )}
+
+          <Button
+            title="Create Bet"
+            onPress={submitBet}
+            loading={loading}
+            style={styles.submitButton}
+          />
         </View>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </ScreenWrapper>
   );
 };
 
-export default NewBet;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBottom: 0,
-    paddingHorizontal: wp(4),
-    gap: 15,
-    backgroundColor: theme.colors.background,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: hp(3),
-    gap: 20,
+  form: {
+    padding: wp(4),
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  userInfo: {
-    gap: 2,
-  },
-  username: {
-    fontSize: hp(2.2),
-    fontWeight: theme.fonts.semibold,
-    color: theme.colors.text,
-  },
-  publicText: {
-    fontSize: hp(1.7),
-    fontWeight: theme.fonts.medium,
-    color: theme.colors.textLight,
-  },
-  section: {
-    gap: 10,
-  },
-  sectionTitle: {
+  label: {
     fontSize: hp(2),
-    fontWeight: theme.fonts.semibold,
+    fontWeight: '600',
     color: theme.colors.text,
+    marginBottom: hp(1),
+    marginTop: hp(2),
   },
-  textInput: {
+  dropdown: {
+    height: hp(6),
+    borderColor: theme.colors.border,
     borderWidth: 1,
-    borderColor: theme.colors.textLight, // darker border
-    borderRadius: theme.radius.xl,
-    padding: 12,
-    fontSize: hp(2),
-    color: theme.colors.text, // ensure input text is dark for readability
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: wp(3),
   },
-  optionRow: {
+  optionContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: hp(1),
+  },
+  optionInput: {
+    flex: 1,
   },
   removeButton: {
-    marginLeft: 8,
-    backgroundColor: '#ff4d4d',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    marginLeft: wp(2),
+    padding: wp(2),
+    backgroundColor: theme.colors.error,
+    borderRadius: theme.radius.sm,
   },
   removeButtonText: {
-    color: '#fff',
+    color: 'white',
+    fontSize: hp(2),
     fontWeight: 'bold',
   },
-  addOptionButton: {
-    paddingVertical: 10,
+  addButton: {
+    alignSelf: 'flex-start',
+    marginVertical: hp(1),
   },
-  addOptionText: {
+  addButtonText: {
     color: theme.colors.primary,
-    fontSize: hp(2),
+    fontSize: hp(1.8),
+    fontWeight: '500',
   },
-  dateInput: {
+  dateButton: {
     borderWidth: 1,
-    borderColor: theme.colors.textDark,
-    borderRadius: theme.radius.xl,
-    padding: 12,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    padding: hp(1.5),
+    backgroundColor: 'white',
   },
-  dateText: {
-    fontSize: hp(2),
-    color: theme.colors.textLight,
+  dateButtonText: {
+    fontSize: hp(1.8),
+    color: theme.colors.text,
   },
-  placeholder: {
-    color: theme.colors.textLight,
+  submitButton: {
+    marginTop: hp(3),
   },
 });
 
-const pickerDropdownStyle = {
-  dropdown: {
-    height: hp(6),
-    borderColor: theme.colors.gray,
-    borderWidth: 1,
-    borderRadius: theme.radius.xl,
-    paddingHorizontal: 12,
-    backgroundColor: '#fff',
-  },
-  placeholderStyle: {
-    fontSize: hp(2),
-    color: theme.colors.textLight,
-  },
-  selectedTextStyle: {
-    fontSize: hp(2),
-    color: theme.colors.text,
-  },
-  iconStyle: {
-    width: 20,
-    height: 20,
-  },
-};
+export default NewBet;

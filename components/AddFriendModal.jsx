@@ -30,7 +30,7 @@ const AddFriendModal = ({ visible, onClose, onAdd }) => {
           <TextInput
             style={styles.input}
             placeholder="Username"
-            value={friendUsername.toLowerCase()}
+            value={friendUsername ? friendUsername.toLowerCase() : ''} // Check if friendUsername is defined
             onChangeText={setFriendUsername}
           />
           <Pressable

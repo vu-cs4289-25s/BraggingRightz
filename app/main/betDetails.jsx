@@ -21,6 +21,7 @@ import GroupsService from '../../src/endpoints/groups.cjs';
 import Button from '../../components/Button';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { sharedStyles } from '../styles/shared';
+import NotificationsService from '../../src/endpoints/notifications.cjs';
 
 const BetDetails = () => {
   const route = useRoute();
@@ -103,6 +104,19 @@ const BetDetails = () => {
 
     const isCreator = betData.creatorId === session.uid;
     const isExpired = new Date(betData.expiresAt) < new Date();
+
+    // Lock bet if expired but not yet locked
+    if (isExpired && betData.status !== 'locked') {
+      try {
+        await BetsService.lockBet(betId);
+        // Refresh bet data after locking
+        const updatedBet = await BetsService.getBet(betId);
+        setBetData(updatedBet);
+      } catch (error) {
+        console.error('Error locking bet:', error);
+      }
+    }
+
     const needsResult = betData.status === 'locked' && !betData.winningOptionId;
 
     if (isCreator && isExpired && needsResult) {
@@ -201,10 +215,64 @@ const BetDetails = () => {
   const handleSelectWinner = async (optionId) => {
     try {
       setSubmitting(true);
-      await BetsService.releaseResult(betId, session.uid, optionId);
-      Alert.alert('Success', 'Winner selected and points distributed!');
+
+      // Get the winning option details
+      const winningOption = betData.answerOptions.find(
+        (opt) => opt.id === optionId,
+      );
+      if (!winningOption) {
+        throw new Error('Invalid option selected');
+      }
+
+      // Calculate winnings per person
+      const totalParticipants = betData.answerOptions.reduce(
+        (sum, opt) => sum + opt.participants.length,
+        0,
+      );
+      const totalPool = betData.wagerAmount * totalParticipants;
+      const winnersCount = winningOption.participants.length;
+      const winningsPerPerson = Math.floor(totalPool / winnersCount);
+
+      // Release result and distribute coins
+      await BetsService.releaseResult(
+        betId,
+        session.uid,
+        optionId,
+        winningsPerPerson,
+      );
+
+      // Send notifications to all participants
+      const notificationPromises = betData.answerOptions.flatMap((option) =>
+        option.participants.map(async (participantId) => {
+          const isWinner = option.id === optionId;
+          const notificationData = {
+            userId: participantId,
+            type: 'bets',
+            title: `Results are in for "${betData.question}"`,
+            message: isWinner
+              ? `Congratulations! You won ${winningsPerPerson} coins!`
+              : 'Better luck next time!',
+            data: {
+              betId,
+              result: isWinner ? 'won' : 'lost',
+              winningsPerPerson: isWinner ? winningsPerPerson : 0,
+            },
+          };
+          return NotificationsService.createNotification(notificationData);
+        }),
+      );
+
+      await Promise.all(notificationPromises);
+
+      Alert.alert(
+        'Success',
+        `Winner selected and ${winningsPerPerson} coins distributed to each winner!`,
+      );
+
+      // Refresh bet data to show updated state
       loadData();
     } catch (error) {
+      console.error('Error selecting winner:', error);
       Alert.alert('Error', error.message || 'Failed to select winner');
     } finally {
       setSubmitting(false);
@@ -241,6 +309,155 @@ const BetDetails = () => {
     option.participants.includes(session?.uid),
   );
 
+  const totalParticipants = betData.answerOptions.reduce(
+    (sum, opt) => sum + opt.participants.length,
+    0,
+  );
+
+  const renderVotingOption = (option) => {
+    const voteCount = option.participants?.length || 0;
+    const percentage =
+      totalParticipants > 0
+        ? Math.round((voteCount / totalParticipants) * 100)
+        : 0;
+    const hasVoted = betData.answerOptions.some((opt) =>
+      opt.participants?.includes(session?.uid),
+    );
+    const isWinner = betData.winningOptionId === option.id;
+    const isCreator = betData.creatorId === session?.uid;
+    const isExpired = new Date(betData.expiresAt) <= new Date();
+    const userVotedThisOption = option.participants?.includes(session?.uid);
+    const userWon = isWinner && userVotedThisOption;
+
+    return (
+      <View
+        key={option.id}
+        style={[
+          styles.optionContainer,
+          userVotedThisOption && styles.votedOption,
+          isWinner && styles.winnerOption,
+        ]}
+      >
+        {/* Winner Crown for winning option */}
+        {isWinner && (
+          <View style={styles.crownContainer}>
+            <Icon name="crown" size={24} color="#FFD700" />
+          </View>
+        )}
+
+        {/* Option Header */}
+        <View style={styles.optionHeader}>
+          <Text style={[styles.optionText, isWinner && styles.winnerText]}>
+            {option.text}
+            {userWon && ' 🏆'}
+          </Text>
+          <View style={[styles.voteCount, isWinner && styles.winnerVoteCount]}>
+            <Text
+              style={[
+                styles.voteCountText,
+                isWinner && styles.winnerVoteCountText,
+              ]}
+            >
+              {voteCount} {voteCount === 1 ? 'vote' : 'votes'} ({percentage}%)
+            </Text>
+          </View>
+        </View>
+
+        {/* Progress Bar */}
+        <View style={styles.progressBarContainer}>
+          <View
+            style={[
+              styles.progressBar,
+              {
+                width: `${percentage}%`,
+                backgroundColor: isWinner
+                  ? '#FFD700'
+                  : percentage >= 50
+                    ? theme.colors.primary
+                    : theme.colors.secondary,
+              },
+            ]}
+          />
+        </View>
+
+        {/* Winner Badge */}
+        {isWinner && (
+          <View style={styles.winnerBadge}>
+            <Icon name="trophy" size={24} color="#FFD700" />
+            <Text style={styles.winnerText}>Winner!</Text>
+            {betData.winningsPerPerson && (
+              <Text style={styles.winningsText}>
+                {betData.winningsPerPerson} coins per winner
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Your Win Badge */}
+        {userWon && (
+          <View style={styles.yourWinBadge}>
+            <Icon name="star" size={20} color="#FFD700" />
+            <Text style={styles.yourWinText}>
+              You won {betData.winningsPerPerson} coins!
+            </Text>
+          </View>
+        )}
+
+        {/* Participants List */}
+        {(hasVoted || isExpired || isCreator) &&
+          option.participants?.length > 0 && (
+            <View style={styles.participantsContainer}>
+              <Text style={styles.participantsLabel}>Voted by:</Text>
+              <View style={styles.participantsList}>
+                {option.participants.map((participantId, index) => {
+                  const isCurrentUser = participantId === session?.uid;
+                  return (
+                    <Text
+                      key={participantId}
+                      style={[
+                        styles.participantName,
+                        isCurrentUser && styles.currentUserVote,
+                        isWinner && styles.winnerParticipant,
+                      ]}
+                    >
+                      {isCurrentUser
+                        ? 'You'
+                        : betData.voterNames?.[participantId]}
+                      {index < option.participants.length - 1 ? ', ' : ''}
+                      {isWinner && '🏆'}
+                    </Text>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+        {/* Vote Button - Only show if user hasn't voted at all */}
+        {!hasVoted && !isExpired && !betData.winningOptionId && (
+          <TouchableOpacity
+            style={styles.voteButton}
+            onPress={() => handleVote(option.id)}
+          >
+            <Text style={styles.voteButtonText}>Vote</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Select Winner Button - Only show for creator when bet is locked */}
+        {isCreator &&
+          betData.status === 'locked' &&
+          !betData.winningOptionId && (
+            <TouchableOpacity
+              style={styles.selectWinnerButton}
+              onPress={() => setShowResultModal(true)}
+            >
+              <Icon name="trophy" size={20} color="#FFD700" />
+              <Text style={styles.selectWinnerText}>Select Winner</Text>
+            </TouchableOpacity>
+          )}
+      </View>
+    );
+  };
+
   return (
     <ScreenWrapper>
       <ScrollView style={sharedStyles.container}>
@@ -254,39 +471,41 @@ const BetDetails = () => {
             </Text>
           </View>
           <Text style={styles.question}>{betData.question}</Text>
-          <Text style={styles.wager}>Wager: {betData.wagerAmount} coins</Text>
-          <Text style={styles.expires}>
-            Expires: {new Date(betData.expiresAt).toLocaleString()}
-          </Text>
+          <View style={styles.betMetaInfo}>
+            <View
+              style={[
+                styles.statusBadge,
+                betData.status === 'open' && styles.openBadge,
+                betData.status === 'locked' && styles.lockedBadge,
+                betData.status === 'completed' && styles.completedBadge,
+              ]}
+            >
+              <Icon
+                name={
+                  betData.status === 'open'
+                    ? 'unlock'
+                    : betData.status === 'locked'
+                      ? 'lock'
+                      : 'check-circle'
+                }
+                size={16}
+                color="white"
+              />
+              <Text style={styles.statusText}>
+                {betData.status.charAt(0).toUpperCase() +
+                  betData.status.slice(1)}
+              </Text>
+            </View>
+            <Text style={styles.wager}>Wager: {betData.wagerAmount} coins</Text>
+            <Text style={styles.expires}>
+              Expires: {new Date(betData.expiresAt).toLocaleString()}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.options}>
-          {betData.answerOptions.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={[
-                styles.option,
-                selectedOption === option.id && styles.selectedOption,
-                hasPlacedBet && styles.disabledOption,
-              ]}
-              onPress={() => !hasPlacedBet && handleVote(option.id)}
-              disabled={hasPlacedBet || isExpired || submitting}
-            >
-              <Text style={styles.optionText}>{option.text}</Text>
-              <Text style={styles.participantCount}>
-                {option.participants.length} votes
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {betData.answerOptions.map((option) => renderVotingOption(option))}
         </View>
-
-        {!hasPlacedBet && !isExpired && (
-          <Button
-            title="Place Bet"
-            onPress={() => selectedOption && handleVote(selectedOption)}
-            disabled={!selectedOption || submitting}
-          />
-        )}
 
         <View style={styles.reactionsContainer}>
           <Text style={styles.sectionTitle}>Reactions</Text>
@@ -377,21 +596,51 @@ const BetDetails = () => {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Select Winner</Text>
-              <Text style={styles.modalText}>Choose the correct answer:</Text>
-              <ScrollView>
+              <Text style={styles.modalText}>Choose the winning option:</Text>
+              <ScrollView style={styles.modalScroll}>
                 {betData?.answerOptions.map((option) => (
                   <TouchableOpacity
                     key={option.id}
-                    style={styles.winnerOption}
-                    onPress={() => handleSelectWinner(option.id)}
+                    style={[
+                      styles.modalOption,
+                      selectedOption === option.id &&
+                        styles.modalOptionSelected,
+                    ]}
+                    onPress={() => setSelectedOption(option.id)}
                   >
-                    <Text style={styles.optionText}>{option.text}</Text>
-                    <Text style={styles.participantCount}>
+                    <Text style={styles.modalOptionText}>{option.text}</Text>
+                    <Text style={styles.modalVoteCount}>
                       {option.participants.length} votes
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalCancelButton]}
+                  onPress={() => {
+                    setShowResultModal(false);
+                    setSelectedOption(null);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton,
+                    styles.modalConfirmButton,
+                    !selectedOption && styles.modalButtonDisabled,
+                  ]}
+                  onPress={() => {
+                    if (selectedOption) {
+                      handleSelectWinner(selectedOption);
+                    }
+                  }}
+                  disabled={!selectedOption}
+                >
+                  <Text style={styles.modalButtonText}>Confirm Winner</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -470,30 +719,116 @@ const styles = StyleSheet.create({
   options: {
     marginVertical: hp(2),
   },
-  option: {
-    padding: hp(2),
-    backgroundColor: '#f0f0f0',
-    borderRadius: theme.radius.lg,
-    marginBottom: hp(1),
+  optionContainer: {
+    backgroundColor: 'white',
+    borderRadius: hp(1.5),
+    padding: wp(4),
+    marginBottom: hp(2),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  votedOption: {
+    borderColor: theme.colors.primary,
+    borderWidth: 2,
+  },
+  winnerOption: {
+    borderColor: '#FFD700',
+    borderWidth: 2,
+    backgroundColor: '#FFFDF7',
+  },
+  optionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  selectedOption: {
-    backgroundColor: theme.colors.primary + '30',
-    borderColor: theme.colors.primary,
-    borderWidth: 1,
-  },
-  disabledOption: {
-    opacity: 0.7,
+    marginBottom: hp(1.5),
   },
   optionText: {
-    fontSize: hp(2),
+    fontSize: hp(2.2),
+    fontWeight: '600',
+    color: theme.colors.text,
     flex: 1,
   },
-  participantCount: {
+  voteCount: {
+    backgroundColor: theme.colors.card,
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1),
+  },
+  voteCountText: {
+    fontSize: hp(1.6),
+    color: theme.colors.text,
+    fontWeight: '500',
+  },
+  progressBarContainer: {
+    height: hp(1.5),
+    backgroundColor: '#E5E7EB',
+    borderRadius: hp(0.75),
+    overflow: 'hidden',
+    marginBottom: hp(1.5),
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: hp(0.75),
+  },
+  participantsContainer: {
+    marginTop: hp(1.5),
+    paddingTop: hp(1.5),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  participantsLabel: {
     fontSize: hp(1.8),
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: hp(0.5),
+  },
+  participantsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  participantName: {
+    fontSize: hp(1.6),
     color: theme.colors.textLight,
+    marginRight: wp(1),
+  },
+  currentUserVote: {
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  voteButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: hp(1.2),
+    borderRadius: hp(1),
+    alignItems: 'center',
+    marginTop: hp(1.5),
+  },
+  voteButtonText: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '600',
+  },
+  winnerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    padding: hp(1.5),
+    borderRadius: hp(1),
+    marginTop: hp(1.5),
+  },
+  winnerText: {
+    color: '#92400E',
+    fontSize: hp(1.8),
+    fontWeight: 'bold',
+  },
+  winningsText: {
+    color: '#92400E',
+    fontSize: hp(1.6),
+    marginLeft: 'auto',
   },
   sectionTitle: {
     fontSize: hp(2.2),
@@ -623,17 +958,123 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#f0f0f0',
   },
-  winnerOption: {
-    padding: hp(2),
-    backgroundColor: '#f0f0f0',
-    borderRadius: theme.radius.lg,
-    marginBottom: hp(1),
+  winnerParticipant: {
+    color: '#92400E',
+    fontWeight: '600',
+  },
+  selectWinnerButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.2),
+    borderRadius: hp(1),
+    alignSelf: 'center',
+    marginTop: hp(2),
+    gap: wp(2),
+  },
+  selectWinnerText: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '600',
   },
   disabledText: {
     color: theme.colors.textLight,
+  },
+  crownContainer: {
+    position: 'absolute',
+    top: -12,
+    right: wp(4),
+    zIndex: 1,
+  },
+  winnerVoteCount: {
+    backgroundColor: '#FFD700',
+  },
+  winnerVoteCountText: {
+    color: '#92400E',
+    fontWeight: 'bold',
+  },
+  yourWinBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E6F6FF',
+    padding: hp(1.5),
+    borderRadius: hp(1),
+    marginTop: hp(1),
+  },
+  yourWinText: {
+    color: theme.colors.primary,
+    fontSize: hp(1.8),
+    fontWeight: 'bold',
+    marginLeft: wp(2),
+  },
+  betMetaInfo: {
+    flexDirection: 'column',
+    gap: hp(1),
+    marginTop: hp(1),
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1),
+    alignSelf: 'flex-start',
+    gap: wp(2),
+  },
+  openBadge: {
+    backgroundColor: theme.colors.primary,
+  },
+  lockedBadge: {
+    backgroundColor: theme.colors.warning,
+  },
+  completedBadge: {
+    backgroundColor: theme.colors.success,
+  },
+  statusText: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '600',
+  },
+  modalScroll: {
+    maxHeight: hp(40),
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: wp(4),
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: hp(1),
+    marginBottom: hp(1),
+  },
+  modalOptionSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary + '10',
+  },
+  modalOptionText: {
+    fontSize: hp(2),
+    color: theme.colors.text,
+    flex: 1,
+  },
+  modalVoteCount: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+  },
+  modalCancelButton: {
+    backgroundColor: theme.colors.gray,
+  },
+  modalConfirmButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  modalButtonDisabled: {
+    opacity: 0.5,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '600',
   },
 });
 

@@ -20,11 +20,11 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
 import AuthService from '../../src/endpoints/auth.cjs';
 import { theme } from '../../constants/theme';
@@ -32,23 +32,26 @@ import { hp, wp } from '../../helpers/common';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
 
-const NotificationTypes = {
-  BETS: 'bets',
-  COMMENTS: 'comments',
-  FOLLOWS: 'follows',
-  ALL: 'all',
+const NotificationIcons = {
+  new_bet: { name: 'plus-circle', color: theme.colors.primary },
+  bet_expiring: { name: 'clock-o', color: theme.colors.warning },
+  bet_result: { name: 'trophy', color: theme.colors.success },
+  vote_reminder: { name: 'exclamation-circle', color: theme.colors.error },
+  comments: { name: 'comment', color: theme.colors.primary },
+  follows: { name: 'user-plus', color: theme.colors.success },
+  groups: { name: 'users', color: theme.colors.primary },
 };
 
 const Notifications = () => {
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [activeFilter, setActiveFilter] = useState(NotificationTypes.ALL);
   const [session, setSession] = useState(null);
 
   useEffect(() => {
     loadData();
-  }, [activeFilter]);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -56,7 +59,6 @@ const Notifications = () => {
       setSession(sessionData);
       const notifs = await NotificationsService.getNotifications(
         sessionData.uid,
-        activeFilter,
       );
       setNotifications(notifs);
     } catch (error) {
@@ -75,7 +77,6 @@ const Notifications = () => {
   const handleMarkAsRead = async (notificationId) => {
     try {
       await NotificationsService.markAsRead(notificationId);
-      // Update local state
       setNotifications(
         notifications.map((notif) =>
           notif.id === notificationId ? { ...notif, read: true } : notif,
@@ -89,7 +90,6 @@ const Notifications = () => {
   const handleMarkAllAsRead = async () => {
     try {
       await NotificationsService.markAllAsRead(session.uid);
-      // Update local state
       setNotifications(
         notifications.map((notif) => ({ ...notif, read: true })),
       );
@@ -98,28 +98,45 @@ const Notifications = () => {
     }
   };
 
-  const renderNotificationItem = (notification) => (
-    <TouchableOpacity
-      key={notification.id}
-      style={styles.notificationItem}
-      onPress={() => handleMarkAsRead(notification.id)}
-    >
-      <Image
-        source={
-          notification.data.avatar || { uri: 'https://i.pravatar.cc/300' }
-        }
-        style={styles.avatar}
-      />
-      <View style={styles.notificationTextContainer}>
-        <Text style={styles.notificationTitle}>{notification.title}</Text>
-        <Text style={styles.notificationSubtitle}>
-          {new Date(notification.createdAt).toLocaleDateString()}
-        </Text>
-      </View>
-      {!notification.read && <View style={styles.unreadDot} />}
-      <FontAwesome5 name="chevron-right" size={14} color="#AAAAAA" />
-    </TouchableOpacity>
-  );
+  const handleNotificationPress = (notification) => {
+    handleMarkAsRead(notification.id);
+    if (notification.data?.betId) {
+      navigation.navigate('BetDetails', { betId: notification.data.betId });
+    }
+  };
+
+  const renderNotificationItem = (notification) => {
+    const icon = NotificationIcons[notification.type] || {
+      name: 'bell',
+      color: theme.colors.gray,
+    };
+
+    return (
+      <TouchableOpacity
+        key={notification.id}
+        style={[
+          styles.notificationItem,
+          !notification.read && styles.unreadItem,
+        ]}
+        onPress={() => handleNotificationPress(notification)}
+      >
+        <View
+          style={[styles.iconContainer, { backgroundColor: icon.color + '20' }]}
+        >
+          <Icon name={icon.name} size={24} color={icon.color} />
+        </View>
+        <View style={styles.notificationContent}>
+          <Text style={styles.notificationTitle}>{notification.title}</Text>
+          <Text style={styles.notificationMessage}>{notification.message}</Text>
+          <Text style={styles.timestamp}>
+            {new Date(notification.createdAt).toLocaleDateString()} •{' '}
+            {new Date(notification.createdAt).toLocaleTimeString()}
+          </Text>
+        </View>
+        {!notification.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -138,83 +155,13 @@ const Notifications = () => {
           title="Notifications"
           showBackButton={true}
           rightComponent={
-            <TouchableOpacity onPress={handleMarkAllAsRead}>
-              <Text style={styles.markAllRead}>Mark all as read</Text>
-            </TouchableOpacity>
+            notifications.some((n) => !n.read) && (
+              <TouchableOpacity onPress={handleMarkAllAsRead}>
+                <Text style={styles.markAllRead}>Mark all as read</Text>
+              </TouchableOpacity>
+            )
           }
         />
-
-        <View style={styles.filterContainer}>
-          <TouchableOpacity
-            style={[
-              styles.filter,
-              activeFilter === NotificationTypes.ALL && styles.activeFilter,
-            ]}
-            onPress={() => setActiveFilter(NotificationTypes.ALL)}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                activeFilter === NotificationTypes.ALL &&
-                  styles.filterTextActive,
-              ]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filter,
-              activeFilter === NotificationTypes.BETS && styles.activeFilter,
-            ]}
-            onPress={() => setActiveFilter(NotificationTypes.BETS)}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                activeFilter === NotificationTypes.BETS &&
-                  styles.filterTextActive,
-              ]}
-            >
-              Your Bets
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filter,
-              activeFilter === NotificationTypes.COMMENTS &&
-                styles.activeFilter,
-            ]}
-            onPress={() => setActiveFilter(NotificationTypes.COMMENTS)}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                activeFilter === NotificationTypes.COMMENTS &&
-                  styles.filterTextActive,
-              ]}
-            >
-              Comments
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filter,
-              activeFilter === NotificationTypes.FOLLOWS && styles.activeFilter,
-            ]}
-            onPress={() => setActiveFilter(NotificationTypes.FOLLOWS)}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                activeFilter === NotificationTypes.FOLLOWS &&
-                  styles.filterTextActive,
-              ]}
-            >
-              New Follows
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         <ScrollView
           contentContainerStyle={styles.notificationsList}
@@ -224,17 +171,11 @@ const Notifications = () => {
         >
           {notifications.length === 0 ? (
             <View style={styles.emptyState}>
-              <FontAwesome5
-                name="bell-slash"
-                size={50}
-                color={theme.colors.textLight}
-              />
-              <Text style={styles.emptyStateText}>No notifications yet</Text>
+              <Icon name="bell-slash" size={50} color={theme.colors.gray} />
+              <Text style={styles.emptyStateText}>No notifications</Text>
             </View>
           ) : (
-            notifications.map((notification) =>
-              renderNotificationItem(notification),
-            )
+            notifications.map(renderNotificationItem)
           )}
         </ScrollView>
       </View>
@@ -245,7 +186,7 @@ const Notifications = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f6f5f5',
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -255,85 +196,69 @@ const styles = StyleSheet.create({
   markAllRead: {
     color: theme.colors.primary,
     fontSize: hp(1.8),
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: wp(4),
-    marginBottom: hp(2),
-  },
-  filter: {
-    backgroundColor: '#eaeaea',
-    paddingVertical: hp(1),
-    paddingHorizontal: wp(3),
-    borderRadius: hp(2),
-  },
-  activeFilter: {
-    backgroundColor: theme.colors.primary,
-  },
-  filterText: {
-    color: '#0c0c0c',
-    fontSize: hp(1.6),
-  },
-  filterTextActive: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+    fontWeight: '500',
   },
   notificationsList: {
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(2),
+    padding: wp(4),
   },
   notificationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingVertical: hp(1.5),
-    paddingHorizontal: wp(4),
+    backgroundColor: 'white',
+    padding: wp(4),
     borderRadius: hp(1.5),
-    marginBottom: hp(1),
+    marginBottom: hp(1.5),
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  avatar: {
-    width: hp(5),
-    height: hp(5),
-    borderRadius: hp(2.5),
+  unreadItem: {
+    backgroundColor: theme.colors.primary + '08',
+  },
+  iconContainer: {
+    width: hp(6),
+    height: hp(6),
+    borderRadius: hp(3),
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: wp(3),
   },
-  notificationTextContainer: {
+  notificationContent: {
     flex: 1,
   },
   notificationTitle: {
-    color: '#070707',
     fontSize: hp(1.8),
-    fontWeight: '500',
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: hp(0.5),
   },
-  notificationSubtitle: {
-    color: '#303030',
+  notificationMessage: {
     fontSize: hp(1.6),
+    color: theme.colors.gray,
+    marginBottom: hp(0.5),
+  },
+  timestamp: {
+    fontSize: hp(1.4),
+    color: theme.colors.gray,
   },
   unreadDot: {
     width: hp(1.2),
     height: hp(1.2),
     borderRadius: hp(0.6),
     backgroundColor: theme.colors.primary,
-    marginRight: wp(2),
+    marginLeft: wp(2),
   },
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingTop: hp(10),
   },
   emptyStateText: {
-    color: theme.colors.textLight,
     fontSize: hp(2),
+    color: theme.colors.gray,
     marginTop: hp(2),
   },
 });

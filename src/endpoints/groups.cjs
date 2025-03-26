@@ -33,17 +33,26 @@ const NotificationsService = require('./notifications.cjs');
 
 class GroupsService {
   // Create a new group
-  async createGroup({ name, description, creatorId, isPrivate = false }) {
+  async createGroup({
+    name,
+    description,
+    creatorId,
+    members = [],
+    isPrivate = false,
+  }) {
     try {
       const groupRef = doc(collection(db, 'groups'));
       const timestamp = new Date().toISOString();
+
+      // Creator is included in the members list
+      const allMembers = Array.from(new Set([creatorId, ...members]));
 
       const groupData = {
         id: groupRef.id,
         name,
         description,
         creatorId,
-        members: [creatorId],
+        members: allMembers,
         admins: [creatorId],
         isPrivate,
         bets: [],
@@ -54,13 +63,16 @@ class GroupsService {
 
       await setDoc(groupRef, groupData);
 
-      // Update user's groups
-      const userRef = doc(db, 'users', creatorId);
-      await updateDoc(userRef, {
-        groups: arrayUnion(groupRef.id),
-        updatedAt: timestamp,
+      // Update each member's groups
+      const updatePromises = allMembers.map((memberId) => {
+        const userRef = doc(db, 'users', memberId);
+        return updateDoc(userRef, {
+          groups: arrayUnion(groupRef.id),
+          updatedAt: timestamp,
+        });
       });
 
+      await Promise.all(updatePromises);
       return groupData;
     } catch (error) {
       this._handleError(error);
