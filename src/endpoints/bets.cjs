@@ -36,6 +36,7 @@ const {
 const { db } = require('../firebase/config');
 const NotificationsService = require('./notifications.cjs');
 const GroupsService = require('./groups.cjs');
+const UserService = require('./user.cjs');
 
 class BetsService {
   // Get all bets in a group
@@ -159,13 +160,201 @@ class BetsService {
   // Get bet by ID
   async getBet(betId) {
     try {
-      const betDoc = await getDoc(doc(db, 'bets', betId));
+      const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
       if (!betDoc.exists()) {
         throw new Error('Bet not found');
       }
-      return betDoc.data();
+
+      const bet = {
+        id: betId,
+        ...betDoc.data(),
+        createdAt:
+          betDoc.data().createdAt?.toDate?.() ||
+          new Date(betDoc.data().createdAt),
+        updatedAt:
+          betDoc.data().updatedAt?.toDate?.() ||
+          new Date(betDoc.data().updatedAt),
+      };
+
+      // Check if bet should be locked
+      if (bet.status === 'open' && new Date(bet.expiresAt) <= new Date()) {
+        await updateDoc(betRef, {
+          status: 'locked',
+          updatedAt: new Date().toISOString(),
+        });
+        bet.status = 'locked';
+
+        // Notify creator
+        await NotificationsService.createNotification({
+          userId: bet.creatorId,
+          type: 'bets',
+          title: `Bet "${bet.question}" has expired`,
+          message: 'Please select the winning option to distribute coins.',
+          data: { betId },
+        });
+      }
+
+      // Fetch participant names
+      const voterNames = {};
+      const participantPromises = bet.answerOptions.flatMap((option) =>
+        option.participants.map(async (participantId) => {
+          if (!voterNames[participantId]) {
+            try {
+              const userDoc = await getDoc(doc(db, 'users', participantId));
+              if (userDoc.exists()) {
+                voterNames[participantId] = userDoc.data().username;
+              }
+            } catch (error) {
+              console.error(`Error fetching user ${participantId}:`, error);
+              voterNames[participantId] = 'Unknown User';
+            }
+          }
+        }),
+      );
+
+      await Promise.all(participantPromises);
+      bet.voterNames = voterNames;
+
+      // If bet has a group, fetch group name
+      if (bet.groupId) {
+        try {
+          const groupDoc = await getDoc(doc(db, 'groups', bet.groupId));
+          if (groupDoc.exists()) {
+            bet.groupName = groupDoc.data().name;
+          }
+        } catch (error) {
+          console.error('Error fetching group name:', error);
+          bet.groupName = 'Unknown Group';
+        }
+      }
+
+      return bet;
     } catch (error) {
-      this._handleError(error);
+      console.error('Error getting bet:', error);
+      throw error;
+    }
+  }
+
+  // Check and update bet status
+  async checkAndUpdateExpiredBets() {
+    try {
+      const now = new Date();
+      const betsQuery = query(
+        collection(db, 'bets'),
+        where('status', '==', 'open'),
+        where('expiresAt', '<=', now.toISOString()),
+      );
+
+      const snapshot = await getDocs(betsQuery);
+      const updatePromises = [];
+
+      for (const betDoc of snapshot.docs) {
+        const bet = { id: betDoc.id, ...betDoc.data() };
+        updatePromises.push(
+          updateDoc(doc(db, 'bets', bet.id), {
+            status: 'locked',
+            updatedAt: new Date().toISOString(),
+          }),
+        );
+
+        // Notify creator that bet needs resolution
+        await NotificationsService.createNotification({
+          userId: bet.creatorId,
+          type: 'bets',
+          title: `Bet "${bet.question}" has expired`,
+          message: 'Please select the winning option to distribute coins.',
+          data: { betId: bet.id },
+        });
+      }
+
+      await Promise.all(updatePromises);
+      return true;
+    } catch (error) {
+      console.error('Error checking expired bets:', error);
+      throw error;
+    }
+  }
+
+  // Release result and distribute coins
+  async releaseResult(betId, userId, winningOptionId) {
+    try {
+      const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const bet = betDoc.data();
+
+      // Verify user is creator
+      if (bet.creatorId !== userId) {
+        throw new Error('Only the bet creator can release results');
+      }
+
+      // Verify bet is locked
+      if (bet.status !== 'locked') {
+        throw new Error('Bet must be locked before releasing results');
+      }
+
+      // Find winning option
+      const winningOption = bet.answerOptions.find(
+        (opt) => opt.id === winningOptionId,
+      );
+      if (!winningOption) {
+        throw new Error('Invalid winning option');
+      }
+
+      const winners = winningOption.participants;
+      const totalPool =
+        bet.wagerAmount *
+        bet.answerOptions.reduce(
+          (sum, opt) => sum + opt.participants.length,
+          0,
+        );
+      const winningsPerPerson =
+        winners.length > 0 ? Math.floor(totalPool / winners.length) : 0;
+
+      // Update winners' coins
+      const updatePromises = winners.map(async (winnerId) => {
+        const userRef = doc(db, 'users', winnerId);
+        await updateDoc(userRef, {
+          numCoins: increment(winningsPerPerson),
+          trophies: increment(1),
+        });
+
+        // Notify winners
+        await NotificationsService.createNotification({
+          userId: winnerId,
+          type: 'bets',
+          title: 'You won the bet!',
+          message: `You won ${winningsPerPerson} coins in "${bet.question}"`,
+          data: { betId, winnings: winningsPerPerson },
+        });
+      });
+
+      // Update bet status
+      await updateDoc(betRef, {
+        status: 'completed',
+        winningOptionId,
+        winningsPerPerson,
+        resultReleasedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      await Promise.all(updatePromises);
+
+      return {
+        success: true,
+        message: 'Results released and coins distributed',
+        winningsPerPerson,
+        winners,
+      };
+    } catch (error) {
+      console.error('Error releasing result:', error);
+      throw error;
     }
   }
 
@@ -189,15 +378,72 @@ class BetsService {
       // Combine results using a Map to remove duplicates
       const betsMap = new Map();
 
-      participantSnapshot.docs.forEach((doc) => {
-        const data = { id: doc.id, ...doc.data() };
-        betsMap.set(doc.id, data);
-      });
+      // Process and update status for each bet
+      const processSnapshot = async (snapshot) => {
+        for (const doc of snapshot.docs) {
+          const data = { id: doc.id, ...doc.data() };
 
-      creatorSnapshot.docs.forEach((doc) => {
-        const data = { id: doc.id, ...doc.data() };
-        betsMap.set(doc.id, data);
-      });
+          // Ensure dates are properly formatted
+          if (data.createdAt) {
+            data.createdAt = data.createdAt.toDate
+              ? data.createdAt.toDate().toISOString()
+              : new Date(data.createdAt).toISOString();
+          }
+
+          if (data.updatedAt) {
+            data.updatedAt = data.updatedAt.toDate
+              ? data.updatedAt.toDate().toISOString()
+              : new Date(data.updatedAt).toISOString();
+          }
+
+          if (data.expiresAt) {
+            data.expiresAt = data.expiresAt.toDate
+              ? data.expiresAt.toDate().toISOString()
+              : new Date(data.expiresAt).toISOString();
+          }
+
+          // Check if bet should be locked
+          if (
+            data.status === 'open' &&
+            new Date(data.expiresAt) <= new Date()
+          ) {
+            const betRef = doc(db, 'bets', doc.id);
+            await updateDoc(betRef, {
+              status: 'locked',
+              updatedAt: new Date().toISOString(),
+            });
+            data.status = 'locked';
+
+            // Notify creator
+            await NotificationsService.createNotification({
+              userId: data.creatorId,
+              type: 'bets',
+              title: `Bet "${data.question}" has expired`,
+              message: 'Please select the winning option to distribute coins.',
+              data: { betId: doc.id },
+            });
+          }
+
+          // Get group name if groupId exists
+          if (data.groupId) {
+            try {
+              const groupDoc = await getDoc(doc(db, 'groups', data.groupId));
+              if (groupDoc.exists()) {
+                data.groupName = groupDoc.data().name;
+              }
+            } catch (error) {
+              console.error('Error fetching group name:', error);
+            }
+          }
+
+          betsMap.set(doc.id, data);
+        }
+      };
+
+      await Promise.all([
+        processSnapshot(participantSnapshot),
+        processSnapshot(creatorSnapshot),
+      ]);
 
       let results = Array.from(betsMap.values());
 
@@ -213,7 +459,8 @@ class BetsService {
 
       return results;
     } catch (error) {
-      this._handleError(error);
+      console.error('Error getting user bets:', error);
+      throw error;
     }
   }
 
@@ -364,127 +611,6 @@ class BetsService {
     }
   }
 
-  // Release result and distribute points
-  async releaseResult(betId, creatorId, winningOptionId) {
-    try {
-      const betRef = doc(db, 'bets', betId);
-      const betDoc = await getDoc(betRef);
-
-      if (!betDoc.exists()) {
-        throw new Error('Bet not found');
-      }
-
-      const betData = betDoc.data();
-
-      // Validate creator
-      if (betData.creatorId !== creatorId) {
-        throw new Error('Only the bet creator can release results');
-      }
-
-      // Validate bet status
-      if (betData.status !== 'locked') {
-        throw new Error('Bet must be locked before releasing results');
-      }
-
-      // Validate winning option
-      const winningOption = betData.answerOptions.find(
-        (opt) => opt.id === winningOptionId,
-      );
-      if (!winningOption) {
-        throw new Error('Invalid winning option');
-      }
-
-      const timestamp = serverTimestamp();
-
-      // Calculate winnings
-      const winners = winningOption.participants;
-      const totalWinners = winners.length;
-      const totalPool = betData.totalPool;
-      const winningsPerPerson =
-        totalWinners > 0 ? Math.floor(totalPool / totalWinners) : 0;
-
-      // Distribute winnings and send notifications
-      if (totalWinners > 0) {
-        const distributionPromises = winners.map(async (winnerId) => {
-          // Add winnings to user's balance
-          await updateDoc(doc(db, 'users', winnerId), {
-            numCoins: increment(winningsPerPerson),
-            totalEarned: increment(winningsPerPerson),
-          });
-
-          // Add to history
-          const historyRef = doc(collection(db, 'pointHistory'));
-          await setDoc(historyRef, {
-            userId: winnerId,
-            amount: winningsPerPerson,
-            type: 'bet_win',
-            betId: betId,
-            description: `Won bet: ${betData.title}`,
-            createdAt: timestamp,
-          });
-
-          // Send win notification
-          await NotificationsService.createBetResultNotification(
-            winnerId,
-            betId,
-            betData.title,
-            'won',
-          );
-        });
-
-        await Promise.all(distributionPromises);
-      }
-
-      // Notify losers
-      const allParticipants = new Set(betData.participants);
-      winners.forEach((id) => allParticipants.delete(id));
-
-      for (const loserId of allParticipants) {
-        await NotificationsService.createBetResultNotification(
-          loserId,
-          betId,
-          betData.title,
-          'lost',
-        );
-      }
-
-      // If it's a group bet, notify all group members of the result
-      if (betData.groupId) {
-        const groupDoc = await getDoc(doc(db, 'groups', betData.groupId));
-        const groupData = groupDoc.data();
-
-        if (groupData.members) {
-          for (const memberId of groupData.members) {
-            if (!allParticipants.has(memberId) && !winners.includes(memberId)) {
-              await NotificationsService.createBetResultNotification(
-                memberId,
-                betId,
-                betData.title,
-                'completed',
-              );
-            }
-          }
-        }
-      }
-
-      // Update bet status
-      await updateDoc(betRef, {
-        status: 'completed',
-        winningOptionId,
-        resultReleasedAt: timestamp,
-        updatedAt: timestamp,
-        winningsPerPerson,
-      });
-
-      return {
-        success: true,
-        message: 'Results released and points distributed',
-      };
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
   // Get bet results
   async getBetResults(betId) {
     try {
@@ -599,22 +725,44 @@ class BetsService {
     }
   }
 
-  // Get bet comments with user details
+  // Get bet comments
   async getBetComments(betId) {
     try {
       const commentsQuery = query(
-        collection(db, 'betComments'),
+        collection(db, 'comments'),
         where('betId', '==', betId),
         orderBy('createdAt', 'desc'),
       );
 
-      const commentsSnapshot = await getDocs(commentsQuery);
-      return commentsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const snapshot = await getDocs(commentsQuery);
+      return await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          try {
+            const userDoc = await getDoc(doc(db, 'users', data.userId));
+            const username = userDoc.exists()
+              ? userDoc.data().username
+              : 'Unknown User';
+            return {
+              id: doc.id,
+              ...data,
+              username,
+              createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            };
+          } catch (error) {
+            console.error(`Error fetching user for comment ${doc.id}:`, error);
+            return {
+              id: doc.id,
+              ...data,
+              username: 'Unknown User',
+              createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            };
+          }
+        }),
+      );
     } catch (error) {
-      this._handleError(error);
+      console.error('Error getting bet comments:', error);
+      throw error;
     }
   }
 
