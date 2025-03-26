@@ -278,7 +278,7 @@ class BetsService {
   }
 
   // Release result and distribute coins
-  async releaseResult(betId, userId, winningOptionId) {
+  async releaseResult(betId, userId, winningOptionId, winningsPerPerson) {
     try {
       const betRef = doc(db, 'bets', betId);
       const betDoc = await getDoc(betRef);
@@ -308,32 +308,51 @@ class BetsService {
       }
 
       const winners = winningOption.participants;
-      const totalPool =
-        bet.wagerAmount *
-        bet.answerOptions.reduce(
-          (sum, opt) => sum + opt.participants.length,
-          0,
+
+      // If no one won, refund everyone's wager
+      if (winners.length === 0) {
+        const allParticipants = bet.answerOptions.flatMap(
+          (opt) => opt.participants,
         );
-      const winningsPerPerson =
-        winners.length > 0 ? Math.floor(totalPool / winners.length) : 0;
+        const refundPromises = allParticipants.map(async (participantId) => {
+          const userRef = doc(db, 'users', participantId);
+          await updateDoc(userRef, {
+            numCoins: increment(bet.wagerAmount),
+          });
 
-      // Update winners' coins
-      const updatePromises = winners.map(async (winnerId) => {
-        const userRef = doc(db, 'users', winnerId);
-        await updateDoc(userRef, {
-          numCoins: increment(winningsPerPerson),
-          trophies: increment(1),
+          // Notify about refund
+          await NotificationsService.createNotification({
+            userId: participantId,
+            type: 'bets',
+            title: 'Bet Refunded',
+            message: `No winners in "${bet.question}". Your ${bet.wagerAmount} coins have been refunded.`,
+            data: { betId },
+          });
         });
 
-        // Notify winners
-        await NotificationsService.createNotification({
-          userId: winnerId,
-          type: 'bets',
-          title: 'You won the bet!',
-          message: `You won ${winningsPerPerson} coins in "${bet.question}"`,
-          data: { betId, winnings: winningsPerPerson },
+        await Promise.all(refundPromises);
+      } else {
+        // Update winners' coins and award trophies
+        const updatePromises = winners.map(async (winnerId) => {
+          const userRef = doc(db, 'users', winnerId);
+          await updateDoc(userRef, {
+            numCoins: increment(winningsPerPerson),
+            trophies: increment(1),
+            braggingRights: increment(1),
+          });
+
+          // Notify winners
+          await NotificationsService.createNotification({
+            userId: winnerId,
+            type: 'bets',
+            title: 'You won the bet! 🏆',
+            message: `Congratulations! You won ${winningsPerPerson} coins and a trophy in "${bet.question}"`,
+            data: { betId, winnings: winningsPerPerson },
+          });
         });
-      });
+
+        await Promise.all(updatePromises);
+      }
 
       // Update bet status
       await updateDoc(betRef, {
@@ -344,11 +363,12 @@ class BetsService {
         updatedAt: new Date().toISOString(),
       });
 
-      await Promise.all(updatePromises);
-
       return {
         success: true,
-        message: 'Results released and coins distributed',
+        message:
+          winners.length > 0
+            ? 'Results released and coins distributed'
+            : 'No winners, wagers refunded',
         winningsPerPerson,
         winners,
       };

@@ -44,44 +44,30 @@ const Home = () => {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const sessionData = await AuthService.getSession();
       setSession(sessionData);
 
-      // Fetch user's bets
-      const userBets = await BetsService.getUserBets(sessionData.uid);
+      // Get user's groups
+      const userGroups = await GroupsService.getUserGroups(sessionData.uid);
+      setUserGroups(userGroups);
 
-      // Fetch group names for each bet
-      const betsWithGroupNames = await Promise.all(
-        userBets.map(async (bet) => {
-          if (bet.groupId) {
-            const groupName = await GroupsService.getGroupName(bet.groupId);
-            return {
-              ...bet,
-              groupName,
-            };
-          }
-          return {
-            ...bet,
-            groupName: 'No Group',
-          };
-        }),
+      // Get bets and filter out expired ones for Live & Upcoming section
+      const bets = await BetsService.getUserBets(sessionData.uid);
+      const now = new Date();
+      const activeBets = bets.filter((bet) => {
+        const expiryDate = new Date(bet.expiresAt);
+        return expiryDate > now && bet.status !== 'completed';
+      });
+      setBets(activeBets);
+
+      // Get notifications
+      const notifications = await NotificationsService.getNotifications(
+        sessionData.uid,
       );
-
-      setBets(betsWithGroupNames);
-
-      // Load groups
-      const groups = await GroupsService.getUserGroups(sessionData.uid);
-      const sortedGroups = groups.sort(
-        (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
-      );
-      setUserGroups(sortedGroups);
-
-      // Load unread notifications count
-      const count = await NotificationsService.getUnreadCount(sessionData.uid);
-      setUnreadNotifications(count);
+      setNotifications(notifications);
     } catch (error) {
       console.error('Error loading data:', error);
-      Alert.alert('Error', 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -132,23 +118,26 @@ const Home = () => {
 
   // Calculate if user has won a bet
   const calculateBetResult = (bet) => {
-    if (bet.status !== 'completed') return null;
+    if (bet.status !== 'completed' || !bet.winningOptionId || !session?.uid) {
+      return null;
+    }
 
-    const userOption = bet.answerOptions.find((opt) =>
-      opt.participants.includes(session?.uid),
+    const winningOption = bet.answerOptions.find(
+      (opt) => opt.id === bet.winningOptionId,
     );
+    if (!winningOption) {
+      return null;
+    }
 
-    if (!userOption) return null;
+    const userWon = winningOption.participants.includes(session.uid);
+    if (!userWon) {
+      return { result: 'lose', coins: 0 };
+    }
 
-    return userOption.id === bet.winningOptionId
-      ? {
-          result: 'win',
-          coins: bet.winningsPerPerson || 0,
-        }
-      : {
-          result: 'loss',
-          coins: -bet.wagerAmount,
-        };
+    return {
+      result: 'win',
+      coins: bet.winningsPerPerson || 0,
+    };
   };
 
   const groups = [
@@ -162,44 +151,98 @@ const Home = () => {
   // Update the group name display in the bet card
   const renderBetCard = (bet) => {
     const betResult = calculateBetResult(bet);
+    const winningOption =
+      bet.status === 'completed' &&
+      bet.answerOptions.find((opt) => opt.id === bet.winningOptionId);
+    const isLocked = bet.status === 'locked';
+    const isCompleted = bet.status === 'completed';
+    const userOption = bet.answerOptions.find((opt) =>
+      opt.participants.includes(session?.uid),
+    );
+
     return (
       <TouchableOpacity
         key={bet.id}
-        style={styles.betCard}
+        style={[
+          styles.betCard,
+          isLocked && styles.lockedBetCard,
+          isCompleted && styles.completedBetCard,
+        ]}
         onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
       >
         <View style={styles.betHeader}>
-          <Text style={styles.betDescription}>{bet.question}</Text>
-          <Text style={[styles.status, { color: getStatusColor(bet.status) }]}>
-            {bet.status.toUpperCase()}
+          <Text style={styles.betDescription} numberOfLines={2}>
+            {bet.question}
           </Text>
-        </View>
-        <View style={styles.betDetails}>
-          <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
-          {/* <View style={styles.groupInfo}> */}
-          {/* <Icon name="users" size={14} color={theme.colors.textLight} /> */}
-          <Text style={styles.groupName}>{bet.groupName || 'No Group'}</Text>
-          {/* </View> */}
-          <View style={styles.betResult}>
-            {betResult && (
-              <Text
-                style={[
-                  styles.betCoins,
-                  { color: betResult.result === 'win' ? '#4CAF50' : '#FF0000' },
-                ]}
-              >
-                {betResult.result === 'win' ? '+' : ''}
-                {betResult.coins}
-              </Text>
-            )}
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(bet.status) + '20' },
+            ]}
+          >
+            <Icon
+              name={isCompleted ? 'trophy' : isLocked ? 'lock' : 'unlock'}
+              size={16}
+              color={getStatusColor(bet.status)}
+            />
+            <Text
+              style={[styles.statusText, { color: getStatusColor(bet.status) }]}
+            >
+              {bet.status.toUpperCase()}
+            </Text>
           </View>
         </View>
-        <View style={styles.betStats}>
-          <Text style={styles.statsText}>
-            {bet.participants?.length || 0} participants
+
+        <View style={styles.betInfo}>
+          <Text style={styles.groupName}>{bet.groupName || 'No Group'}</Text>
+          <Text style={styles.wagerAmount}>Wager: {bet.wagerAmount} 🪙</Text>
+        </View>
+
+        {isCompleted && winningOption && (
+          <View style={styles.winnerContainer}>
+            <Text style={styles.winnerLabel}>Winner: </Text>
+            <Text style={styles.winnerOption}>{winningOption.text}</Text>
+            {betResult && (
+              <View
+                style={[
+                  styles.resultBadge,
+                  betResult.result === 'win'
+                    ? styles.winBadge
+                    : styles.loseBadge,
+                ]}
+              >
+                <Text style={styles.resultText}>
+                  {betResult.result === 'win'
+                    ? `Won ${betResult.coins} 🪙`
+                    : 'Lost'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {isLocked && bet.creatorId === session?.uid && !bet.winningOptionId && (
+          <View style={styles.actionNeeded}>
+            <Icon
+              name="exclamation-circle"
+              size={16}
+              color={theme.colors.warning}
+            />
+            <Text style={styles.actionText}>Select Winner</Text>
+          </View>
+        )}
+
+        <View style={styles.betFooter}>
+          <Text style={styles.participants}>
+            {bet.answerOptions.reduce(
+              (sum, opt) => sum + opt.participants.length,
+              0,
+            )}{' '}
+            participants
           </Text>
-          <Text style={styles.statsText}>{bet.commentCount || 0} comments</Text>
-          <Text style={styles.statsText}>Pool: {bet.totalPool || 0} coins</Text>
+          {userOption && (
+            <Text style={styles.yourVote}>Your vote: {userOption.text}</Text>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -291,23 +334,35 @@ const Home = () => {
             style={styles.groupsScroll}
           >
             {userGroups.length > 0 ? (
-              userGroups.map((group) => (
+              <>
+                {userGroups.map((group) => (
+                  <TouchableOpacity
+                    key={group.id}
+                    style={styles.groupItem}
+                    onPress={() =>
+                      navigation.navigate('GroupBets', { groupId: group.id })
+                    }
+                  >
+                    <Avatar size={hp(6)} source={{ uri: group.avatar }} />
+                    <Text style={styles.groupName} numberOfLines={1}>
+                      {group.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
                 <TouchableOpacity
-                  key={group.id}
                   style={styles.groupItem}
-                  onPress={() =>
-                    navigation.navigate('GroupBets', { groupId: group.id })
-                  }
+                  onPress={() => navigation.navigate('Groups')}
                 >
-                  <Avatar size={hp(6)} source={{ uri: group.avatar }} />
-                  <Text style={styles.groupName} numberOfLines={1}>
-                    {group.name}
-                  </Text>
-                  <Text style={styles.lastActive}>
-                    {formatDate(group.updatedAt)}
-                  </Text>
+                  <View style={styles.plusIconContainer}>
+                    <Icon
+                      name="plus"
+                      size={hp(4)}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                  <Text style={styles.createGroupText}>Join/Create</Text>
                 </TouchableOpacity>
-              ))
+              </>
             ) : (
               <TouchableOpacity
                 style={styles.createGroupButton}
@@ -316,7 +371,7 @@ const Home = () => {
                 <View style={styles.plusIconContainer}>
                   <Icon name="plus" size={hp(4)} color={theme.colors.primary} />
                 </View>
-                <Text style={styles.createGroupText}>New Group</Text>
+                <Text style={styles.createGroupText}>Join/Create Group</Text>
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -461,6 +516,7 @@ const styles = StyleSheet.create({
   groupItem: {
     alignItems: 'center',
     marginRight: wp(4),
+    width: hp(10),
   },
   groupAvatar: {
     width: hp(8),
@@ -474,15 +530,6 @@ const styles = StyleSheet.create({
   groupName: {
     fontSize: hp(1.6),
   },
-  // betItem: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   justifyContent: "space-between",
-  //   backgroundColor: theme.colors.card,
-  //   padding: hp(2),
-  //   borderRadius: hp(1.5),
-  //   marginBottom: hp(1),
-  // },
   betsContainer: {
     marginTop: 10,
     paddingHorizontal: 10,
@@ -502,167 +549,183 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   betDescription: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    flex: 1,
+    fontSize: hp(2),
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginRight: wp(3),
   },
   betDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  groupInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(1),
-    justifyContent: 'center',
-  },
-  betDate: {
-    fontSize: 14,
-    color: '#666',
-  },
-  betGroup: {
-    fontSize: 14,
-    color: '#666',
-  },
-  betResult: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  betCoins: {
-    marginLeft: 5,
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  betName: {
-    flex: 1,
-    marginLeft: wp(2),
-    color: theme.colors.text,
-    fontSize: hp(1.8),
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: hp(4),
-  },
-  emptyText: {
-    fontSize: hp(2),
-    color: theme.colors.textLight,
     marginBottom: hp(2),
   },
-  createButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(1),
-    borderRadius: theme.radius.lg,
+  betInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: hp(1),
   },
-  createButtonText: {
-    color: 'white',
+  betDate: {
+    fontSize: hp(1.4),
+    color: theme.colors.textLight,
+  },
+  winnerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: hp(1),
+    backgroundColor: '#FEF3C7',
+    padding: hp(1),
+    borderRadius: hp(1),
+  },
+  winnerLabel: {
     fontSize: hp(1.8),
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#92400E',
   },
-  betStats: {
+  winnerOption: {
+    fontSize: hp(1.8),
+    color: '#92400E',
+    flex: 1,
+  },
+  resultBadge: {
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1),
+  },
+  winBadge: {
+    backgroundColor: theme.colors.success + '20',
+  },
+  loseBadge: {
+    backgroundColor: theme.colors.error + '20',
+  },
+  resultText: {
+    fontSize: hp(1.6),
+    fontWeight: '600',
+  },
+  actionNeeded: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.warning + '20',
+    padding: hp(1),
+    borderRadius: hp(1),
+    marginTop: hp(1),
+    gap: wp(2),
+  },
+  betFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: hp(1),
     paddingTop: hp(1),
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: theme.colors.border,
   },
-  statsText: {
+  participants: {
     fontSize: hp(1.6),
     color: theme.colors.textLight,
   },
+  yourVote: {
+    fontSize: hp(1.6),
+    color: theme.colors.primary,
+    fontWeight: '500',
+  },
   betCard: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
+    borderRadius: hp(2),
+    padding: wp(4),
+    marginBottom: hp(2),
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  lockedBetCard: {
+    borderColor: theme.colors.warning,
+    borderWidth: 2,
+  },
+  completedBetCard: {
+    borderColor: theme.colors.success,
+    borderWidth: 2,
   },
   betHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: hp(1),
+    alignItems: 'flex-start',
+    marginBottom: hp(2),
   },
-  status: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  notificationIcon: {
-    position: 'relative',
-  },
-  badge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    padding: 2,
-  },
-  badgeText: {
-    color: 'white',
-    fontSize: hp(1.2),
-    fontWeight: 'bold',
-  },
-  notificationsContainer: {
-    padding: hp(2),
-  },
-  notificationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: hp(1),
-  },
-  notificationText: {
-    marginLeft: hp(1),
-    color: theme.colors.text,
-    fontSize: hp(1.6),
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.primary,
-    position: 'absolute',
-    top: 5,
-    right: 5,
-  },
-  lastActive: {
-    fontSize: hp(1.4),
-    color: theme.colors.textLight,
-    marginTop: hp(0.5),
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  createGroupButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: wp(4),
-  },
-  plusIconContainer: {
-    width: hp(8),
-    height: hp(8),
-    borderRadius: hp(4),
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: hp(1),
-  },
-  createGroupText: {
-    fontSize: hp(1.6),
-    color: theme.colors.primary,
-    fontWeight: '500',
-    textAlign: 'center',
+  statusBadge: {
+    status: {
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    notificationIcon: {
+      position: 'relative',
+    },
+    badge: {
+      position: 'absolute',
+      top: -5,
+      right: -5,
+      backgroundColor: theme.colors.primary,
+      borderRadius: 10,
+      padding: 2,
+    },
+    badgeText: {
+      color: 'white',
+      fontSize: hp(1.2),
+      fontWeight: 'bold',
+    },
+    notificationsContainer: {
+      padding: hp(2),
+    },
+    notificationItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: hp(1),
+    },
+    notificationText: {
+      marginLeft: hp(1),
+      color: theme.colors.text,
+      fontSize: hp(1.6),
+    },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.primary,
+      position: 'absolute',
+      top: 5,
+      right: 5,
+    },
+    lastActive: {
+      fontSize: hp(1.4),
+      color: theme.colors.textLight,
+      marginTop: hp(0.5),
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    createGroupButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: wp(4),
+    },
+    plusIconContainer: {
+      width: hp(6),
+      height: hp(6),
+      borderRadius: hp(3),
+      backgroundColor: '#F3F4F6',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: hp(1),
+    },
+    createGroupText: {
+      fontSize: hp(1.4),
+      color: theme.colors.primary,
+      fontWeight: '500',
+      textAlign: 'center',
+    },
   },
 });
 
