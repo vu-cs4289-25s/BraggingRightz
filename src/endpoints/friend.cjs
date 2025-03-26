@@ -65,13 +65,21 @@ class FriendService {
       // Add friend to current user's list
       const currUserDocRef = doc(db, 'users', currUser.uid);
       await updateDoc(currUserDocRef, {
-        friends: arrayUnion({ userId: user2uid, status: 'pending' }),
+        friends: arrayUnion({
+          userId: user2uid,
+          status: 'pending',
+          direction: 'sent',
+        }),
       });
 
       // Add current user to friend's list
       const user2DocRef = doc(db, 'users', user2uid);
       await updateDoc(user2DocRef, {
-        friends: arrayUnion({ userId: currUser.uid, status: 'pending' }),
+        friends: arrayUnion({
+          userId: currUser.uid,
+          status: 'pending',
+          direction: 'recieved',
+        }),
       });
 
       Alert.alert('Success', 'Friend request sent!');
@@ -122,6 +130,7 @@ class FriendService {
               coins: profile.numCoins || 0,
               trophies: profile.trophies || 0,
               status: friendData.status,
+              direction: friendData.direction || '',
             };
           } catch (error) {
             console.error(`Error fetching profile for user ${uid}:`, error);
@@ -136,6 +145,72 @@ class FriendService {
       console.error('Error getting friends list:', error);
       Alert.alert('Error', 'Failed to load friends list. Please try again.');
       return [];
+    }
+  }
+
+  // Accept friend request
+  async acceptFriendRequest({ user2username }) {
+    try {
+      // Get curr user information
+      const currUser = auth.currentUser;
+
+      // Make sure user is logged in
+      if (!currUser) {
+        Alert.alert('Error', 'Please log in to add friends');
+        throw new Error('User not authenticated');
+      }
+
+      // Find user in friends list and change status from pending to active
+      const currUserProfile = await getUserProfile(currUser.uid);
+      const user2uid = await getUid({ username: user2username.toLowerCase() });
+
+      // Check if the friend request exists
+      const incomingRequest = currUserProfile.friends?.find(
+        (friend) =>
+          friend.userId === user2uid &&
+          friend.status === 'pending' &&
+          friend.direction === 'recieved',
+      );
+
+      if (!incomingRequest) {
+        Alert.alert('Error', 'No friend request from this user');
+        return;
+      }
+
+      // Update current user's friend entry
+      const updatedCurrFriends = currUserProfile.friends.map((friend) => {
+        if (friend.userId === user2uid) {
+          return { ...friend, status: 'active' };
+        }
+        return friend;
+      });
+
+      const currUserDocRef = doc(db, 'users', currUser.uid);
+      await updateDoc(currUserDocRef, {
+        friends: updatedCurrFriends,
+      });
+
+      // Update user2's friend entry
+      const user2Profile = await getUserProfile(user2uid);
+      const updatedUser2Friends = user2Profile.friends.map((friend) => {
+        if (friend.userId === currUser.uid) {
+          return { ...friend, status: 'active' };
+        }
+        return friend;
+      });
+
+      const user2DocRef = doc(db, 'users', user2uid);
+      await updateDoc(user2DocRef, {
+        friends: updatedUser2Friends,
+      });
+
+      Alert.alert('Success', 'Friend request accepted!');
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+      Alert.alert(
+        'Error',
+        'Failed to accept friend request. Please try again.',
+      );
     }
   }
 }

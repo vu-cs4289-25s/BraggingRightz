@@ -46,7 +46,7 @@ const Friends = () => {
     fetchFriends();
   }, []);
 
-  const handleAddFriend = async ({ username }) => {
+  const handleAddFriend = async (username) => {
     try {
       await FriendService.addFriend({
         user2username: username,
@@ -56,6 +56,15 @@ const Friends = () => {
       await fetchFriends();
     } catch (error) {
       console.error('Error adding friend:', error);
+    }
+  };
+
+  const handleAcceptRequest = async (username) => {
+    try {
+      await FriendService.acceptFriendRequest({ user2username: username });
+      await fetchFriends(); // refresh list after accepting
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
     }
   };
 
@@ -76,14 +85,35 @@ const Friends = () => {
                   : styles.activeBadge,
               ]}
             >
-              <Text style={styles.statusText}>
-                {friend.status === 'pending' ? 'Pending' : 'Friend'}
-              </Text>
+              {friend.status === 'pending' ? (
+                friend.direction === 'sent' ? (
+                  <Text style={styles.statusText}>Request Sent</Text>
+                ) : friend.direction === 'recieved' ? (
+                  <TouchableOpacity
+                    onPress={() => handleAcceptRequest(friend.username)}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        { color: theme.colors.primary },
+                      ]}
+                    >
+                      Accept Request
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={[styles.statusText, { color: 'red' }]}>
+                    ERROR: outdated friend request
+                  </Text>
+                )
+              ) : (
+                <Text style={styles.statusText}>Friend</Text>
+              )}
             </View>
           </View>
           <View style={styles.statsContainer}>
             <View style={styles.stat}>
-              <Icon name="coins" size={hp(2)} color={theme.colors.warning} />
+              <Icon name="star-o" size={hp(2)} color={theme.colors.warning} />
               <Text style={styles.statText}>{friend.coins}</Text>
             </View>
             <View style={styles.stat}>
