@@ -9,7 +9,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { hp } from '../helpers/common';
 import Avatar from './Avatar';
 import LeaderboardScreen from '../app/main/leaderboard';
-import { FriendsService } from '../src/endpoints/friend';
+import FriendService from '../src/endpoints/friend.cjs';
 import { useState, useEffect } from 'react';
 import { auth } from '../src/firebase/config';
 
@@ -21,8 +21,8 @@ const BottomTabNavigator = () => {
 
   useEffect(() => {
     const fetchFriends = async () => {
-      const friends = await FriendsService.getFriendList();
-      setFriends(friends);
+      const friendsList = await FriendService.getFriendList();
+      setFriends(friendsList);
     };
     fetchFriends();
   }, []);

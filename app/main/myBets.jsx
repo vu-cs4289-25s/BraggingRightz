@@ -85,6 +85,11 @@ const MyBets = () => {
     );
     const hasWon =
       bet.status === 'completed' && userOption?.id === bet.winningOptionId;
+    const isExpired = new Date(bet.expiresAt) < new Date();
+    const totalParticipants = bet.answerOptions.reduce(
+      (sum, opt) => sum + opt.participants.length,
+      0,
+    );
 
     return (
       <TouchableOpacity
@@ -93,7 +98,10 @@ const MyBets = () => {
         onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
       >
         <View style={styles.betHeader}>
-          <Text style={styles.groupName}>{bet.groupId}</Text>
+          <View style={styles.groupInfo}>
+            <Icon name="users" size={hp(2)} color={theme.colors.primary} />
+            <Text style={styles.groupName}>{bet.groupName || 'No Group'}</Text>
+          </View>
           <Text style={[styles.status, { color: getStatusColor(bet.status) }]}>
             {bet.status.toUpperCase()}
           </Text>
@@ -103,21 +111,37 @@ const MyBets = () => {
 
         <View style={styles.betDetails}>
           <View style={styles.detailRow}>
-            <Icon name="clock-o" size={16} color={theme.colors.textLight} />
-            <Text style={styles.timeLeft}>{formatTimeLeft(bet.expiresAt)}</Text>
+            <Icon name="clock-o" size={hp(2)} color={theme.colors.textLight} />
+            {isExpired ? (
+              <Text style={styles.timeLeft}>
+                Expired on {new Date(bet.expiresAt).toLocaleDateString()}
+              </Text>
+            ) : (
+              <Text style={styles.timeLeft}>
+                {formatTimeLeft(bet.expiresAt)}
+              </Text>
+            )}
           </View>
 
           <View style={styles.detailRow}>
-            <Icon name="money" size={16} color={theme.colors.textLight} />
-            <Text style={styles.wager}>{bet.wagerAmount} coins</Text>
+            <Icon name="money" size={hp(2)} color={theme.colors.textLight} />
+            <Text style={styles.wager}>{bet.wagerAmount} coins per bet</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Icon name="users" size={hp(2)} color={theme.colors.textLight} />
+            <Text style={styles.participants}>
+              {totalParticipants} participant
+              {totalParticipants !== 1 ? 's' : ''}
+            </Text>
           </View>
 
           {userOption && (
             <View style={styles.detailRow}>
               <Icon
                 name="check-circle"
-                size={16}
-                color={theme.colors.textLight}
+                size={hp(2)}
+                color={theme.colors.success}
               />
               <Text style={styles.selectedOption}>
                 Your pick: {userOption.text}
@@ -129,13 +153,13 @@ const MyBets = () => {
             <View style={styles.resultRow}>
               <Icon
                 name={hasWon ? 'trophy' : 'times-circle'}
-                size={20}
-                color={hasWon ? '#FFD700' : '#FF0000'}
+                size={hp(2.5)}
+                color={hasWon ? theme.colors.warning : theme.colors.error}
               />
               <Text
                 style={[
                   styles.result,
-                  { color: hasWon ? '#4CAF50' : '#FF0000' },
+                  { color: hasWon ? theme.colors.success : theme.colors.error },
                 ]}
               >
                 {hasWon
@@ -147,11 +171,16 @@ const MyBets = () => {
         </View>
 
         <View style={styles.statsRow}>
-          <Text style={styles.statsText}>
-            {bet.participants.length} participants
-          </Text>
-          <Text style={styles.statsText}>{bet.commentCount || 0} comments</Text>
           <Text style={styles.statsText}>Pool: {bet.totalPool} coins</Text>
+          {bet.status === 'completed' && bet.winningOptionId && (
+            <Text style={styles.statsText}>
+              Winning option:{' '}
+              {
+                bet.answerOptions.find((opt) => opt.id === bet.winningOptionId)
+                  ?.text
+              }
+            </Text>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -307,9 +336,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: hp(1),
   },
+  groupInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+  },
   groupName: {
     fontSize: hp(1.8),
-    color: theme.colors.textLight,
+    color: theme.colors.primary,
+    fontWeight: '500',
   },
   status: {
     fontSize: hp(1.6),
@@ -318,6 +353,7 @@ const styles = StyleSheet.create({
   question: {
     fontSize: hp(2.2),
     fontWeight: 'bold',
+    color: theme.colors.text,
     marginBottom: hp(1.5),
   },
   betDetails: {
@@ -336,15 +372,23 @@ const styles = StyleSheet.create({
     fontSize: hp(1.8),
     color: theme.colors.text,
   },
-  selectedOption: {
+  participants: {
     fontSize: hp(1.8),
     color: theme.colors.text,
+  },
+  selectedOption: {
+    fontSize: hp(1.8),
+    color: theme.colors.success,
+    fontWeight: '500',
   },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(2),
     marginTop: hp(1),
+    backgroundColor: theme.colors.background,
+    padding: hp(1),
+    borderRadius: theme.radius.sm,
   },
   result: {
     fontSize: hp(1.8),
@@ -356,7 +400,7 @@ const styles = StyleSheet.create({
     marginTop: hp(2),
     paddingTop: hp(2),
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: theme.colors.border,
   },
   statsText: {
     fontSize: hp(1.6),

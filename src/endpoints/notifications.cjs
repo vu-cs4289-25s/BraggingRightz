@@ -10,6 +10,7 @@ const {
   deleteDoc,
   addDoc,
   Timestamp,
+  serverTimestamp,
 } = require('firebase/firestore');
 const { db } = require('../firebase/config');
 
@@ -32,14 +33,109 @@ class NotificationsService {
       }
 
       const snapshot = await getDocs(notificationsQuery);
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt.toDate(),
-      }));
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+        };
+      });
     } catch (error) {
       this._handleError(error);
     }
+  }
+
+  // Create a new notification
+  async createNotification({ userId, type, title, message, data = {} }) {
+    try {
+      const timestamp = serverTimestamp();
+      const notification = {
+        userId,
+        type,
+        title,
+        message,
+        data,
+        read: false,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+
+      const docRef = await addDoc(
+        collection(db, 'notifications'),
+        notification,
+      );
+
+      return {
+        id: docRef.id,
+        ...notification,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Create a bet expiration notification
+  async createBetExpirationNotification(userId, betId, betTitle, expiresIn) {
+    return this.createNotification({
+      userId,
+      type: 'bet_expiring',
+      title: `Bet "${betTitle}" expires in ${expiresIn}`,
+      message: 'Make sure to place your vote before it expires!',
+      data: { betId, expiresIn },
+    });
+  }
+
+  // Create a new bet notification
+  async createNewBetNotification(
+    userId,
+    betId,
+    creatorName,
+    betTitle,
+    groupName,
+  ) {
+    return this.createNotification({
+      userId,
+      type: 'new_bet',
+      title: `New bet in ${groupName}: "${betTitle}"`,
+      message: `${creatorName} created a new bet. Check it out!`,
+      data: { betId, creatorName, groupName },
+    });
+  }
+
+  // Create a bet result notification
+  async createBetResultNotification(
+    userId,
+    betId,
+    betTitle,
+    result,
+    winnings = null,
+  ) {
+    const message = winnings
+      ? `Congratulations! You won ${winnings} coins!`
+      : 'The results are in!';
+
+    return this.createNotification({
+      userId,
+      type: 'bet_result',
+      title: `Results for "${betTitle}"`,
+      message,
+      data: { betId, result, winnings },
+    });
+  }
+
+  // Create a bet vote reminder notification
+  async createBetVoteReminderNotification(userId, betId, betTitle, timeLeft) {
+    return this.createNotification({
+      userId,
+      type: 'vote_reminder',
+      title: `Don't forget to vote on "${betTitle}"`,
+      message: `Only ${timeLeft} left to place your vote!`,
+      data: { betId, timeLeft },
+    });
   }
 
   // Mark notification as read
@@ -90,34 +186,6 @@ class NotificationsService {
     }
   }
 
-  // Create a new notification
-  async createNotification({ userId, type, title, message, data = {} }) {
-    try {
-      const timestamp = new Date().toISOString();
-      const notification = {
-        userId,
-        type,
-        title,
-        message,
-        data,
-        read: false,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      };
-
-      const docRef = await addDoc(
-        collection(db, 'notifications'),
-        notification,
-      );
-      return {
-        id: docRef.id,
-        ...notification,
-      };
-    } catch (error) {
-      this._handleError(error);
-    }
-  }
-
   // Get unread count
   async getUnreadCount(userId) {
     try {
@@ -132,28 +200,6 @@ class NotificationsService {
     } catch (error) {
       this._handleError(error);
     }
-  }
-
-  // Create a bet expiration notification
-  async createBetExpirationNotification(userId, betId, betTitle, expiresIn) {
-    return this.createNotification({
-      userId,
-      type: 'expiring',
-      title: `Bet "${betTitle}" expires in ${expiresIn}`,
-      message: 'Make sure to complete your bet before it expires!',
-      data: { betId, expiresIn },
-    });
-  }
-
-  // Create a new bet notification
-  async createNewBetNotification(userId, betId, creatorName, betTitle) {
-    return this.createNotification({
-      userId,
-      type: 'bets',
-      title: `${creatorName} created a new bet: "${betTitle}"`,
-      message: 'Check out the new bet and join in!',
-      data: { betId, creatorName },
-    });
   }
 
   // Create a new comment notification
@@ -175,17 +221,6 @@ class NotificationsService {
       title: `${requesterName} sent you a friend request`,
       message: 'Tap to accept or decline the request',
       data: { requesterId, requesterName },
-    });
-  }
-
-  // Create a bet result notification
-  async createBetResultNotification(userId, betId, betTitle, result) {
-    return this.createNotification({
-      userId,
-      type: 'bets',
-      title: `Results are in for "${betTitle}"`,
-      message: `The bet has been ${result}`,
-      data: { betId, result },
     });
   }
 

@@ -17,106 +17,125 @@ class FriendService {
       // Get curr user information
       const currUser = auth.currentUser;
 
-      // Makure sure user is logged in
+      // Make sure user is logged in
       if (!currUser) {
-        console.log('');
+        Alert.alert('Error', 'Please log in to add friends');
         throw new Error('User not authenticated');
       }
 
       const currUserProfile = await getUserProfile(currUser.uid);
-
-      // TODO: delete
-      console.log(
-        'User: ',
-        currUserProfile.username,
-        ' adding ',
-        user2username,
-        '...',
-      );
 
       // Check if username exists
       const isValidUsername = await userExists({
         username: user2username.toLowerCase(),
       });
 
-      // TODO: try again logic
       if (!isValidUsername) {
-        // Invalid friend request
-        console.log('Username does not exist');
         Alert.alert('Error', 'Username does not exist');
         return;
-      } else if (currUser.username == user2username) {
-        console.log('Can not add yourself as a friend');
-        Alert.alert('Error', 'Can not add yourself as a friend');
+      } else if (
+        currUserProfile.username.toLowerCase() === user2username.toLowerCase()
+      ) {
+        Alert.alert('Error', 'You cannot add yourself as a friend');
         return;
-      } else {
-        // Valid friend request
-        // Get uid of new friend
-        const user2uid = await getUid({ username: user2username });
-
-        // Add friend to current user's list
-        const currUserDocRef = doc(db, 'users', currUser.uid);
-        await updateDoc(currUserDocRef, {
-          friends: arrayUnion({ userId: user2uid, status: 'pending' }),
-        });
-
-        // Add current user to friend's list
-        const user2DocRef = doc(db, 'users', user2uid);
-        await updateDoc(user2DocRef, {
-          friends: arrayUnion({ userId: currUser.uid, status: 'pending' }),
-        });
       }
+
+      // Get uid of new friend
+      const user2uid = await getUid({ username: user2username });
+
+      // Check if already friends
+      const user2Profile = await getUserProfile(user2uid);
+      const alreadyFriends = currUserProfile.friends?.some(
+        (friend) => friend.userId === user2uid && friend.status === 'active',
+      );
+      const pendingRequest = currUserProfile.friends?.some(
+        (friend) => friend.userId === user2uid && friend.status === 'pending',
+      );
+
+      if (alreadyFriends) {
+        Alert.alert('Error', 'You are already friends with this user');
+        return;
+      }
+
+      if (pendingRequest) {
+        Alert.alert('Error', 'Friend request already pending');
+        return;
+      }
+
+      // Add friend to current user's list
+      const currUserDocRef = doc(db, 'users', currUser.uid);
+      await updateDoc(currUserDocRef, {
+        friends: arrayUnion({ userId: user2uid, status: 'pending' }),
+      });
+
+      // Add current user to friend's list
+      const user2DocRef = doc(db, 'users', user2uid);
+      await updateDoc(user2DocRef, {
+        friends: arrayUnion({ userId: currUser.uid, status: 'pending' }),
+      });
+
+      Alert.alert('Success', 'Friend request sent!');
     } catch (error) {
-      // TODO: handle error
-      console.log('ERROR ADDING FRIEND: ', error);
+      console.error('Error adding friend:', error);
+      Alert.alert('Error', 'Failed to add friend. Please try again.');
     }
   }
 
-  // Get list of friends fro current user
+  // Get list of friends for current user
   // Returns: [{uid, username, coins, trophies}, {...}, ...]
-  async getFriendList() {
+  async getFriendList(includeStatus = 'active') {
     try {
-      // Get curr user information
       const currUser = auth.currentUser;
 
-      // Check current user is logged in
       if (!currUser) {
-        console.log('User must be logged in');
+        Alert.alert('Error', 'Please log in to view friends');
         throw new Error('User not authenticated.');
       }
 
-      // Get user profile
       const currUserProfile = await getUserProfile(currUser.uid);
 
-      // Get list of uid's of friends
-      const friendsList = currUserProfile.friends;
-      const userIds = await friendsList.map((friend) => friend.userId);
-
-      // TODO: DELETE
-      console.log('Friends List:', friendsList);
+      // Get list of friends based on status
+      const friendsList = currUserProfile.friends || [];
+      let filteredFriends;
+      if (includeStatus === 'all') {
+        filteredFriends = friendsList;
+      } else {
+        filteredFriends = friendsList.filter(
+          (friend) => friend.status === includeStatus,
+        );
+      }
+      const userIds = filteredFriends.map((friend) => friend.userId);
 
       const friendInfo = await Promise.all(
         userIds.map(async (uid) => {
-          // Make sure valid uid
           if (!uid) {
             console.error('Skipping user with invalid UID:', uid);
             return null;
           }
 
-          const profile = await getUserProfile(uid); // Fetch friend's profile
-
-          return {
-            userId: uid,
-            username: profile.username || 'Unknown', // Ensure a default value
-            coins: profile.numCoins || 0, // Default to 0 if missing
-            trophies: profile.trophies || 0, // Default to 0 if missing
-          };
+          try {
+            const profile = await getUserProfile(uid);
+            const friendData = friendsList.find((f) => f.userId === uid);
+            return {
+              userId: uid,
+              username: profile.username || 'Unknown',
+              coins: profile.numCoins || 0,
+              trophies: profile.trophies || 0,
+              status: friendData.status,
+            };
+          } catch (error) {
+            console.error(`Error fetching profile for user ${uid}:`, error);
+            return null;
+          }
         }),
       );
 
-      return friendInfo;
+      // Filter out any null entries from failed profile fetches
+      return friendInfo.filter((friend) => friend !== null);
     } catch (error) {
-      console.log('ERROR GETTING FRIENDS LIST: ', error);
+      console.error('Error getting friends list:', error);
+      Alert.alert('Error', 'Failed to load friends list. Please try again.');
+      return [];
     }
   }
 }
