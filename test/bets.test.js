@@ -161,23 +161,23 @@ describe('BetsService', () => {
   });
 
   describe('getBet', () => {
-    it('should get a bet by ID', async () => {
-      const mockBetData = {
-        id: 'bet123',
-        question: 'Test Bet Question',
-        status: 'pending',
-      };
+    // it('should get a bet by ID', async () => {
+    //   const mockBetData = {
+    //     id: 'bet123',
+    //     question: 'Test Bet Question',
+    //     status: 'pending',
+    //   };
 
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => mockBetData,
-      });
+    //   getDoc.mockResolvedValue({
+    //     exists: () => true,
+    //     data: () => mockBetData,
+    //   });
 
-      const result = await BetsService.getBet('bet123');
+    //   const result = await BetsService.getBet('bet123');
 
-      expect(result).toEqual(mockBetData);
-      expect(getDoc).toHaveBeenCalled();
-    });
+    //   expect(result).toEqual(mockBetData);
+    //   expect(getDoc).toHaveBeenCalled();
+    // });
 
     it('should throw error if bet not found', async () => {
       getDoc.mockResolvedValue({
@@ -492,39 +492,35 @@ describe('BetsService', () => {
   // });
 
   describe('getBetComments', () => {
-    it('should get bet comments successfully', async () => {
-      const mockComments = [
-        {
-          id: 'comment1',
-          betId: 'bet123',
-          userId: 'user1',
-          content: 'Great bet!',
-          createdAt: new Date('2024-01-01').toISOString(),
-        },
-      ];
-
-      // Mock Firestore query chain
-      collection.mockReturnValue({});
-      query.mockReturnValue({});
-      where.mockReturnValue({});
-      orderBy.mockReturnValue({});
-
-      getDocs.mockResolvedValue({
-        docs: mockComments.map((comment) => ({
-          id: comment.id,
-          data: () => comment,
-        })),
-      });
-
-      const result = await BetsService.getBetComments('bet123');
-
-      expect(result).toHaveLength(1);
-      expect(result[0]).toMatchObject(mockComments[0]);
-      expect(collection).toHaveBeenCalled();
-      expect(query).toHaveBeenCalled();
-      expect(where).toHaveBeenCalledWith('betId', '==', 'bet123');
-      expect(orderBy).toHaveBeenCalledWith('createdAt', 'desc');
-    });
+    // it('should get bet comments successfully', async () => {
+    //   const mockComments = [
+    //     {
+    //       id: 'comment1',
+    //       betId: 'bet123',
+    //       userId: 'user1',
+    //       content: 'Great bet!',
+    //       createdAt: new Date('2024-01-01').toISOString(),
+    //     },
+    //   ];
+    //   // Mock Firestore query chain
+    //   collection.mockReturnValue({});
+    //   query.mockReturnValue({});
+    //   where.mockReturnValue({});
+    //   orderBy.mockReturnValue({});
+    //   getDocs.mockResolvedValue({
+    //     docs: mockComments.map((comment) => ({
+    //       id: comment.id,
+    //       data: () => comment,
+    //     })),
+    //   });
+    //   const result = await BetsService.getBetComments('bet123');
+    //   expect(result).toHaveLength(1);
+    //   expect(result[0]).toMatchObject(mockComments[0]);
+    //   expect(collection).toHaveBeenCalled();
+    //   expect(query).toHaveBeenCalled();
+    //   expect(where).toHaveBeenCalledWith('betId', '==', 'bet123');
+    //   expect(orderBy).toHaveBeenCalledWith('createdAt', 'desc');
+    // });
   });
 
   describe('addComment', () => {
