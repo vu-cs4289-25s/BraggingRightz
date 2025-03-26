@@ -87,11 +87,14 @@ const Home = () => {
     }
   };
 
-  const handleAddFriend = (username) => {
-    console.log('Adding friend:', username);
-    FriendService.addFriend({
-      user2username: username,
-    });
+  const handleAddFriend = async (username) => {
+    try {
+      await FriendService.addFriend({
+        user2username: username,
+      });
+    } catch (error) {
+      console.error('Error adding friend:', error);
+    }
   };
 
   // Define the getStatusColor function
