@@ -428,7 +428,7 @@ const Profile = () => {
               >
                 <Icon name="group" size={24} color="#FFD700" />
                 <Text style={styles.statValue}>
-                  {session.friends.length || 0}
+                  {session.friends.filter((f) => f.status === 'active').length || 0}
                 </Text>
                 <Text style={styles.statLabel}>Friends</Text>
               </Pressable>
