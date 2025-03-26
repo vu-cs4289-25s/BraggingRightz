@@ -331,7 +331,6 @@ const Profile = () => {
       setEmail(sessionData.email);
       setBirthdate(new Date(sessionData.birthdate).toLocaleDateString());
       setProfileImage(sessionData.profilePicture);
-      setFriendCount(sessionData.friends.length);
     } catch (error) {
       console.log('Error fetching session:', error);
     }
