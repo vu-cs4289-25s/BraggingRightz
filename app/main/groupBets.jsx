@@ -248,7 +248,7 @@ const GroupBets = () => {
             </View>
           )}
           <TouchableOpacity
-            onPress={() => navigation.navigate('NewBet')}
+            onPress={() => navigation.navigate('NewBet', { groupId: groupId })} //  add param here
             style={styles.createButton}
           >
             <Text style={styles.createButtonText}>Create a New Bet</Text>

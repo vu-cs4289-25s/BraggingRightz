@@ -20,11 +20,12 @@ import BetsService from '../../src/endpoints/bets.cjs';
 import AuthService from '../../src/endpoints/auth.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import { Dropdown } from 'react-native-element-dropdown';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 const NewBet = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { groupId } = route.params || {};
+  const { groupId } = route.params || {}; // TODO -- fix
 
   const [loading, setLoading] = useState(false);
   const [question, setQuestion] = useState('');
@@ -60,7 +61,7 @@ const NewBet = () => {
     loadData();
   }, [groupId]);
 
-  const handleConfirm = (event, selectedDate) => {
+  const handleDateConfirm = (date) => {
     const currentDate = selectedDate || endTime;
     setShowDatePicker(false);
 
@@ -239,25 +240,17 @@ const NewBet = () => {
           />
 
           <Text style={styles.label}>Voting Ends</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => {
-              Keyboard.dismiss();
-              setShowDatePicker(true);
-            }}
-          >
-            <Text style={styles.dateButtonText}>
-              {endTime.toLocaleString()}
-            </Text>
-          </TouchableOpacity>
-
+          <Input
+            onPress={() => setShowDatePicker(true)}
+            placeholder="Voting Ends"
+            value={endTime.toLocaleString()}
+          />
           {showDatePicker && (
-            <DateTimePicker
-              value={endTime}
-              mode="datetime"
-              display="default"
-              onChange={handleConfirm}
-              minimumDate={new Date()}
+            <DateTimePickerModal
+              isVisible={showDatePicker}
+              mode="date"
+              onConfirm={handleDateConfirm}
+              onCancel={() => setShowDatePicker(false)}
             />
           )}
 
@@ -295,7 +288,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(3),
   },
   optionContainer: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
     alignItems: 'center',
     marginBottom: hp(1),
   },
@@ -309,7 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   removeButtonText: {
-    color: 'white',
+    color: theme.colors.red,
     fontSize: hp(2),
     fontWeight: 'bold',
   },

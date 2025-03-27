@@ -12,6 +12,13 @@ export const theme = {
 
     rose: '#ff007f',
     roseLight: '#ff3399',
+
+    red: '#ff0000',
+    green: '#00ff00',
+    blue: '#0000ff',
+    yellow: '#ffff00',
+    orange: '#ffa500',
+    purple: '#800080',
   },
   fonts: {
     medium: '500',
