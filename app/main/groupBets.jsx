@@ -152,10 +152,12 @@ const GroupBets = () => {
       opt.participants.includes(session?.uid),
     );
 
+    const isSentByUser = bet.creatorId === session?.uid;
+
     return (
       <ScrollView>
         <View key={bet.id} style={styles.betContainer}>
-          <View style={styles.betSender}>
+          <View style={[styles.betSender, isSentByUser ? styles.betSenderRight : styles.betSenderLeft,]}>
             <Avatar
               source={{
                 uri:
@@ -433,6 +435,12 @@ const styles = StyleSheet.create({
   },
   betDetails: {
     marginBottom: hp(2),
+  },
+  betSenderRight: {
+    alignSelf: 'flex-end',
+  },
+  betSenderLeft: {
+    alignSelf: 'flex-start',
   },
   betInfo: {
     flexDirection: 'row',
