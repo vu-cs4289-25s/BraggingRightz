@@ -62,16 +62,8 @@ const NewBet = () => {
   }, [groupId]);
 
   const handleDateConfirm = (date) => {
-    const currentDate = selectedDate || endTime;
+    setEndTime(date);
     setShowDatePicker(false);
-
-    // Ensure selected date is in the future
-    if (currentDate <= new Date()) {
-      Alert.alert('Invalid Date', 'Please select a future date and time');
-      return;
-    }
-
-    setEndTime(currentDate);
   };
 
   const addOption = () => {
@@ -240,17 +232,22 @@ const NewBet = () => {
           />
 
           <Text style={styles.label}>Voting Ends</Text>
-          <Input
+          <TouchableOpacity
+            style={styles.dateButton}
             onPress={() => setShowDatePicker(true)}
-            placeholder="Voting Ends"
-            value={endTime.toLocaleString()}
-          />
+          >
+            <Text style={styles.dateButtonText}>
+              {endTime.toLocaleString()}
+            </Text>
+          </TouchableOpacity>
+
           {showDatePicker && (
             <DateTimePickerModal
               isVisible={showDatePicker}
-              mode="date"
+              mode="datetime"
               onConfirm={handleDateConfirm}
               onCancel={() => setShowDatePicker(false)}
+              minimumDate={new Date()}
             />
           )}
 

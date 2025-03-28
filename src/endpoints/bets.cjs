@@ -465,19 +465,16 @@ class BetsService {
         processSnapshot(creatorSnapshot),
       ]);
 
-      let results = Array.from(betsMap.values());
-
-      // Filter by status if provided
+      // Convert map to array and filter by status if needed
+      let bets = Array.from(betsMap.values());
       if (status) {
-        results = results.filter((bet) => bet.status === status);
+        bets = bets.filter((bet) => bet.status === status);
       }
 
-      // Sort by createdAt in descending order (most recent first)
-      results.sort((a, b) => {
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      });
+      // Sort by creation date, newest first
+      bets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-      return results;
+      return bets;
     } catch (error) {
       console.error('Error getting user bets:', error);
       throw error;
