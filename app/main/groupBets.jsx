@@ -118,25 +118,58 @@ const GroupBets = () => {
     }).format(dateObj);
   };
 
+  const calculateBetResult = (bet) => {
+    if (bet.status !== 'completed' || !bet.winningOptionId || !session?.uid) {
+      return null;
+    }
+
+    const winningOption = bet.answerOptions.find(
+      (opt) => opt.id === bet.winningOptionId,
+    );
+    if (!winningOption) {
+      return null;
+    }
+
+    const userWon = winningOption.participants.includes(session.uid);
+    if (!userWon) {
+      return { result: 'lose', coins: 0 };
+    }
+
+    return {
+      result: 'win',
+      coins: bet.winningsPerPerson || 0,
+    };
+  };
+
   const renderBetCard = (bet) => {
+    const betResult = calculateBetResult(bet);
+    const winningOption =
+      bet.status === 'completed' &&
+      bet.answerOptions.find((opt) => opt.id === bet.winningOptionId);
+    const isLocked = bet.status === 'locked';
+    const isCompleted = bet.status === 'completed';
     const userOption = bet.answerOptions.find((opt) =>
       opt.participants.includes(session?.uid),
     );
-    const hasWon =
-      bet.status === 'completed' && userOption?.id === bet.winningOptionId;
+
+    const isSentByUser = bet.creatorId === session?.uid;
 
     return (
       <ScrollView>
-        <Text style={styles.creationDate}>{formatDate(bet.createdAt)}</Text>
         <View key={bet.id} style={styles.betContainer}>
-          <View style={styles.betSender}>
+          <View
+            style={[
+              styles.betSender,
+              isSentByUser ? styles.betSenderRight : styles.betSenderLeft,
+            ]}
+          >
             <Avatar
               source={{
                 uri:
                   fetchCreatorProfilePic(bet.creatorId) ||
                   require('../../assets/images/default-avatar.png'),
               }}
-              size={hp(5)}
+              size={hp(3)}
             />
             <Text style={styles.creatorName}>
               {fetchCreatorUsername(bet.creatorId)}
@@ -144,68 +177,115 @@ const GroupBets = () => {
           </View>
           <TouchableOpacity
             key={bet.id}
-            style={styles.betCard}
+            style={[
+              styles.betCard,
+              isLocked && styles.lockedBetCard,
+              isCompleted && styles.completedBetCard,
+            ]}
             onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
           >
-            <View style={styles.betContent}>
-              <View style={styles.betHeader}>
-                <Text style={styles.question}>{bet.question}</Text>
+            <View style={styles.betHeader}>
+              <Text style={styles.betDescription} numberOfLines={2}>
+                {bet.question}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(bet.status) + '20' },
+                ]}
+              >
+                <Icon
+                  name={isCompleted ? 'trophy' : isLocked ? 'lock' : 'unlock'}
+                  size={16}
+                  color={getStatusColor(bet.status)}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: getStatusColor(bet.status) },
+                  ]}
+                >
+                  {bet.status.toUpperCase()}
+                </Text>
               </View>
-              <View style={styles.betDetails}>
-                <View style={styles.detailRow}>
+            </View>
+
+            <View style={styles.betInfo}>
+              <View style={styles.betTime}>
+                <Text style={styles.creationDate}>
+                  Created: {formatDate(bet.createdAt)}
+                </Text>
+                <View style={styles.timeContainer}>
                   <Icon
                     name="clock-o"
                     size={16}
                     color={theme.colors.textLight}
+                    paddingRight={wp(1)}
                   />
                   <Text style={styles.timeLeft}>
                     {formatTimeLeft(bet.expiresAt)}
                   </Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <Icon name="money" size={16} color={theme.colors.textLight} />
-                  <Text style={styles.wager}>{bet.wagerAmount} coins</Text>
-                  <Text
+              </View>
+              <View style={styles.wager}>
+                <Text style={styles.wagerAmount}>
+                  Wager: {bet.wagerAmount} 🪙
+                </Text>
+                <Text style={styles.wagerAmount} paddingTop={hp(0.5)}>
+                  Total Pool: {bet.totalWager ?? 0} 🪙
+                </Text>
+              </View>
+            </View>
+
+            {isCompleted && winningOption && (
+              <View style={styles.winnerContainer}>
+                <Text style={styles.winnerLabel}>Winner: </Text>
+                <Text style={styles.winnerOption}>{winningOption.text}</Text>
+                {betResult && (
+                  <View
                     style={[
-                      styles.status,
-                      { color: getStatusColor(bet.status) },
+                      styles.resultBadge,
+                      betResult.result === 'win'
+                        ? styles.winBadge
+                        : styles.loseBadge,
                     ]}
                   >
-                    {bet.status.toUpperCase()}
-                  </Text>
-                </View>
-                {userOption && (
-                  <View style={styles.detailRow}>
-                    <Icon
-                      name="check-circle"
-                      size={16}
-                      color={theme.colors.textLight}
-                    />
-                    <Text style={styles.selectedOption}>
-                      Your pick: {userOption.text}
-                    </Text>
-                  </View>
-                )}
-                {bet.status === 'completed' && (
-                  <View style={styles.resultRow}>
-                    <Icon
-                      name={hasWon ? 'trophy' : 'times-circle'}
-                      size={20}
-                      color={hasWon ? '#FFD700' : '#FF0000'}
-                    />
-                    <Text
-                      style={[
-                        styles.result,
-                        { color: hasWon ? '#4CAF50' : '#FF0000' },
-                      ]}
-                    >
-                      {hasWon
-                        ? `Won ${bet.winningsPerPerson} coins!`
-                        : 'Better luck next time!'}
+                    <Text style={styles.resultText}>
+                      {betResult.result === 'win'
+                        ? `Won ${betResult.coins} 🪙`
+                        : 'Lost'}
                     </Text>
                   </View>
                 )}
               </View>
+            )}
+
+            {isLocked &&
+              bet.creatorId === session?.uid &&
+              !bet.winningOptionId && (
+                <View style={styles.actionNeeded}>
+                  <Icon
+                    name="exclamation-circle"
+                    size={16}
+                    color={theme.colors.warning}
+                  />
+                  <Text style={styles.actionText}>Select Winner</Text>
+                </View>
+              )}
+
+            <View style={styles.betFooter}>
+              <Text style={styles.participants}>
+                {bet.answerOptions.reduce(
+                  (sum, opt) => sum + opt.participants.length,
+                  0,
+                )}{' '}
+                participants
+              </Text>
+              {userOption && (
+                <Text style={styles.yourVote}>
+                  Your vote: {userOption.text}
+                </Text>
+              )}
             </View>
           </TouchableOpacity>
         </View>
@@ -236,13 +316,15 @@ const GroupBets = () => {
                       require('../../assets/images/default-avatar.png'),
                   }}
                   size={hp(4)}
+                  style={styles.groupIcon}
                 />
               </TouchableOpacity>
             }
           />
           <View style={styles.sectionDivider} />
-          {bets.map(renderBetCard)}:
-          {bets.length === 0 && (
+          {bets.length > 0 ? (
+            bets.map((bet) => <View key={bet.id}>{renderBetCard(bet)}</View>)
+          ) : (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No bets have been made yet.</Text>
             </View>
@@ -261,92 +343,49 @@ const GroupBets = () => {
 
 const styles = StyleSheet.create({
   betContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    padding: 10,
   },
   contentContainer: {
     flexGrow: 1,
   },
   creationDate: {
-    backgroundColor: theme.colors.darkLight,
     paddingVertical: hp(0.5),
-    paddingHorizontal: wp(3),
     borderRadius: hp(2),
-    fontWeight: 'bold',
-    fontSize: hp(1.8),
     color: theme.colors.textDark,
     alignSelf: 'center',
     textAlign: 'center',
   },
-  betHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  betCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.gray,
-    padding: 10,
-    borderRadius: 15,
-    borderColor: theme.colors.light,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    marginRight: 15,
-    flex: 1,
-  },
-  betContent: {
-    marginLeft: 10,
-    justifyContent: 'space-between',
-  },
   betSender: {
     padding: wp(4),
     alignContent: 'center',
+    justifyContent: 'center',
   },
   creatorName: {
-    fontSize: hp(2),
+    fontSize: hp(1.25),
     color: theme.colors.text,
   },
-  question: {
-    fontSize: hp(2.2),
-    fontWeight: 'bold',
-    marginBottom: hp(1.5),
+  betTime: {
+    flexDirection: 'column',
   },
-  betDetails: {
-    gap: hp(1),
+  groupIcon: {
+    marginRight: hp(3),
   },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(2),
-  },
+
   timeLeft: {
-    fontSize: hp(1.8),
     color: theme.colors.text,
     fontStyle: 'italic',
   },
-  wager: {
-    fontSize: hp(1.8),
-    color: theme.colors.text,
-  },
-  selectedOption: {
-    fontSize: hp(1.8),
-    color: theme.colors.text,
-  },
-  status: {
-    fontSize: hp(1.6),
-    fontWeight: 'bold',
-  },
-  resultRow: {
+  timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: wp(2),
   },
-  result: {
-    fontSize: hp(1.8),
-    fontWeight: 'bold',
+  wager: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
   },
   sectionDivider: {
     height: 1,
@@ -373,6 +412,146 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: 'white',
     fontSize: hp(2),
+  },
+  betsContainer: {
+    marginTop: 10,
+    paddingHorizontal: 10,
+  },
+  betItem: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  betDescription: {
+    flex: 1,
+    fontSize: hp(2),
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginRight: wp(3),
+  },
+  betDetails: {
+    marginBottom: hp(2),
+  },
+  betSenderRight: {
+    alignSelf: 'flex-end',
+  },
+  betSenderLeft: {
+    alignSelf: 'flex-start',
+  },
+  betInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: hp(1),
+  },
+  betDate: {
+    fontSize: hp(1.4),
+    color: theme.colors.textLight,
+  },
+  winnerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: hp(1),
+    backgroundColor: '#FEF3C7',
+    padding: hp(1),
+    borderRadius: hp(1),
+  },
+  winnerLabel: {
+    fontSize: hp(1.8),
+    fontWeight: '600',
+    color: '#92400E',
+  },
+  winnerOption: {
+    fontSize: hp(1.8),
+    color: '#92400E',
+    flex: 1,
+  },
+  resultBadge: {
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1),
+  },
+  winBadge: {
+    backgroundColor: theme.colors.success + '20',
+  },
+  loseBadge: {
+    backgroundColor: theme.colors.error + '20',
+  },
+  resultText: {
+    fontSize: hp(1.6),
+    fontWeight: '600',
+  },
+  actionNeeded: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.warning + '20',
+    padding: hp(1),
+    borderRadius: hp(1),
+    marginTop: hp(1),
+    gap: wp(2),
+  },
+  betFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: hp(1),
+    paddingTop: hp(1),
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  participants: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+  },
+  yourVote: {
+    fontSize: hp(1.6),
+    color: theme.colors.primary,
+    fontWeight: '500',
+  },
+  betCard: {
+    backgroundColor: 'rgba(97,174,95,0.35)',
+    borderRadius: hp(2),
+    padding: wp(4),
+    marginBottom: hp(2),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    flex: 1,
+  },
+  lockedBetCard: {
+    backgroundColor: 'rgba(248,242,146,0.6)',
+    borderColor: theme.colors.warning,
+    borderWidth: 2,
+    flex: 1,
+  },
+  completedBetCard: {
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderColor: theme.colors.success,
+    borderWidth: 2,
+    flex: 1,
+  },
+  betHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: hp(2),
+  },
+  statusBadge: {
+    status: {
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
   },
 });
 export default GroupBets;

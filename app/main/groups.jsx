@@ -21,7 +21,6 @@ import { hp, wp } from '../../helpers/common';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/Avatar';
-import FriendService from '../../src/endpoints/friend';
 import Header from '../../components/Header';
 
 const Groups = () => {
@@ -29,7 +28,8 @@ const Groups = () => {
   const [session, setSession] = useState(null);
 
   const [groups, setGroups] = useState([]);
-
+  const [groupPics, setGroupPics] = useState({});
+  const [groupStats, setGroupStats] = useState({});
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -41,6 +41,18 @@ const Groups = () => {
           (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
         );
         setGroups(sortedGroups);
+
+        const pics = {};
+        const stats = {};
+        for (const group of sortedGroups) {
+          pics[group.id] = await fetchGroupPic(group.id);
+          stats[group.id] = {
+            numMembers: await fetchNumMembers(group.id),
+            numBets: await fetchNumBets(group.id),
+          };
+        }
+        setGroupPics(pics);
+        setGroupStats(stats);
       } catch (error) {
         console.log('Error fetching session:', error);
       }
@@ -78,6 +90,23 @@ const Groups = () => {
     } else {
       return new Intl.DateTimeFormat('en-US', fullDateOptions).format(dateObj);
     }
+  };
+
+  const fetchGroupPic = async (groupId) => {
+    const group = await GroupsService.getGroup(groupId);
+    return group.photoUrl;
+  };
+
+  const fetchNumMembers = async (groupId) => {
+    const group = await GroupsService.getGroup(groupId);
+    const numMembers = group.members.length;
+    return numMembers;
+  };
+
+  const fetchNumBets = async (groupId) => {
+    const group = await GroupsService.getGroup(groupId);
+    const numBets = group.bets.length;
+    return numBets;
   };
 
   return (
@@ -124,10 +153,28 @@ const Groups = () => {
               style={styles.groupContainer}
             >
               <View style={styles.groupInfo}>
-                <Avatar source={{ uri: group.avatar }} size={hp(5)} />
+                <Avatar
+                  source={
+                    groupPics[group.id]
+                      ? { uri: groupPics[group.id] }
+                      : require('../../assets/images/default-avatar.png')
+                  }
+                  size={hp(5)}
+                />
                 <View style={styles.groupTextContainer}>
                   <Text style={styles.groupName}>{group.name}</Text>
-                  <Text style={styles.groupPreview}>{group.latestMessage}</Text>
+                  <View style={styles.groupStatsContainer}>
+                    <Text style={styles.groupPreview}>
+                      {`${groupStats[group.id]?.numMembers || 0} ${
+                        groupStats[group.id]?.numMembers === 1
+                          ? 'Member'
+                          : 'Members'
+                      }`}
+                    </Text>
+                    <Text
+                      style={styles.groupPreview}
+                    >{`${groupStats[group.id]?.numBets || 0} Bets`}</Text>
+                  </View>
                 </View>
                 <Text style={styles.groupLastMessage}>
                   {formatDate(group.updatedAt)}
@@ -154,7 +201,6 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     marginHorizontal: 10,
   },
-
   groupContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -172,6 +218,12 @@ const styles = StyleSheet.create({
     marginLeft: wp(3),
     flex: 1,
   },
+  groupStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginTop: hp(0.5),
+  },
   groupName: {
     fontSize: hp(2.2),
     fontWeight: 'bold',
@@ -180,6 +232,8 @@ const styles = StyleSheet.create({
   groupPreview: {
     fontSize: hp(1.8),
     color: theme.colors.textLight,
+    marginRight: wp(8),
+    fontStyle: 'italic',
   },
   groupLastMessage: {
     fontSize: hp(1.8),
