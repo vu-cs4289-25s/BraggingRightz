@@ -164,9 +164,13 @@ const Groups = () => {
                 <View style={styles.groupTextContainer}>
                   <Text style={styles.groupName}>{group.name}</Text>
                   <View style={styles.groupStatsContainer}>
-                    <Text
-                      style={styles.groupPreview}
-                    >{`${groupStats[group.id]?.numMembers || 0} Members`}</Text>
+                    <Text style={styles.groupPreview}>
+                      {`${groupStats[group.id]?.numMembers || 0} ${
+                        groupStats[group.id]?.numMembers === 1
+                          ? 'Member'
+                          : 'Members'
+                      }`}
+                    </Text>
                     <Text
                       style={styles.groupPreview}
                     >{`${groupStats[group.id]?.numBets || 0} Bets`}</Text>
