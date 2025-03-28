@@ -157,7 +157,12 @@ const GroupBets = () => {
     return (
       <ScrollView>
         <View key={bet.id} style={styles.betContainer}>
-          <View style={[styles.betSender, isSentByUser ? styles.betSenderRight : styles.betSenderLeft,]}>
+          <View
+            style={[
+              styles.betSender,
+              isSentByUser ? styles.betSenderRight : styles.betSenderLeft,
+            ]}
+          >
             <Avatar
               source={{
                 uri:
