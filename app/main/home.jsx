@@ -48,27 +48,37 @@ const Home = () => {
       const sessionData = await AuthService.getSession();
       setSession(sessionData);
 
-      // Get user's groups
+      // Load user's groups
       const userGroups = await GroupsService.getUserGroups(sessionData.uid);
       setUserGroups(userGroups);
 
-      // Get bets and filter out expired ones for Live & Upcoming section
-      const bets = await BetsService.getUserBets(sessionData.uid);
+      // Load user's bets
+      const userBets = await BetsService.getUserBets(sessionData.uid);
+
+      // Filter active bets (not expired and not completed)
       const now = new Date();
-      const activeBets = bets.filter((bet) => {
+      const activeBets = userBets.filter((bet) => {
         const expiryDate = new Date(bet.expiresAt);
         return expiryDate > now && bet.status !== 'completed';
       });
-      setBets(activeBets);
 
-      // Get notifications
+      // Filter completed bets
+      const completedBets = userBets.filter(
+        (bet) => bet.status === 'completed',
+      );
+
+      setBets(activeBets);
+      setBets(completedBets);
+
+      // Load notifications
       const notifications = await NotificationsService.getNotifications(
         sessionData.uid,
       );
       setNotifications(notifications);
+
+      setLoading(false);
     } catch (error) {
       console.error('Error loading data:', error);
-    } finally {
       setLoading(false);
     }
   };
@@ -151,101 +161,159 @@ const Home = () => {
   // Update the group name display in the bet card
   const renderBetCard = (bet) => {
     const betResult = calculateBetResult(bet);
-    const winningOption =
-      bet.status === 'completed' &&
-      bet.answerOptions.find((opt) => opt.id === bet.winningOptionId);
-    const isLocked = bet.status === 'locked';
-    const isCompleted = bet.status === 'completed';
-    const userOption = bet.answerOptions.find((opt) =>
-      opt.participants.includes(session?.uid),
-    );
-
     return (
       <TouchableOpacity
         key={bet.id}
-        style={[
-          styles.betCard,
-          isLocked && styles.lockedBetCard,
-          isCompleted && styles.completedBetCard,
-        ]}
+        style={styles.betCard}
         onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
       >
         <View style={styles.betHeader}>
-          <Text style={styles.betDescription} numberOfLines={2}>
+          <Text
+            style={styles.betQuestion}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {bet.question}
           </Text>
           <View
             style={[
               styles.statusBadge,
-              { backgroundColor: getStatusColor(bet.status) + '20' },
+              { backgroundColor: getStatusColorBackground(bet.status) },
             ]}
           >
-            <Icon
-              name={isCompleted ? 'trophy' : isLocked ? 'lock' : 'unlock'}
-              size={16}
-              color={getStatusColor(bet.status)}
-            />
             <Text
-              style={[styles.statusText, { color: getStatusColor(bet.status) }]}
+              style={[
+                styles.statusText,
+                { color: getStatusColorText(bet.status) },
+              ]}
             >
               {bet.status.toUpperCase()}
             </Text>
           </View>
         </View>
 
-        <View style={styles.betInfo}>
-          <Text style={styles.groupName}>{bet.groupName || 'No Group'}</Text>
-          <Text style={styles.wagerAmount}>Wager: {bet.wagerAmount} 🪙</Text>
-        </View>
+        <View style={styles.betDetails}>
+          <View style={styles.betInfoRow}>
+            <View style={styles.dateGroupContainer}>
+              <View style={styles.dateContainer}>
+                <Icon
+                  name="calendar"
+                  size={14}
+                  color={theme.colors.textLight}
+                  style={styles.infoIcon}
+                />
+                <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
+              </View>
+              <View style={styles.groupContainer}>
+                <Icon
+                  name="users"
+                  size={14}
+                  color={theme.colors.textLight}
+                  style={styles.infoIcon}
+                />
+                <Text
+                  style={styles.groupName}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {bet.groupName || 'No Group'}
+                </Text>
+              </View>
+            </View>
 
-        {isCompleted && winningOption && (
-          <View style={styles.winnerContainer}>
-            <Text style={styles.winnerLabel}>Winner: </Text>
-            <Text style={styles.winnerOption}>{winningOption.text}</Text>
             {betResult && (
               <View
                 style={[
                   styles.resultBadge,
-                  betResult.result === 'win'
-                    ? styles.winBadge
-                    : styles.loseBadge,
+                  {
+                    backgroundColor:
+                      betResult.result === 'win'
+                        ? 'rgba(76, 175, 80, 0.1)'
+                        : 'rgba(255, 0, 0, 0.1)',
+                  },
                 ]}
               >
-                <Text style={styles.resultText}>
-                  {betResult.result === 'win'
-                    ? `Won ${betResult.coins} 🪙`
-                    : 'Lost'}
+                <Icon
+                  name={betResult.result === 'win' ? 'trophy' : 'times-circle'}
+                  size={14}
+                  color={betResult.result === 'win' ? '#4CAF50' : '#FF0000'}
+                  style={styles.resultIcon}
+                />
+                <Text
+                  style={[
+                    styles.betCoins,
+                    {
+                      color: betResult.result === 'win' ? '#4CAF50' : '#FF0000',
+                    },
+                  ]}
+                >
+                  {betResult.result === 'win' ? '+' : ''}
+                  {betResult.coins}
                 </Text>
               </View>
             )}
           </View>
-        )}
+        </View>
 
-        {isLocked && bet.creatorId === session?.uid && !bet.winningOptionId && (
-          <View style={styles.actionNeeded}>
+        <View style={styles.betStats}>
+          <View style={styles.statBadge}>
             <Icon
-              name="exclamation-circle"
-              size={16}
-              color={theme.colors.warning}
+              name="user"
+              size={12}
+              color={theme.colors.primary}
+              style={styles.statIcon}
             />
-            <Text style={styles.actionText}>Select Winner</Text>
+            <Text style={styles.statsText}>
+              {bet.participants?.length || 0}
+            </Text>
           </View>
-        )}
-
-        <View style={styles.betFooter}>
-          <Text style={styles.participants}>
-            {bet.answerOptions.reduce(
-              (sum, opt) => sum + opt.participants.length,
-              0,
-            )}{' '}
-            participants
-          </Text>
-          {userOption && (
-            <Text style={styles.yourVote}>Your vote: {userOption.text}</Text>
-          )}
+          <View style={styles.statBadge}>
+            <Icon
+              name="comment"
+              size={12}
+              color={theme.colors.primary}
+              style={styles.statIcon}
+            />
+            <Text style={styles.statsText}>{bet.commentCount || 0}</Text>
+          </View>
+          <View style={styles.statBadge}>
+            <Icon
+              name="money"
+              size={12}
+              color={theme.colors.primary}
+              style={styles.statIcon}
+            />
+            <Text style={styles.statsText}>{bet.wagerAmount || 0}</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
+  };
+
+  const getStatusColorBackground = (status) => {
+    switch (status) {
+      case 'open':
+        return 'rgba(33, 150, 243, 0.1)'; // Light blue background
+      case 'locked':
+        return 'rgba(255, 165, 0, 0.1)'; // Light orange background
+      case 'completed':
+        return 'rgba(76, 175, 80, 0.1)'; // Light green background
+      default:
+        return 'rgba(158, 158, 158, 0.1)'; // Light gray background
+    }
+  };
+
+  const getStatusColorText = (status) => {
+    switch (status) {
+      case 'open':
+        return '#2196F3'; // Blue text
+      case 'locked':
+        return '#FFA500'; // Orange text
+      case 'completed':
+        return '#4CAF50'; // Green text
+      default:
+        return theme.colors.textLight; // Default text color
+    }
   };
 
   const renderNotificationItem = (notification) => {
@@ -653,79 +721,137 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: hp(2),
   },
+  betQuestion: {
+    fontSize: hp(2),
+    fontWeight: '700',
+    color: theme.colors.text,
+    flex: 1,
+    marginRight: wp(2),
+  },
   statusBadge: {
-    status: {
-      fontSize: 14,
-      fontWeight: 'bold',
-    },
-    notificationIcon: {
-      position: 'relative',
-    },
-    badge: {
-      position: 'absolute',
-      top: -5,
-      right: -5,
-      backgroundColor: theme.colors.primary,
-      borderRadius: 10,
-      padding: 2,
-    },
-    badgeText: {
-      color: 'white',
-      fontSize: hp(1.2),
-      fontWeight: 'bold',
-    },
-    notificationsContainer: {
-      padding: hp(2),
-    },
-    notificationItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: hp(1),
-    },
-    notificationText: {
-      marginLeft: hp(1),
-      color: theme.colors.text,
-      fontSize: hp(1.6),
-    },
-    unreadDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.colors.primary,
-      position: 'absolute',
-      top: 5,
-      right: 5,
-    },
-    lastActive: {
-      fontSize: hp(1.4),
-      color: theme.colors.textLight,
-      marginTop: hp(0.5),
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    createGroupButton: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: wp(4),
-    },
-    plusIconContainer: {
-      width: hp(6),
-      height: hp(6),
-      borderRadius: hp(3),
-      backgroundColor: '#F3F4F6',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: hp(1),
-    },
-    createGroupText: {
-      fontSize: hp(1.4),
-      color: theme.colors.primary,
-      fontWeight: '500',
-      textAlign: 'center',
-    },
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1.5),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusText: {
+    fontSize: hp(1.4),
+    fontWeight: '700',
+  },
+  betDetails: {
+    marginBottom: hp(1.5),
+  },
+  betInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateGroupContainer: {
+    flexDirection: 'column',
+    gap: hp(0.5),
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  groupContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '80%',
+  },
+  infoIcon: {
+    marginRight: wp(1),
+  },
+  betDate: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+  },
+  groupName: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+    maxWidth: '90%',
+  },
+  resultBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1.5),
+  },
+  resultIcon: {
+    marginRight: wp(1),
+  },
+  betCoins: {
+    fontWeight: '700',
+    fontSize: hp(1.8),
+  },
+  betStats: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: wp(3),
+    marginTop: hp(1),
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(33, 150, 243, 0.05)',
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1.5),
+  },
+  statIcon: {
+    marginRight: wp(1),
+  },
+  statsText: {
+    fontSize: hp(1.6),
+    color: theme.colors.text,
+    fontWeight: '500',
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: hp(1),
+  },
+  notificationText: {
+    marginLeft: hp(1),
+    color: theme.colors.text,
+    fontSize: hp(1.6),
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.primary,
+    position: 'absolute',
+    top: 5,
+    right: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createGroupButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: wp(4),
+  },
+  plusIconContainer: {
+    width: hp(6),
+    height: hp(6),
+    borderRadius: hp(3),
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(1),
+  },
+  createGroupText: {
+    fontSize: hp(1.4),
+    color: theme.colors.primary,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
 
