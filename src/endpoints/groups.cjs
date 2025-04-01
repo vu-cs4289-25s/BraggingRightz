@@ -39,6 +39,7 @@ class GroupsService {
     creatorId,
     members = [],
     isPrivate = false,
+    photoUrl = null,
   }) {
     try {
       const groupRef = doc(collection(db, 'groups'));
@@ -59,6 +60,7 @@ class GroupsService {
         createdAt: timestamp,
         updatedAt: timestamp,
         inviteCode: this._generateInviteCode(),
+        photoUrl: photoUrl,
       };
 
       await setDoc(groupRef, groupData);
@@ -73,6 +75,7 @@ class GroupsService {
       });
 
       await Promise.all(updatePromises);
+      console.log(groupData);
       return groupData;
     } catch (error) {
       this._handleError(error);

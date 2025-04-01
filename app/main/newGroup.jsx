@@ -107,6 +107,7 @@ const NewGroup = () => {
         description: description.current,
         members: selectedMembers,
         isPrivate: isPrivate,
+        photoUrl: groupPhoto,
       });
 
       Alert.alert('Group Successfully Created!', 'Create Some Bets!', [
