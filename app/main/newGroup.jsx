@@ -134,7 +134,7 @@ const NewGroup = () => {
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
 
-        const friendsList = await FriendService.getFriendList('all');
+        const friendsList = await FriendService.getFriendList('active');
         setFriends(friendsList);
       } catch (error) {
         console.log('Error fetching session:', error);
