@@ -118,8 +118,17 @@ class BetsService {
       if (groupId) {
         const groupRef = doc(db, 'groups', groupId);
         const groupDoc = await getDoc(groupRef);
-        const groupData = groupDoc.data();
 
+        if (!groupDoc.exists()) {
+          throw new Error('Group not found');
+        }
+
+        const groupData = groupDoc.data();
+        if (!groupData) {
+          throw new Error('Invalid group data');
+        }
+
+        // Update group with new bet
         await updateDoc(groupRef, {
           bets: arrayUnion(betRef.id),
           updatedAt: timestamp,
@@ -127,20 +136,30 @@ class BetsService {
 
         // Get creator's name
         const creatorDoc = await getDoc(doc(db, 'users', creatorId));
+        if (!creatorDoc.exists()) {
+          throw new Error('Creator not found');
+        }
         const creatorName = creatorDoc.data().username;
 
         // Notify all group members
-        if (groupData.members) {
-          for (const memberId of groupData.members) {
-            if (memberId !== creatorId) {
-              await NotificationsService.createNewBetNotification(
-                memberId,
-                betRef.id,
-                creatorName,
-                question,
-              );
-            }
-          }
+        if (groupData.members && Array.isArray(groupData.members)) {
+          const notificationPromises = groupData.members
+            .filter((memberId) => memberId !== creatorId)
+            .map((memberId) =>
+              NotificationsService.createNotification({
+                userId: memberId,
+                type: 'new_bet',
+                title: `New bet in ${groupData.name || 'Group'}: "${question}"`,
+                message: `${creatorName} created a new bet. Check it out!`,
+                data: {
+                  betId: betRef.id,
+                  creatorName,
+                  groupId,
+                },
+              }),
+            );
+
+          await Promise.all(notificationPromises);
         }
       }
 
@@ -216,19 +235,6 @@ class BetsService {
 
       await Promise.all(participantPromises);
       bet.voterNames = voterNames;
-
-      // If bet has a group, fetch group name
-      if (bet.groupId) {
-        try {
-          const groupDoc = await getDoc(doc(db, 'groups', bet.groupId));
-          if (groupDoc.exists()) {
-            bet.groupName = groupDoc.data().name;
-          }
-        } catch (error) {
-          console.error('Error fetching group name:', error);
-          bet.groupName = 'Unknown Group';
-        }
-      }
 
       return bet;
     } catch (error) {
