@@ -37,6 +37,7 @@ const Home = () => {
   const [session, setSession] = useState(null);
   const [userGroups, setUserGroups] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notifications, setNotifications] = useState(null);
 
   useEffect(() => {
     loadData();

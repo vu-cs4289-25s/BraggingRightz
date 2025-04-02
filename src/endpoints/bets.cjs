@@ -400,8 +400,8 @@ class BetsService {
 
       // Process and update status for each bet
       const processSnapshot = async (snapshot) => {
-        for (const doc of snapshot.docs) {
-          const data = { id: doc.id, ...doc.data() };
+        for (const betDoc of snapshot.docs) {
+          const data = { id: betDoc.id, ...betDoc.data() };
 
           // Ensure dates are properly formatted
           if (data.createdAt) {
@@ -427,7 +427,7 @@ class BetsService {
             data.status === 'open' &&
             new Date(data.expiresAt) <= new Date()
           ) {
-            const betRef = doc(db, 'bets', doc.id);
+            const betRef = doc(db, 'bets', betDoc.id);
             await updateDoc(betRef, {
               status: 'locked',
               updatedAt: new Date().toISOString(),
@@ -440,7 +440,7 @@ class BetsService {
               type: 'bets',
               title: `Bet "${data.question}" has expired`,
               message: 'Please select the winning option to distribute coins.',
-              data: { betId: doc.id },
+              data: { betId: betDoc.id },
             });
           }
 
@@ -456,7 +456,7 @@ class BetsService {
             }
           }
 
-          betsMap.set(doc.id, data);
+          betsMap.set(betDoc.id, data);
         }
       };
 
