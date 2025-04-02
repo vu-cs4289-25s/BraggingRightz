@@ -12,7 +12,7 @@ import {
   ImageBackground,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import AuthService from '../../src/endpoints/auth.cjs';
 import { theme } from '../../constants/theme';
@@ -39,9 +39,29 @@ const Home = () => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notifications, setNotifications] = useState(null);
 
+  const loadNotificationsOnly = async () => {
+    try {
+      if (!session?.uid) return;
+
+      // Load unread notifications count only
+      const unreadCount = await NotificationsService.getUnreadCount(
+        session.uid,
+      );
+      setUnreadNotifications(unreadCount);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadNotificationsOnly();
+    }, [session?.uid]),
+  );
 
   const loadData = async () => {
     try {
@@ -71,11 +91,11 @@ const Home = () => {
       setBets(activeBets);
       setBets(completedBets);
 
-      // Load notifications
-      const notifications = await NotificationsService.getNotifications(
+      // Load unread notifications count
+      const unreadCount = await NotificationsService.getUnreadCount(
         sessionData.uid,
       );
-      setNotifications(notifications);
+      setUnreadNotifications(unreadCount);
 
       setLoading(false);
     } catch (error) {
@@ -367,7 +387,7 @@ const Home = () => {
     <ScreenWrapper bg="white">
       <View style={sharedStyles.header}>
         <Text style={sharedStyles.title}>BraggingRightz</Text>
-        <View style={styles.icons}>
+        <View style={styles.headerIcons}>
           <Pressable
             onPress={() => navigation.navigate('Notifications')}
             style={styles.notificationIcon}
@@ -494,21 +514,51 @@ const styles = StyleSheet.create({
     fontSize: hp(3.2),
     fontWeight: 'bold',
   },
-  icons: {
+  headerIcons: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(3),
+  },
+  notificationIcon: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF0000', // Bright red color
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
+    paddingHorizontal: 5,
+    borderWidth: 2,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: hp(1.2),
+    fontWeight: 'bold',
   },
   pointsContainer: {
-    backgroundColor: 'black',
-    paddingHorizontal: wp(2),
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: wp(3),
     paddingVertical: hp(0.5),
-    borderRadius: 4,
+    borderRadius: hp(1.5),
   },
   points: {
     color: 'white',
-    fontWeight: '500',
+    fontSize: hp(1.8),
+    fontWeight: '600',
   },
   profileSection: {
     alignItems: 'center',
