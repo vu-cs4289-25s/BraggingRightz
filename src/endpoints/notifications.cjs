@@ -186,6 +186,17 @@ class NotificationsService {
     }
   }
 
+  // Create a friend request notification
+  async createFriendRequestNotification(userId, requesterId, requesterName) {
+    return this.createNotification({
+      userId,
+      type: 'friend_request',
+      title: `${requesterName} sent you a friend request`,
+      message: 'Tap to accept or decline the request',
+      data: { requesterId, requesterName },
+    });
+  }
+
   // Get unread count
   async getUnreadCount(userId) {
     try {
@@ -210,17 +221,6 @@ class NotificationsService {
       title: `${commenterName} commented on "${betTitle}"`,
       message: 'See what they said about your bet',
       data: { betId, commenterName },
-    });
-  }
-
-  // Create a friend request notification
-  async createFriendRequestNotification(userId, requesterId, requesterName) {
-    return this.createNotification({
-      userId,
-      type: 'follows',
-      title: `${requesterName} sent you a friend request`,
-      message: 'Tap to accept or decline the request',
-      data: { requesterId, requesterName },
     });
   }
 

@@ -8,6 +8,7 @@ const { doc, updateDoc, arrayUnion } = require('firebase/firestore');
 const { auth, db } = require('../firebase/config');
 const { getUid, getUserProfile, userExists } = require('./user.cjs');
 import { Alert } from 'react-native';
+const NotificationsService = require('./notifications.cjs');
 
 class FriendService {
   // Add a new friend
@@ -81,6 +82,13 @@ class FriendService {
           direction: 'recieved',
         }),
       });
+
+      // Create notification for the recipient
+      await NotificationsService.createFriendRequestNotification(
+        user2uid,
+        currUser.uid,
+        currUserProfile.username,
+      );
 
       Alert.alert('Success', 'Friend request sent!');
     } catch (error) {

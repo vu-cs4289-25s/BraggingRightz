@@ -23,7 +23,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
 import AuthService from '../../src/endpoints/auth.cjs';
@@ -31,6 +31,7 @@ import { theme } from '../../constants/theme';
 import { hp, wp } from '../../helpers/common';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
+import FriendService from '../../src/endpoints/friend.cjs';
 
 const NotificationIcons = {
   new_bet: { name: 'plus-circle', color: theme.colors.primary },
@@ -40,6 +41,7 @@ const NotificationIcons = {
   comments: { name: 'comment', color: theme.colors.primary },
   follows: { name: 'user-plus', color: theme.colors.success },
   groups: { name: 'users', color: theme.colors.primary },
+  friend_request: { name: 'user-plus', color: theme.colors.primary },
 };
 
 const Notifications = () => {
@@ -52,6 +54,12 @@ const Notifications = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, []),
+  );
 
   const loadData = async () => {
     try {
@@ -82,6 +90,8 @@ const Notifications = () => {
           notif.id === notificationId ? { ...notif, read: true } : notif,
         ),
       );
+      // Refresh the unread count in the home page
+      navigation.setParams({ refreshNotifications: true });
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -93,15 +103,30 @@ const Notifications = () => {
       setNotifications(
         notifications.map((notif) => ({ ...notif, read: true })),
       );
+      // Refresh the unread count in the home page
+      navigation.setParams({ refreshNotifications: true });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
   };
 
-  const handleNotificationPress = (notification) => {
-    handleMarkAsRead(notification.id);
+  const handleNotificationPress = async (notification) => {
+    await handleMarkAsRead(notification.id);
+
     if (notification.data?.betId) {
       navigation.navigate('BetDetails', { betId: notification.data.betId });
+    }
+  };
+
+  const handleAcceptFriendRequest = async (notification) => {
+    try {
+      await FriendService.acceptFriendRequest({
+        user2username: notification.data.requesterName,
+      });
+      await handleMarkAsRead(notification.id);
+      await loadData(); // Refresh notifications
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
     }
   };
 
@@ -132,6 +157,22 @@ const Notifications = () => {
             {new Date(notification.createdAt).toLocaleDateString()} •{' '}
             {new Date(notification.createdAt).toLocaleTimeString()}
           </Text>
+          {notification.type === 'friend_request' && !notification.read && (
+            <View style={styles.friendRequestActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.acceptButton]}
+                onPress={() => handleAcceptFriendRequest(notification)}
+              >
+                <Text style={styles.actionButtonText}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.declineButton]}
+                onPress={() => handleMarkAsRead(notification.id)}
+              >
+                <Text style={styles.actionButtonText}>Decline</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
         {!notification.read && <View style={styles.unreadDot} />}
       </TouchableOpacity>
@@ -260,6 +301,28 @@ const styles = StyleSheet.create({
     fontSize: hp(2),
     color: theme.colors.gray,
     marginTop: hp(2),
+  },
+  friendRequestActions: {
+    flexDirection: 'row',
+    marginTop: hp(1),
+    gap: wp(2),
+  },
+  actionButton: {
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1),
+    minWidth: wp(20),
+    alignItems: 'center',
+  },
+  acceptButton: {
+    backgroundColor: theme.colors.success + '20',
+  },
+  declineButton: {
+    backgroundColor: theme.colors.error + '20',
+  },
+  actionButtonText: {
+    fontSize: hp(1.4),
+    fontWeight: '500',
   },
 });
 
