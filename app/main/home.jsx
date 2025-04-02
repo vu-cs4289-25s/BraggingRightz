@@ -39,14 +39,28 @@ const Home = () => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notifications, setNotifications] = useState(null);
 
+  const loadNotificationsOnly = async () => {
+    try {
+      if (!session?.uid) return;
+
+      // Load unread notifications count only
+      const unreadCount = await NotificationsService.getUnreadCount(
+        session.uid,
+      );
+      setUnreadNotifications(unreadCount);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      loadData();
-    }, []),
+      loadNotificationsOnly();
+    }, [session?.uid]),
   );
 
   const loadData = async () => {
@@ -76,12 +90,6 @@ const Home = () => {
 
       setBets(activeBets);
       setBets(completedBets);
-
-      // Load notifications
-      const notifications = await NotificationsService.getNotifications(
-        sessionData.uid,
-      );
-      setNotifications(notifications);
 
       // Load unread notifications count
       const unreadCount = await NotificationsService.getUnreadCount(
