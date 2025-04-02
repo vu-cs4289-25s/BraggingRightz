@@ -465,9 +465,7 @@ const Home = () => {
                 <TouchableOpacity
                   style={styles.createButton}
                   onPress={() => navigation.navigate('NewBet')}
-                >
-                  <Text style={styles.createButtonText}>Create a New Bet</Text>
-                </TouchableOpacity>
+                ></TouchableOpacity>
               </View>
             )}
           </View>
