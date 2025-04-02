@@ -127,40 +127,8 @@ const NewBet = () => {
       };
 
       const result = await BetsService.createBet(betData);
-
-      Alert.alert(
-        'Success',
-        'Bet created successfully!',
-        [
-          {
-            text: 'View Bet',
-            onPress: () => {
-              // Reset navigation stack to prevent going back to create bet
-              navigation.reset({
-                index: 0,
-                routes: [
-                  { name: 'Home' },
-                  { name: 'BetDetails', params: { betId: result.id } },
-                ],
-              });
-            },
-          },
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate back to the group
-              navigation.reset({
-                index: 0,
-                routes: [
-                  { name: 'Home' },
-                  { name: 'GroupDetails', params: { groupId: selectedGroup } },
-                ],
-              });
-            },
-          },
-        ],
-        { cancelable: false },
-      );
+      // navigate to bet details
+      navigation.navigate('BetDetails', { betId: result.id });
     } catch (error) {
       console.error('Error creating bet:', error);
       Alert.alert('Error', error.message || 'Failed to create bet');

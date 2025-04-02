@@ -13,6 +13,7 @@ const {
   serverTimestamp,
 } = require('firebase/firestore');
 const { db } = require('../firebase/config');
+const GroupsService = require('./groups.cjs');
 
 class NotificationsService {
   // Get user's notifications
@@ -95,15 +96,28 @@ class NotificationsService {
     betId,
     creatorName,
     betTitle,
-    groupName,
+    groupId,
   ) {
-    return this.createNotification({
-      userId,
-      type: 'new_bet',
-      title: `New bet in ${groupName}: "${betTitle}"`,
-      message: `${creatorName} created a new bet. Check it out!`,
-      data: { betId, creatorName, groupName },
-    });
+    try {
+      let groupName = 'Group';
+      if (groupId) {
+        try {
+          groupName = (await GroupsService.getGroupName(groupId)) || 'Group';
+        } catch (error) {
+          console.error('Error fetching group name:', error);
+        }
+      }
+
+      return this.createNotification({
+        userId,
+        type: 'new_bet',
+        title: `New bet in ${groupName}: "${betTitle}"`,
+        message: `${creatorName} created a new bet. Check it out!`,
+        data: { betId, creatorName, groupName, groupId },
+      });
+    } catch (error) {
+      this._handleError(error);
+    }
   }
 
   // Create a bet result notification
