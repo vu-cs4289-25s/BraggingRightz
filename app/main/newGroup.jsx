@@ -143,22 +143,42 @@ const NewGroup = () => {
 
     setLoading(true);
     try {
-      // First, get the group ID from the invite code
-      const groups = await GroupsService.getUserGroups(session.uid);
-      const group = groups.find(
-        (g) => g.inviteCode === inviteCode.trim().toUpperCase(),
-      );
+      const processedInviteCode = inviteCode.trim().toUpperCase();
+      console.log('Original invite code:', inviteCode);
+      console.log('Processed invite code:', processedInviteCode);
+      console.log('Session user ID:', session?.uid);
+
+      // Get all groups from the database
+      const group =
+        await GroupsService.findGroupByInviteCode(processedInviteCode);
 
       if (!group) {
-        throw new Error('Invalid invite code');
+        console.log('No group found for invite code:', processedInviteCode);
+        throw new Error('Invalid invite code. Please check and try again.');
       }
 
+      console.log('Found group:', {
+        id: group.id,
+        name: group.name,
+        inviteCode: group.inviteCode,
+        members: group.members,
+      });
+
+      // Check if user is already a member
+      if (group.members.includes(session.uid)) {
+        console.log('User is already a member of the group');
+        throw new Error('You are already a member of this group.');
+      }
+
+      console.log('Attempting to add member:', {
+        groupId: group.id,
+        userId: session.uid,
+      });
+
       // Join the group
-      await GroupsService.addMember(
-        group.id,
-        session.uid,
-        inviteCode.trim().toUpperCase(),
-      );
+      await GroupsService.addMember(group.id, session.uid);
+
+      console.log('Successfully joined group');
 
       Alert.alert('Success', 'You have joined the group!', [
         {
@@ -168,6 +188,7 @@ const NewGroup = () => {
       ]);
       navigation.navigate('Groups');
     } catch (error) {
+      console.error('Join group error:', error);
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
