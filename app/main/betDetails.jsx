@@ -40,6 +40,8 @@ const BetDetails = () => {
   const [userReactions, setUserReactions] = useState({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentError, setCommentError] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -168,7 +170,8 @@ const BetDetails = () => {
     if (!newComment.trim()) return;
 
     try {
-      setCommenting(true);
+      setCommentLoading(true);
+      setCommentError(null);
       await BetsService.addComment(
         betData.groupId,
         betId,
@@ -176,11 +179,14 @@ const BetDetails = () => {
         newComment.trim(),
       );
       setNewComment('');
-      loadData(); // Reload comments
+      // Reload comments
+      const betComments = await BetsService.getBetComments(betId);
+      setComments(betComments);
     } catch (error) {
+      setCommentError(error.message || 'Failed to add comment');
       Alert.alert('Error', error.message || 'Failed to add comment');
     } finally {
-      setCommenting(false);
+      setCommentLoading(false);
     }
   };
 
@@ -593,26 +599,71 @@ const BetDetails = () => {
               onChangeText={setNewComment}
               placeholder="Add a comment..."
               multiline
+              editable={!commentLoading}
             />
             <TouchableOpacity
-              style={styles.sendButton}
+              style={[
+                styles.sendButton,
+                commentLoading && styles.disabledButton,
+              ]}
               onPress={handleAddComment}
-              disabled={submitting || !newComment.trim()}
+              disabled={commentLoading || !newComment.trim()}
             >
-              <Icon name="send" size={20} color={theme.colors.primary} />
+              {commentLoading ? (
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              ) : (
+                <Icon name="send" size={20} color={theme.colors.primary} />
+              )}
             </TouchableOpacity>
           </View>
 
+          {commentError && <Text style={styles.errorText}>{commentError}</Text>}
+
           <View style={styles.commentsList}>
-            {comments.map((comment) => (
-              <View key={comment.id} style={styles.comment}>
-                <Text style={styles.commentUser}>{comment.username}</Text>
-                <Text style={styles.commentText}>{comment.content}</Text>
-                <Text style={styles.commentTime}>
-                  {new Date(comment.createdAt).toLocaleString()}
-                </Text>
-              </View>
-            ))}
+            {comments.length === 0 ? (
+              <Text style={styles.noCommentsText}>
+                No comments yet. Be the first to comment!
+              </Text>
+            ) : (
+              comments.map((comment) => {
+                const isCurrentUser = comment.userId === session?.uid;
+                return (
+                  <View
+                    key={comment.id}
+                    style={[
+                      styles.comment,
+                      isCurrentUser && styles.currentUserComment,
+                    ]}
+                  >
+                    <View style={styles.commentHeader}>
+                      <View style={styles.userInfo}>
+                        <Text
+                          style={[
+                            styles.commentUser,
+                            isCurrentUser && styles.currentUserText,
+                          ]}
+                        >
+                          {isCurrentUser
+                            ? 'You'
+                            : comment.username || 'Loading...'}
+                        </Text>
+                        {comment.username === 'Unknown User' && (
+                          <ActivityIndicator
+                            size="small"
+                            color={theme.colors.primary}
+                            style={styles.loadingIndicator}
+                          />
+                        )}
+                      </View>
+                      <Text style={styles.commentTime}>
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </Text>
+                    </View>
+                    <Text style={styles.commentText}>{comment.content}</Text>
+                  </View>
+                );
+              })
+            )}
           </View>
         </View>
 
@@ -1151,44 +1202,43 @@ const styles = StyleSheet.create({
     marginBottom: hp(2),
     color: theme.colors.text,
   },
-  voteButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingVertical: hp(1.5),
-    paddingHorizontal: wp(4),
-    borderRadius: hp(1),
-    marginBottom: hp(1),
+  disabledButton: {
+    opacity: 0.5,
   },
-  voteButtonText: {
-    color: 'white',
-    fontSize: hp(1.8),
-    fontWeight: '600',
-  },
-  selectWinnerButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingVertical: hp(1.5),
-    paddingHorizontal: wp(4),
-    borderRadius: hp(1),
-    marginBottom: hp(1),
-    borderWidth: 1,
-    borderColor: '#FFD700',
-  },
-  selectedWinnerButton: {
-    backgroundColor: '#FFD700',
-  },
-  selectWinnerText: {
-    color: '#92400E',
-    fontSize: hp(1.8),
-    fontWeight: '600',
-  },
-  voteCount: {
+  errorText: {
+    color: theme.colors.error,
     fontSize: hp(1.6),
-    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: hp(1),
+    textAlign: 'center',
+  },
+  noCommentsText: {
+    color: theme.colors.textLight,
+    fontSize: hp(1.8),
+    textAlign: 'center',
+    marginTop: hp(2),
+    fontStyle: 'italic',
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: hp(0.5),
+  },
+  currentUserComment: {
+    backgroundColor: theme.colors.primary + '10',
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.primary,
+  },
+  currentUserText: {
+    color: theme.colors.primary,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1),
+  },
+  loadingIndicator: {
+    marginLeft: wp(1),
   },
 });
 

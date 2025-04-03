@@ -752,7 +752,7 @@ class BetsService {
   async getBetComments(betId) {
     try {
       const commentsQuery = query(
-        collection(db, 'comments'),
+        collection(db, 'betComments'),
         where('betId', '==', betId),
         orderBy('createdAt', 'desc'),
       );
@@ -761,15 +761,42 @@ class BetsService {
       return await Promise.all(
         snapshot.docs.map(async (doc) => {
           const data = doc.data();
-          try {
-            const userDoc = await getDoc(doc(db, 'users', data.userId));
-            const username = userDoc.exists()
-              ? userDoc.data().username
-              : 'Unknown User';
+
+          // If the comment already has a username, use it
+          if (data.username) {
             return {
               id: doc.id,
               ...data,
-              username,
+              createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            };
+          }
+
+          // Otherwise fetch the username
+          try {
+            const userDoc = await getDoc(doc(db, 'users', data.userId));
+            if (!userDoc.exists()) {
+              console.error(
+                `User ${data.userId} not found for comment ${doc.id}`,
+              );
+              return {
+                id: doc.id,
+                ...data,
+                username: 'Deleted User',
+                createdAt:
+                  data.createdAt?.toDate?.() || new Date(data.createdAt),
+              };
+            }
+
+            const userData = userDoc.data();
+            // Update the comment with the username for future fetches
+            await updateDoc(doc(db, 'betComments', doc.id), {
+              username: userData.username,
+            });
+
+            return {
+              id: doc.id,
+              ...data,
+              username: userData.username,
               createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
             };
           } catch (error) {
