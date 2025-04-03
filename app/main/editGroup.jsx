@@ -17,12 +17,14 @@ import Button from '../../components/Button';
 import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
 import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 import Camera from '../../assets/icons/Camera';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Input from '../../components/Input';
 import AuthService from '../../src/endpoints/auth.cjs';
 import UserService from '../../src/endpoints/user.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const EditGroup = () => {
   const navigation = useNavigation();
@@ -36,6 +38,7 @@ const EditGroup = () => {
   const [members, setMembers] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newMemberUsername, setNewMemberUsername] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -44,6 +47,7 @@ const EditGroup = () => {
         setSession(sessionData);
 
         setGroupName(groupId.name);
+        setInviteCode(groupId.inviteCode || '');
 
         const tempMembers = await Promise.all(
           groupId.members.map(async (memberId) => {
@@ -55,16 +59,12 @@ const EditGroup = () => {
                 `Error fetching profile for UID: ${memberId}`,
                 error,
               );
-              return null; // Return null or handle the error as needed
+              return null;
             }
           }),
         );
 
-        // Array of user profiles, filter out any null values in case of errors
         setMembers(tempMembers.filter((profile) => profile !== null));
-
-        // Note to add group image capabilities to back end
-        // setGroupImage(tempGroup.image);
       } catch (error) {
         console.log('Error fetching session:', error);
       }
@@ -175,6 +175,33 @@ const EditGroup = () => {
                 </View>
               </TouchableOpacity>
             </View>
+
+            {/* Invite Code Section */}
+            <View style={styles.inviteCodeContainer}>
+              <Text style={styles.sectionTitle}>Invite Code</Text>
+              <View style={styles.inviteCodeBox}>
+                <Text style={styles.inviteCodeText}>{inviteCode}</Text>
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (inviteCode) {
+                      await Clipboard.setStringAsync(inviteCode);
+                      Alert.alert('Copied!', 'Invite code copied to clipboard');
+                    }
+                  }}
+                  style={styles.copyButton}
+                >
+                  <Icon
+                    name="copy"
+                    size={hp(2.5)}
+                    color={theme.colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.inviteCodeDescription}>
+                Share this code with friends to let them join the group
+              </Text>
+            </View>
+
             <Text style={styles.sectionTitle}>Edit Group Name</Text>
             <Input
               placeholder="Edit Group Name"
@@ -327,5 +354,35 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  inviteCodeContainer: {
+    marginVertical: hp(2),
+    padding: wp(4),
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.lg,
+  },
+  inviteCodeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    padding: wp(4),
+    borderRadius: theme.radius.lg,
+    marginVertical: hp(1),
+  },
+  inviteCodeText: {
+    fontSize: hp(2.5),
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    letterSpacing: 2,
+  },
+  copyButton: {
+    padding: wp(2),
+  },
+  inviteCodeDescription: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+    textAlign: 'center',
+    marginTop: hp(1),
   },
 });

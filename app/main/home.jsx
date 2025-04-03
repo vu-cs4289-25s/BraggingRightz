@@ -440,7 +440,9 @@ const Home = () => {
                 ))}
                 <TouchableOpacity
                   style={styles.groupItem}
-                  onPress={() => navigation.navigate('Groups')}
+                  onPress={() =>
+                    navigation.navigate('NewGroup', { initialTab: 'join' })
+                  }
                 >
                   <View style={styles.plusIconContainer}>
                     <Icon
@@ -455,7 +457,9 @@ const Home = () => {
             ) : (
               <TouchableOpacity
                 style={styles.createGroupButton}
-                onPress={() => navigation.navigate('Groups')}
+                onPress={() =>
+                  navigation.navigate('NewGroup', { initialTab: 'join' })
+                }
               >
                 <View style={styles.plusIconContainer}>
                   <Icon name="plus" size={hp(4)} color={theme.colors.primary} />
