@@ -221,6 +221,36 @@ class FriendService {
       );
     }
   }
-}
 
+  // Get friendship status between two users
+  async getFriendshipStatus(user1uid, user2uid) {
+    try {
+      const user1Profile = await getUserProfile(user1uid);
+      const user2Profile = await getUserProfile(user2uid);
+
+      const user1Friends = user1Profile.friends || [];
+      const user2Friends = user2Profile.friends || [];
+
+      const user1FriendStatus = user1Friends.find(
+        (friend) => friend.userId === user2uid,
+      );
+      const user2FriendStatus = user2Friends.find(
+        (friend) => friend.userId === user1uid,
+      );
+
+      if (user1FriendStatus && user2FriendStatus) {
+        return 'active';
+      } else if (user1FriendStatus) {
+        return 'pending';
+      } else if (user2FriendStatus) {
+        return 'recieved';
+      } else {
+        return 'none';
+      }
+    } catch (error) {
+      console.error('Error getting friendship status:', error);
+      return 'error';
+    }
+  }
+}
 module.exports = new FriendService();
