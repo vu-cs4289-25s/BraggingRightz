@@ -199,20 +199,84 @@ class BetsService {
 
       // Check if bet should be locked
       if (bet.status === 'open' && new Date(bet.expiresAt) <= new Date()) {
-        await updateDoc(betRef, {
-          status: 'locked',
-          updatedAt: new Date().toISOString(),
-        });
-        bet.status = 'locked';
+        // Get total participants
+        const totalParticipants = bet.answerOptions.reduce(
+          (sum, opt) => sum + opt.participants.length,
+          0,
+        );
 
-        // Notify creator
-        await NotificationsService.createNotification({
-          userId: bet.creatorId,
-          type: 'bets',
-          title: `Bet "${bet.question}" has expired`,
-          message: 'Please select the winning option to distribute coins.',
-          data: { betId },
-        });
+        // Case 1: No one voted
+        if (totalParticipants === 0) {
+          await updateDoc(betRef, {
+            status: 'completed',
+            result: 'No one participated in this bet, create new bet.',
+            updatedAt: new Date().toISOString(),
+          });
+          bet.status = 'completed';
+          bet.result = 'No one participated in this bet, create new bet.';
+
+          // Notify creator
+          await NotificationsService.createNotification({
+            userId: bet.creatorId,
+            type: 'bets',
+            title: `Bet "${bet.question}" has ended`,
+            message: 'No one participated in this bet.',
+            data: { betId },
+          });
+        } else {
+          // Case 2: Everyone voted for the same option
+          const votedOptions = bet.answerOptions.filter(
+            (opt) => opt.participants.length > 0,
+          );
+          if (votedOptions.length === 1) {
+            const votedOption = votedOptions[0];
+
+            // Update bet status first
+            await updateDoc(betRef, {
+              status: 'completed',
+              result: `Everyone bet on the same option: "${votedOption.text}"`,
+              updatedAt: new Date().toISOString(),
+            });
+            bet.status = 'completed';
+            bet.result = `Everyone bet on the same option: "${votedOption.text}"`;
+
+            // Refund all participants
+            const refundPromises = votedOption.participants.map(
+              async (participantId) => {
+                const userRef = doc(db, 'users', participantId);
+                await updateDoc(userRef, {
+                  numCoins: increment(bet.wagerAmount),
+                });
+
+                // Notify about refund
+                await NotificationsService.createNotification({
+                  userId: participantId,
+                  type: 'bets',
+                  title: 'Bet Refunded',
+                  message: `Everyone bet on the same option in "${bet.question}". Your ${bet.wagerAmount} coins have been refunded.`,
+                  data: { betId },
+                });
+              },
+            );
+
+            await Promise.all(refundPromises);
+          } else {
+            await updateDoc(betRef, {
+              status: 'locked',
+              updatedAt: new Date().toISOString(),
+            });
+            bet.status = 'locked';
+
+            // Notify creator
+            await NotificationsService.createNotification({
+              userId: bet.creatorId,
+              type: 'bets',
+              title: `Bet "${bet.question}" has expired`,
+              message: 'Please select the winning option to distribute coins.',
+              data: { betId },
+            });
+          }
+        }
       }
 
       // Fetch participant names
@@ -254,16 +318,78 @@ class BetsService {
       );
 
       const snapshot = await getDocs(betsQuery);
-      const updatePromises = [];
 
       for (const betDoc of snapshot.docs) {
         const bet = { id: betDoc.id, ...betDoc.data() };
-        updatePromises.push(
-          updateDoc(doc(db, 'bets', bet.id), {
-            status: 'locked',
-            updatedAt: new Date().toISOString(),
-          }),
+        const betRef = doc(db, 'bets', bet.id);
+
+        // Get total participants
+        const totalParticipants = bet.answerOptions.reduce(
+          (sum, opt) => sum + opt.participants.length,
+          0,
         );
+
+        // Case 1: No one voted
+        if (totalParticipants === 0) {
+          await updateDoc(betRef, {
+            status: 'completed',
+            result: 'No one participated in this bet, create new bet.',
+            updatedAt: new Date().toISOString(),
+          });
+
+          // Notify creator
+          await NotificationsService.createNotification({
+            userId: bet.creatorId,
+            type: 'bets',
+            title: `Bet "${bet.question}" has ended`,
+            message: 'No one participated in this bet.',
+            data: { betId: bet.id },
+          });
+          continue;
+        }
+
+        // Case 2: Everyone voted for the same option
+        const votedOptions = bet.answerOptions.filter(
+          (opt) => opt.participants.length > 0,
+        );
+        if (votedOptions.length === 1) {
+          const votedOption = votedOptions[0];
+
+          // Update bet status first
+          await updateDoc(betRef, {
+            status: 'completed',
+            result: `Everyone bet on the same option: "${votedOption.text}"`,
+            updatedAt: new Date().toISOString(),
+          });
+
+          // Refund all participants
+          const refundPromises = votedOption.participants.map(
+            async (participantId) => {
+              const userRef = doc(db, 'users', participantId);
+              await updateDoc(userRef, {
+                numCoins: increment(bet.wagerAmount),
+              });
+
+              // Notify about refund
+              await NotificationsService.createNotification({
+                userId: participantId,
+                type: 'bets',
+                title: 'Bet Refunded',
+                message: `Everyone bet on the same option in "${bet.question}". Your ${bet.wagerAmount} coins have been refunded.`,
+                data: { betId: bet.id },
+              });
+            },
+          );
+
+          await Promise.all(refundPromises);
+          continue;
+        }
+
+        // Default case: Lock the bet for manual resolution
+        await updateDoc(betRef, {
+          status: 'locked',
+          updatedAt: new Date().toISOString(),
+        });
 
         // Notify creator that bet needs resolution
         await NotificationsService.createNotification({
@@ -275,7 +401,6 @@ class BetsService {
         });
       }
 
-      await Promise.all(updatePromises);
       return true;
     } catch (error) {
       console.error('Error checking expired bets:', error);
@@ -434,20 +559,86 @@ class BetsService {
             new Date(data.expiresAt) <= new Date()
           ) {
             const betRef = doc(db, 'bets', betDoc.id);
-            await updateDoc(betRef, {
-              status: 'locked',
-              updatedAt: new Date().toISOString(),
-            });
-            data.status = 'locked';
 
-            // Notify creator
-            await NotificationsService.createNotification({
-              userId: data.creatorId,
-              type: 'bets',
-              title: `Bet "${data.question}" has expired`,
-              message: 'Please select the winning option to distribute coins.',
-              data: { betId: betDoc.id },
-            });
+            // Get total participants
+            const totalParticipants = data.answerOptions.reduce(
+              (sum, opt) => sum + opt.participants.length,
+              0,
+            );
+
+            // Case 1: No one voted
+            if (totalParticipants === 0) {
+              await updateDoc(betRef, {
+                status: 'completed',
+                result: 'No one participated in this bet, create new bet.',
+                updatedAt: new Date().toISOString(),
+              });
+              data.status = 'completed';
+              data.result = 'No one participated in this bet, create new bet.';
+
+              // Notify creator
+              await NotificationsService.createNotification({
+                userId: data.creatorId,
+                type: 'bets',
+                title: `Bet "${data.question}" has ended`,
+                message: 'No one participated in this bet.',
+                data: { betId: betDoc.id },
+              });
+            } else {
+              // Case 2: Everyone voted for the same option
+              const votedOptions = data.answerOptions.filter(
+                (opt) => opt.participants.length > 0,
+              );
+              if (votedOptions.length === 1) {
+                const votedOption = votedOptions[0];
+
+                // Update bet status first
+                await updateDoc(betRef, {
+                  status: 'completed',
+                  result: `Everyone bet on the same option: "${votedOption.text}"`,
+                  updatedAt: new Date().toISOString(),
+                });
+                data.status = 'completed';
+                data.result = `Everyone bet on the same option: "${votedOption.text}"`;
+
+                // Refund all participants
+                const refundPromises = votedOption.participants.map(
+                  async (participantId) => {
+                    const userRef = doc(db, 'users', participantId);
+                    await updateDoc(userRef, {
+                      numCoins: increment(data.wagerAmount),
+                    });
+
+                    // Notify about refund
+                    await NotificationsService.createNotification({
+                      userId: participantId,
+                      type: 'bets',
+                      title: 'Bet Refunded',
+                      message: `Everyone bet on the same option in "${data.question}". Your ${data.wagerAmount} coins have been refunded.`,
+                      data: { betId: betDoc.id },
+                    });
+                  },
+                );
+
+                await Promise.all(refundPromises);
+              } else {
+                await updateDoc(betRef, {
+                  status: 'locked',
+                  updatedAt: new Date().toISOString(),
+                });
+                data.status = 'locked';
+
+                // Notify creator
+                await NotificationsService.createNotification({
+                  userId: data.creatorId,
+                  type: 'bets',
+                  title: `Bet "${data.question}" has expired`,
+                  message:
+                    'Please select the winning option to distribute coins.',
+                  data: { betId: betDoc.id },
+                });
+              }
+            }
           }
 
           // Get group name if groupId exists
