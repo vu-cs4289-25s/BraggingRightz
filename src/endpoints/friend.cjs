@@ -4,7 +4,7 @@ Friends Functionality
 // Get friend list (username, coins, trophies)
 */
 
-const { doc, updateDoc, arrayUnion } = require('firebase/firestore');
+const { doc, updateDoc, arrayUnion, getDoc } = require('firebase/firestore');
 const { auth, db } = require('../firebase/config');
 const { getUid, getUserProfile, userExists } = require('./user.cjs');
 import { Alert } from 'react-native';
@@ -139,6 +139,7 @@ class FriendService {
               trophies: profile.trophies || 0,
               status: friendData.status,
               direction: friendData.direction || '',
+              profilePicture: profile.profilePicture || null,
             };
           } catch (error) {
             console.error(`Error fetching profile for user ${uid}:`, error);
@@ -250,6 +251,98 @@ class FriendService {
     } catch (error) {
       console.error('Error getting friendship status:', error);
       return 'error';
+    }
+  }
+
+  // Decline friend request
+  async declineFriendRequest({ user2username }) {
+    try {
+      const currUser = auth.currentUser;
+      if (!currUser) {
+        Alert.alert('Error', 'Please log in to decline friend requests');
+        throw new Error('User not authenticated');
+      }
+
+      const user2uid = await getUid({ username: user2username });
+      if (!user2uid) {
+        Alert.alert('Error', 'User not found');
+        return;
+      }
+
+      // Remove friend request from current user's list
+      const currUserRef = doc(db, 'users', currUser.uid);
+      const currUserDoc = await getDoc(currUserRef);
+      const currUserFriends = currUserDoc.data().friends || [];
+
+      const updatedCurrFriends = currUserFriends.filter(
+        (friend) =>
+          !(friend.userId === user2uid && friend.status === 'pending'),
+      );
+
+      await updateDoc(currUserRef, { friends: updatedCurrFriends });
+
+      // Remove friend request from other user's list
+      const user2Ref = doc(db, 'users', user2uid);
+      const user2Doc = await getDoc(user2Ref);
+      const user2Friends = user2Doc.data().friends || [];
+
+      const updatedUser2Friends = user2Friends.filter(
+        (friend) =>
+          !(friend.userId === currUser.uid && friend.status === 'pending'),
+      );
+
+      await updateDoc(user2Ref, { friends: updatedUser2Friends });
+
+      Alert.alert('Success', 'Friend request declined');
+    } catch (error) {
+      console.error('Error declining friend request:', error);
+      Alert.alert('Error', 'Failed to decline friend request');
+    }
+  }
+
+  // Cancel sent friend request
+  async cancelFriendRequest({ user2username }) {
+    try {
+      const currUser = auth.currentUser;
+      if (!currUser) {
+        Alert.alert('Error', 'Please log in to cancel friend requests');
+        throw new Error('User not authenticated');
+      }
+
+      const user2uid = await getUid({ username: user2username });
+      if (!user2uid) {
+        Alert.alert('Error', 'User not found');
+        return;
+      }
+
+      // Remove friend request from current user's list
+      const currUserRef = doc(db, 'users', currUser.uid);
+      const currUserDoc = await getDoc(currUserRef);
+      const currUserFriends = currUserDoc.data().friends || [];
+
+      const updatedCurrFriends = currUserFriends.filter(
+        (friend) =>
+          !(friend.userId === user2uid && friend.status === 'pending'),
+      );
+
+      await updateDoc(currUserRef, { friends: updatedCurrFriends });
+
+      // Remove friend request from other user's list
+      const user2Ref = doc(db, 'users', user2uid);
+      const user2Doc = await getDoc(user2Ref);
+      const user2Friends = user2Doc.data().friends || [];
+
+      const updatedUser2Friends = user2Friends.filter(
+        (friend) =>
+          !(friend.userId === currUser.uid && friend.status === 'pending'),
+      );
+
+      await updateDoc(user2Ref, { friends: updatedUser2Friends });
+
+      Alert.alert('Success', 'Friend request canceled');
+    } catch (error) {
+      console.error('Error canceling friend request:', error);
+      Alert.alert('Error', 'Failed to cancel friend request');
     }
   }
 }

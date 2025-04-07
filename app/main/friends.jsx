@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { hp, wp } from '../../helpers/common';
@@ -34,6 +35,7 @@ const Friends = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchFriends = async () => {
     try {
@@ -74,10 +76,34 @@ const Friends = () => {
     }
   };
 
+  const handleDeclineRequest = async (username) => {
+    try {
+      await FriendService.declineFriendRequest({ user2username: username });
+      await fetchFriends(); // refresh list after declining
+    } catch (error) {
+      console.error('Error declining friend request:', error);
+    }
+  };
+
+  const handleDeleteRequest = async (username) => {
+    try {
+      await FriendService.cancelFriendRequest({ user2username: username });
+      await fetchFriends(); // refresh list after canceling
+    } catch (error) {
+      console.error('Error canceling friend request:', error);
+    }
+  };
+
   const handleAvatarPress = (userId) => {
     setSelectedUserId(userId);
     setShowUserProfile(true);
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchFriends();
+    setRefreshing(false);
+  }, []);
 
   const FriendCard = ({ friend }) => (
     <View style={styles.friendCard}>
@@ -96,42 +122,7 @@ const Friends = () => {
           />
         </TouchableOpacity>
         <View style={styles.friendDetails}>
-          <View style={styles.nameAndStatus}>
-            <Text style={styles.username}>{friend.username}</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                friend.status === 'pending'
-                  ? styles.pendingBadge
-                  : styles.activeBadge,
-              ]}
-            >
-              {friend.status === 'pending' ? (
-                friend.direction === 'sent' ? (
-                  <Text style={styles.statusText}>Request Sent</Text>
-                ) : friend.direction === 'recieved' ? (
-                  <TouchableOpacity
-                    onPress={() => handleAcceptRequest(friend.username)}
-                  >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        { color: theme.colors.primary },
-                      ]}
-                    >
-                      Accept Request
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={[styles.statusText, { color: 'red' }]}>
-                    ERROR: outdated friend request
-                  </Text>
-                )
-              ) : (
-                <Text style={styles.statusText}>Friend</Text>
-              )}
-            </View>
-          </View>
+          <Text style={styles.username}>{friend.username}</Text>
           <View style={styles.statsContainer}>
             <View style={styles.stat}>
               <Icon name="star-o" size={hp(2)} color={theme.colors.warning} />
@@ -143,6 +134,38 @@ const Friends = () => {
             </View>
           </View>
         </View>
+        {friend.status === 'pending' && (
+          <View style={styles.requestContainer}>
+            {friend.direction === 'sent' ? (
+              <TouchableOpacity
+                onPress={() => handleDeleteRequest(friend.username)}
+                style={[styles.requestButton, styles.cancelButton]}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.requestButtons}>
+                <TouchableOpacity
+                  onPress={() => handleAcceptRequest(friend.username)}
+                  style={[styles.requestButton, styles.acceptButton]}
+                >
+                  <Text style={styles.acceptButtonText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleDeclineRequest(friend.username)}
+                  style={[styles.requestButton, styles.declineButton]}
+                >
+                  <Text style={styles.declineButtonText}>Decline</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+        {friend.status === 'active' && (
+          <View style={styles.activeBadge}>
+            <Text style={styles.activeBadgeText}>Friend</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -175,6 +198,14 @@ const Friends = () => {
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
           >
             {friendsList.length === 0 ? (
               <View style={styles.emptyContainer}>
@@ -191,12 +222,34 @@ const Friends = () => {
               </View>
             ) : (
               <>
-                {friendsList.filter((f) => f.status === 'pending').length >
-                  0 && (
+                {friendsList.filter(
+                  (f) => f.status === 'pending' && f.direction === 'recieved',
+                ).length > 0 && (
                   <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>Pending Requests</Text>
+                    <Text style={styles.sectionTitle}>Friend Requests</Text>
                     {friendsList
-                      .filter((friend) => friend.status === 'pending')
+                      .filter(
+                        (friend) =>
+                          friend.status === 'pending' &&
+                          friend.direction === 'recieved',
+                      )
+                      .map((friend) => (
+                        <FriendCard key={friend.userId} friend={friend} />
+                      ))}
+                  </View>
+                )}
+
+                {friendsList.filter(
+                  (f) => f.status === 'pending' && f.direction === 'sent',
+                ).length > 0 && (
+                  <View style={styles.sectionContainer}>
+                    <Text style={styles.sectionTitle}>Sent Requests</Text>
+                    {friendsList
+                      .filter(
+                        (friend) =>
+                          friend.status === 'pending' &&
+                          friend.direction === 'sent',
+                      )
                       .map((friend) => (
                         <FriendCard key={friend.userId} friend={friend} />
                       ))}
@@ -240,6 +293,7 @@ export default Friends;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'white',
   },
   scrollContent: {
     padding: wp(4),
@@ -265,7 +319,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     paddingHorizontal: wp(6),
     paddingVertical: hp(1.5),
-    borderRadius: hp(3),
+    borderRadius: theme.radius.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   addFirstFriendText: {
     color: 'white',
@@ -283,17 +342,14 @@ const styles = StyleSheet.create({
   },
   friendCard: {
     backgroundColor: 'white',
-    borderRadius: hp(1.5),
+    borderRadius: theme.radius.lg,
     padding: wp(4),
     marginBottom: hp(2),
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 3,
+    elevation: 2,
   },
   friendInfo: {
     flexDirection: 'row',
@@ -301,52 +357,87 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: wp(4),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   friendDetails: {
     flex: 1,
   },
-  nameAndStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: hp(0.5),
-  },
   username: {
-    fontSize: hp(2.2),
+    fontSize: hp(2),
     fontWeight: '600',
-    color: theme.colors.text,
-  },
-  statusBadge: {
-    paddingHorizontal: wp(2),
-    paddingVertical: hp(0.5),
-    borderRadius: hp(1),
-  },
-  pendingBadge: {
-    backgroundColor: theme.colors.warning + '20',
-  },
-  activeBadge: {
-    backgroundColor: theme.colors.success + '20',
-  },
-  statusText: {
-    fontSize: hp(1.4),
-    fontWeight: '500',
     color: theme.colors.text,
   },
   statsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: wp(4),
   },
   stat: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: wp(4),
+    gap: wp(1),
   },
   statText: {
-    marginLeft: wp(1),
-    fontSize: hp(1.8),
-    color: theme.colors.grey,
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
   },
   actionButton: {
     padding: wp(2),
+  },
+  requestContainer: {
+    marginLeft: 'auto',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  requestButtons: {
+    flexDirection: 'row',
+    gap: wp(2),
+  },
+  requestButton: {
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(1),
+    borderRadius: theme.radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: wp(20),
+  },
+  acceptButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  declineButton: {
+    backgroundColor: theme.colors.red,
+  },
+  cancelButton: {
+    backgroundColor: theme.colors.red,
+  },
+  acceptButtonText: {
+    color: 'white',
+    fontSize: hp(1.6),
+    fontWeight: '600',
+  },
+  declineButtonText: {
+    color: 'white',
+    fontSize: hp(1.6),
+    fontWeight: '600',
+  },
+  cancelButtonText: {
+    color: 'white',
+    fontSize: hp(1.6),
+    fontWeight: '600',
+  },
+  activeBadge: {
+    backgroundColor: `${theme.colors.success}20`,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.5),
+    borderRadius: theme.radius.xl,
+    marginLeft: 'auto',
+  },
+  activeBadgeText: {
+    color: theme.colors.success,
+    fontSize: hp(1.4),
+    fontWeight: '500',
   },
 });

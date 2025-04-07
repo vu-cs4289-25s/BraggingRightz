@@ -24,6 +24,7 @@ const UserProfileModal = ({ visible, onClose, userId }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [commonGroups, setCommonGroups] = useState([]);
   const [isFriend, setIsFriend] = useState(false);
+  const [friendStatus, setFriendStatus] = useState('none');
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
@@ -55,17 +56,56 @@ const UserProfileModal = ({ visible, onClose, userId }) => {
       );
       setCommonGroups(common);
 
-      // Check if they are friends
+      // Check friendship status
       const friends = await FriendService.getFriendList('all');
-      setIsFriend(
-        friends.some(
-          (friend) => friend.userId === userId && friend.status === 'active',
-        ),
-      );
+      const friendData = friends.find((friend) => friend.userId === userId);
+      if (friendData) {
+        setFriendStatus(friendData.status + '_' + (friendData.direction || ''));
+        setIsFriend(friendData.status === 'active');
+      } else {
+        setFriendStatus('none');
+        setIsFriend(false);
+      }
     } catch (error) {
       console.error('Error loading user profile:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAcceptRequest = async () => {
+    try {
+      await FriendService.acceptFriendRequest({
+        user2username: userProfile.username,
+      });
+      setFriendStatus('active');
+      setIsFriend(true);
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+    }
+  };
+
+  const handleDeclineRequest = async () => {
+    try {
+      await FriendService.declineFriendRequest({
+        user2username: userProfile.username,
+      });
+      setFriendStatus('none');
+      setIsFriend(false);
+    } catch (error) {
+      console.error('Error declining friend request:', error);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    try {
+      await FriendService.cancelFriendRequest({
+        user2username: userProfile.username,
+      });
+      setFriendStatus('none');
+      setIsFriend(false);
+    } catch (error) {
+      console.error('Error canceling friend request:', error);
     }
   };
 
@@ -152,7 +192,7 @@ const UserProfileModal = ({ visible, onClose, userId }) => {
               {/* Friend Status */}
               {userId !== currentUser?.uid && (
                 <View style={styles.friendSection}>
-                  {isFriend ? (
+                  {friendStatus === 'active' ? (
                     <View style={styles.friendStatus}>
                       <Icon
                         name="check-circle"
@@ -160,6 +200,38 @@ const UserProfileModal = ({ visible, onClose, userId }) => {
                         color={theme.colors.success}
                       />
                       <Text style={styles.friendStatusText}>Friends</Text>
+                    </View>
+                  ) : friendStatus === 'pending_sent' ? (
+                    <View style={styles.friendRequestSent}>
+                      <TouchableOpacity
+                        style={styles.cancelRequestButton}
+                        onPress={handleCancelRequest}
+                      >
+                        <Icon
+                          name="clock-o"
+                          size={20}
+                          color={theme.colors.warning}
+                        />
+                        <Text style={styles.pendingRequestText}>
+                          Friend Request Sent
+                        </Text>
+                        <Text style={styles.cancelText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : friendStatus === 'pending_recieved' ? (
+                    <View style={styles.requestButtons}>
+                      <TouchableOpacity
+                        style={styles.acceptButton}
+                        onPress={handleAcceptRequest}
+                      >
+                        <Text style={styles.acceptButtonText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.declineButton}
+                        onPress={handleDeclineRequest}
+                      >
+                        <Text style={styles.declineButtonText}>Decline</Text>
+                      </TouchableOpacity>
                     </View>
                   ) : (
                     <TouchableOpacity
@@ -292,6 +364,53 @@ const styles = StyleSheet.create({
   errorText: {
     color: theme.colors.error,
     textAlign: 'center',
+  },
+  friendRequestSent: {
+    alignItems: 'center',
+    marginTop: hp(1),
+  },
+  cancelRequestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${theme.colors.warning}20`,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(4),
+    borderRadius: theme.radius.xl,
+  },
+  pendingRequestText: {
+    color: theme.colors.warning,
+    marginLeft: wp(2),
+    fontWeight: '600',
+  },
+  cancelText: {
+    color: theme.colors.error,
+    marginLeft: wp(2),
+    fontWeight: '600',
+  },
+  requestButtons: {
+    flexDirection: 'row',
+    gap: wp(2),
+    marginTop: hp(1),
+  },
+  acceptButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(4),
+    borderRadius: theme.radius.xl,
+  },
+  declineButton: {
+    backgroundColor: theme.colors.error,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(4),
+    borderRadius: theme.radius.xl,
+  },
+  acceptButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  declineButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });
 
