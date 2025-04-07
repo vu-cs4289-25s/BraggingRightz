@@ -56,7 +56,10 @@ const BetDetails = () => {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showReactionPopup, setShowReactionPopup] = useState(false);
   const [selectedComment, setSelectedComment] = useState(null);
-  const [reactionPopupPosition, setReactionPopupPosition] = useState({ x: 0, y: 0 });
+  const [reactionPopupPosition, setReactionPopupPosition] = useState({
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     loadData();
@@ -423,7 +426,7 @@ const BetDetails = () => {
 
   const handleCommentReaction = async (reaction) => {
     if (!selectedComment) return;
-    
+
     try {
       setSubmitting(true);
       await BetsService.toggleCommentReaction(
@@ -431,13 +434,13 @@ const BetDetails = () => {
         betId,
         selectedComment.id,
         session.uid,
-        reaction
+        reaction,
       );
-      
+
       // Refresh comments
       const updatedComments = await BetsService.getBetComments(betId);
       setComments(updatedComments);
-      
+
       // Close popup
       setShowReactionPopup(false);
       setSelectedComment(null);
@@ -747,7 +750,9 @@ const BetDetails = () => {
                 return (
                   <TouchableOpacity
                     key={comment.id}
-                    onLongPress={(event) => handleCommentLongPress(comment, event)}
+                    onLongPress={(event) =>
+                      handleCommentLongPress(comment, event)
+                    }
                     delayLongPress={500}
                   >
                     <View
@@ -790,16 +795,26 @@ const BetDetails = () => {
                         </Text>
                       </View>
                       <Text style={styles.commentText}>{comment.content}</Text>
-                      {comment.reactions && Object.keys(comment.reactions).length > 0 && (
-                        <View style={styles.commentReactions}>
-                          {Object.entries(comment.reactions).map(([reaction, users]) => (
-                            <View key={reaction} style={styles.commentReaction}>
-                              <Text style={styles.reactionEmoji}>{reaction}</Text>
-                              <Text style={styles.reactionCount}>{users.length}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
+                      {comment.reactions &&
+                        Object.keys(comment.reactions).length > 0 && (
+                          <View style={styles.commentReactions}>
+                            {Object.entries(comment.reactions).map(
+                              ([reaction, users]) => (
+                                <View
+                                  key={reaction}
+                                  style={styles.commentReaction}
+                                >
+                                  <Text style={styles.reactionEmoji}>
+                                    {reaction}
+                                  </Text>
+                                  <Text style={styles.reactionCount}>
+                                    {users.length}
+                                  </Text>
+                                </View>
+                              ),
+                            )}
+                          </View>
+                        )}
                     </View>
                   </TouchableOpacity>
                 );

@@ -113,35 +113,45 @@ const Notifications = () => {
       await FriendService.acceptFriendRequest({
         user2username: notification.data.requesterName,
       });
-      
+
       // Update local state to mark notification as read
-      setNotifications(notifications.map(notif => 
-        notif.id === notification.id 
-          ? { ...notif, read: true, status: 'accepted' }
-          : notif
-      ));
+      setNotifications(
+        notifications.map((notif) =>
+          notif.id === notification.id
+            ? { ...notif, read: true, status: 'accepted' }
+            : notif,
+        ),
+      );
 
       // Show success message
       Alert.alert('Success', 'Friend request accepted!');
     } catch (error) {
       console.error('Error accepting friend request:', error);
-      Alert.alert('Error', 'Failed to accept friend request. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to accept friend request. Please try again.',
+      );
     }
   };
 
   const handleDeclineFriendRequest = async (notification) => {
     try {
       await handleMarkAsRead(notification.id);
-      
+
       // Update local state
-      setNotifications(notifications.map(notif => 
-        notif.id === notification.id 
-          ? { ...notif, read: true, status: 'declined' }
-          : notif
-      ));
+      setNotifications(
+        notifications.map((notif) =>
+          notif.id === notification.id
+            ? { ...notif, read: true, status: 'declined' }
+            : notif,
+        ),
+      );
     } catch (error) {
       console.error('Error declining friend request:', error);
-      Alert.alert('Error', 'Failed to decline friend request. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to decline friend request. Please try again.',
+      );
     }
   };
 
@@ -200,20 +210,23 @@ const Notifications = () => {
     const oneDay = 24 * 60 * 60 * 1000;
     const oneWeek = 7 * oneDay;
 
-    return notifs.reduce((groups, notification) => {
-      const notifDate = new Date(notification.createdAt);
-      const timeDiff = now - notifDate;
+    return notifs.reduce(
+      (groups, notification) => {
+        const notifDate = new Date(notification.createdAt);
+        const timeDiff = now - notifDate;
 
-      if (timeDiff < oneDay) {
-        groups.new.push(notification);
-      } else if (timeDiff < oneWeek) {
-        groups.thisWeek.push(notification);
-      } else {
-        groups.earlier.push(notification);
-      }
+        if (timeDiff < oneDay) {
+          groups.new.push(notification);
+        } else if (timeDiff < oneWeek) {
+          groups.thisWeek.push(notification);
+        } else {
+          groups.earlier.push(notification);
+        }
 
-      return groups;
-    }, { new: [], thisWeek: [], earlier: [] });
+        return groups;
+      },
+      { new: [], thisWeek: [], earlier: [] },
+    );
   };
 
   const renderNotificationSection = (sectionTitle, sectionNotifications) => {
@@ -286,8 +299,14 @@ const Notifications = () => {
           ) : (
             <>
               {renderNotificationSection('New', groupedNotifications.new)}
-              {renderNotificationSection('This week', groupedNotifications.thisWeek)}
-              {renderNotificationSection('Earlier', groupedNotifications.earlier)}
+              {renderNotificationSection(
+                'This week',
+                groupedNotifications.thisWeek,
+              )}
+              {renderNotificationSection(
+                'Earlier',
+                groupedNotifications.earlier,
+              )}
             </>
           )}
         </ScrollView>
