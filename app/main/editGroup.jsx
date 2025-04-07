@@ -282,12 +282,26 @@ const EditGroup = () => {
           onPress: async () => {
             try {
               setLoading(true);
-              await GroupsService.deleteGroup(groupId.id, session.uid);
-              Alert.alert('Success', 'Group deleted successfully');
-              navigation.navigate('Groups');
+              const actualGroupId =
+                typeof groupId === 'object' ? groupId.id : groupId;
+
+              if (!actualGroupId) {
+                throw new Error('Invalid group ID');
+              }
+
+              await GroupsService.deleteGroup(actualGroupId, session.uid);
+              Alert.alert('Success', 'Group deleted successfully', [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.navigate('Main'),
+                },
+              ]);
             } catch (error) {
               console.error('Error deleting group:', error);
-              Alert.alert('Error', error.message || 'Failed to delete group');
+              Alert.alert(
+                'Error',
+                error.message || 'Failed to delete group. Please try again.',
+              );
             } finally {
               setLoading(false);
             }
