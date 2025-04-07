@@ -21,9 +21,14 @@ import Edit from '../../assets/icons/Edit';
 import AuthService from '../../src/endpoints/auth.cjs';
 import BetsService from '../../src/endpoints/bets.cjs';
 import Header from '../../components/Header';
-import GroupsService from '../../src/endpoints/groups';
-import NotificationsService from '../../src/endpoints/notifications';
+import GroupsService from '../../src/endpoints/groups.cjs';
+import NotificationsService from '../../src/endpoints/notifications.cjs';
 import loading from '../../components/Loading';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../src/firebase/config';
+import UserService from '../../src/endpoints/user.cjs';
+
+const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
 const Profile = () => {
   const navigation = useNavigation();
@@ -35,38 +40,98 @@ const Profile = () => {
   const [birthdate, setBirthdate] = useState('');
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
 
-        // Fetch user's bets
+        const userProfile = await UserService.getUserProfile(sessionData.uid);
+        setUserProfile(userProfile);
+
         const userBets = await BetsService.getUserBets(sessionData.uid);
 
-        // Fetch group names for each bet
-        const betsWithGroupNames = await Promise.all(
+        // Fix any inconsistent bet statuses and fetch additional info
+        const betsWithInfo = await Promise.all(
           userBets.map(async (bet) => {
-            if (bet.groupId) {
-              const groupName = await GroupsService.getGroupName(bet.groupId);
+            try {
+              // Fix inconsistent status if needed
+              if (bet.winningOptionId && bet.status === 'locked') {
+                console.log('Fixing inconsistent bet status:', {
+                  id: bet.id,
+                  status: bet.status,
+                  winningOptionId: bet.winningOptionId,
+                });
+
+                await BetsService.updateBet(bet.id, {
+                  status: 'completed',
+                  updatedAt: new Date().toISOString(),
+                });
+                bet.status = 'completed';
+              }
+
+              // Get group name
+              let groupName = 'No Group';
+              if (bet.groupId) {
+                groupName = await GroupsService.getGroupName(bet.groupId);
+              }
+
+              // Get creator info
+              let creatorUsername = 'Unknown User';
+              let creatorProfilePicture =
+                Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri;
+
+              if (bet.creatorId) {
+                const userDocRef = doc(db, 'users', bet.creatorId);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                  const userData = userDocSnap.data();
+                  creatorUsername = userData.username || 'Unknown User';
+                  creatorProfilePicture =
+                    userData.profilePicture ||
+                    Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri;
+                }
+              }
+
               return {
                 ...bet,
                 groupName,
+                creatorUsername,
+                creatorProfilePicture,
+              };
+            } catch (error) {
+              console.error('Error fetching bet info:', error);
+              return {
+                ...bet,
+                groupName: 'No Group',
+                creatorUsername: 'Unknown User',
+                creatorProfilePicture:
+                  Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
               };
             }
-            return {
-              ...bet,
-              groupName: 'No Group',
-            };
           }),
         );
 
-        setBets(betsWithGroupNames);
+        // Sort bets by creation date, newest first
+        const sortedBets = betsWithInfo.sort((a, b) => {
+          const dateA = a.createdAt?.seconds
+            ? new Date(a.createdAt.seconds * 1000)
+            : new Date(a.createdAt);
+          const dateB = b.createdAt?.seconds
+            ? new Date(b.createdAt.seconds * 1000)
+            : new Date(b.createdAt);
+          return dateB - dateA;
+        });
+
+        setBets(sortedBets);
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert('Error', 'Failed to load data');
-      } finally {
         setLoading(false);
       }
     };

@@ -136,27 +136,32 @@ class GroupsService {
   }
 
   // Add member to group
-  async addMember(groupId, userId, inviteCode) {
+  async addMember(groupId, userId) {
     try {
+      console.log('Adding member to group:', { groupId, userId });
+
       const groupRef = doc(db, 'groups', groupId);
       const groupDoc = await getDoc(groupRef);
 
       if (!groupDoc.exists()) {
+        console.log('Group not found:', groupId);
         throw new Error('Group not found');
       }
 
       const groupData = groupDoc.data();
-
-      // Check invite code for private groups
-      if (groupData.isPrivate && groupData.inviteCode !== inviteCode) {
-        throw new Error('Invalid invite code');
-      }
+      console.log('Group data:', {
+        name: groupData.name,
+        currentMembers: groupData.members,
+        isPrivate: groupData.isPrivate,
+      });
 
       if (groupData.members.includes(userId)) {
+        console.log('User is already a member:', userId);
         throw new Error('User is already a member of this group');
       }
 
       const timestamp = new Date().toISOString();
+      console.log('Updating group with new member');
 
       // Add user to group
       await updateDoc(groupRef, {
@@ -164,6 +169,7 @@ class GroupsService {
         updatedAt: timestamp,
       });
 
+      console.log('Updating user with new group');
       // Add group to user's groups
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
@@ -171,8 +177,10 @@ class GroupsService {
         updatedAt: timestamp,
       });
 
+      console.log('Successfully added member to group');
       return true;
     } catch (error) {
+      console.error('Error in addMember:', error);
       this._handleError(error);
     }
   }
@@ -463,6 +471,60 @@ class GroupsService {
 
       return true;
     } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Find group by invite code
+  async findGroupByInviteCode(inviteCode) {
+    try {
+      console.log('Searching for group with invite code:', inviteCode);
+      console.log(
+        'Invite code type:',
+        typeof inviteCode,
+        'length:',
+        inviteCode.length,
+      );
+
+      // Get all groups first to debug
+      const allGroupsQuery = query(collection(db, 'groups'));
+      const allGroups = await getDocs(allGroupsQuery);
+
+      console.log('All available invite codes:');
+      allGroups.forEach((doc) => {
+        const data = doc.data();
+        console.log(`- Group "${data.name}": ${data.inviteCode}`);
+      });
+
+      const groupsQuery = query(
+        collection(db, 'groups'),
+        where('inviteCode', '==', inviteCode),
+      );
+
+      const querySnapshot = await getDocs(groupsQuery);
+      console.log('Query results:', {
+        empty: querySnapshot.empty,
+        size: querySnapshot.size,
+      });
+
+      if (querySnapshot.empty) {
+        console.log('No groups found with invite code:', inviteCode);
+        return null;
+      }
+
+      const group = {
+        id: querySnapshot.docs[0].id,
+        ...querySnapshot.docs[0].data(),
+      };
+      console.log('Found group:', {
+        id: group.id,
+        name: group.name,
+        inviteCode: group.inviteCode,
+      });
+
+      return group;
+    } catch (error) {
+      console.error('Error in findGroupByInviteCode:', error);
       this._handleError(error);
     }
   }

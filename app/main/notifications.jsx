@@ -1,18 +1,3 @@
-// import { StyleSheet, Text, View } from 'react-native';
-// import React from 'react';
-//
-// const Notifications = () => {
-//   return (
-//     <View>
-//       <Text>notifications</Text>
-//     </View>
-//   );
-// };
-//
-// export default Notifications;
-//
-// const styles = StyleSheet.create({});
-
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -23,7 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
 import AuthService from '../../src/endpoints/auth.cjs';
@@ -31,6 +16,7 @@ import { theme } from '../../constants/theme';
 import { hp, wp } from '../../helpers/common';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
+import FriendService from '../../src/endpoints/friend.cjs';
 
 const NotificationIcons = {
   new_bet: { name: 'plus-circle', color: theme.colors.primary },
@@ -40,6 +26,7 @@ const NotificationIcons = {
   comments: { name: 'comment', color: theme.colors.primary },
   follows: { name: 'user-plus', color: theme.colors.success },
   groups: { name: 'users', color: theme.colors.primary },
+  friend_request: { name: 'user-plus', color: theme.colors.primary },
 };
 
 const Notifications = () => {
@@ -52,6 +39,12 @@ const Notifications = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, []),
+  );
 
   const loadData = async () => {
     try {
@@ -82,6 +75,10 @@ const Notifications = () => {
           notif.id === notificationId ? { ...notif, read: true } : notif,
         ),
       );
+      // Navigate back to refresh the home page's notification count
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -93,15 +90,32 @@ const Notifications = () => {
       setNotifications(
         notifications.map((notif) => ({ ...notif, read: true })),
       );
+      // Navigate back to refresh the home page's notification count
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
   };
 
-  const handleNotificationPress = (notification) => {
-    handleMarkAsRead(notification.id);
+  const handleNotificationPress = async (notification) => {
+    await handleMarkAsRead(notification.id);
+
     if (notification.data?.betId) {
       navigation.navigate('BetDetails', { betId: notification.data.betId });
+    }
+  };
+
+  const handleAcceptFriendRequest = async (notification) => {
+    try {
+      await FriendService.acceptFriendRequest({
+        user2username: notification.data.requesterName,
+      });
+      await handleMarkAsRead(notification.id);
+      await loadData(); // Refresh notifications
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
     }
   };
 
@@ -132,6 +146,22 @@ const Notifications = () => {
             {new Date(notification.createdAt).toLocaleDateString()} •{' '}
             {new Date(notification.createdAt).toLocaleTimeString()}
           </Text>
+          {notification.type === 'friend_request' && !notification.read && (
+            <View style={styles.friendRequestActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.acceptButton]}
+                onPress={() => handleAcceptFriendRequest(notification)}
+              >
+                <Text style={styles.actionButtonText}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.declineButton]}
+                onPress={() => handleMarkAsRead(notification.id)}
+              >
+                <Text style={styles.actionButtonText}>Decline</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
         {!notification.read && <View style={styles.unreadDot} />}
       </TouchableOpacity>
@@ -151,17 +181,35 @@ const Notifications = () => {
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        <Header
-          title="Notifications"
-          showBackButton={true}
-          rightComponent={
-            notifications.some((n) => !n.read) && (
-              <TouchableOpacity onPress={handleMarkAllAsRead}>
-                <Text style={styles.markAllRead}>Mark all as read</Text>
-              </TouchableOpacity>
-            )
-          }
-        />
+        <View style={styles.headerContainer}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Icon
+                name="chevron-left"
+                size={hp(2.5)}
+                color={theme.colors.text}
+              />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Notifications</Text>
+          </View>
+          {notifications.some((n) => !n.read) && (
+            <TouchableOpacity
+              style={styles.markAllReadButton}
+              onPress={handleMarkAllAsRead}
+            >
+              <Icon
+                name="check-circle"
+                size={hp(2)}
+                color={theme.colors.primary}
+                style={styles.markAllReadIcon}
+              />
+              <Text style={styles.markAllRead}>Mark all as read</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         <ScrollView
           contentContainerStyle={styles.notificationsList}
@@ -193,10 +241,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(2),
+    backgroundColor: '',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: wp(3),
+    padding: wp(2),
+  },
+  headerTitle: {
+    fontSize: hp(2.4),
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  markAllReadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary + '10',
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.8),
+    borderRadius: hp(2),
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '20',
+  },
+  markAllReadIcon: {
+    marginRight: wp(1),
+  },
   markAllRead: {
     color: theme.colors.primary,
-    fontSize: hp(1.8),
-    fontWeight: '500',
+    fontSize: hp(1.6),
+    fontWeight: '600',
   },
   notificationsList: {
     padding: wp(4),
@@ -215,7 +297,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   unreadItem: {
-    backgroundColor: theme.colors.primary + '08',
+    backgroundColor: theme.colors.dark + '08',
   },
   iconContainer: {
     width: hp(6),
@@ -236,12 +318,12 @@ const styles = StyleSheet.create({
   },
   notificationMessage: {
     fontSize: hp(1.6),
-    color: theme.colors.gray,
+    color: theme.colors.text,
     marginBottom: hp(0.5),
   },
   timestamp: {
     fontSize: hp(1.4),
-    color: theme.colors.gray,
+    color: theme.colors.dark,
   },
   unreadDot: {
     width: hp(1.2),
@@ -260,6 +342,28 @@ const styles = StyleSheet.create({
     fontSize: hp(2),
     color: theme.colors.gray,
     marginTop: hp(2),
+  },
+  friendRequestActions: {
+    flexDirection: 'row',
+    marginTop: hp(1),
+    gap: wp(2),
+  },
+  actionButton: {
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1),
+    minWidth: wp(20),
+    alignItems: 'center',
+  },
+  acceptButton: {
+    backgroundColor: theme.colors.success + '20',
+  },
+  declineButton: {
+    backgroundColor: theme.colors.error + '20',
+  },
+  actionButtonText: {
+    fontSize: hp(1.4),
+    fontWeight: '500',
   },
 });
 

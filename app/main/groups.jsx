@@ -11,6 +11,7 @@ import {
   Pressable,
   ImageBackground,
   Modal,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import GroupsService from '../../src/endpoints/groups.cjs';
@@ -22,6 +23,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/Avatar';
 import Header from '../../components/Header';
+const DEFAULT_GROUP_IMAGE = require('../../assets/images/default-avatar.png');
 
 const Groups = () => {
   const navigation = useNavigation();
@@ -154,12 +156,12 @@ const Groups = () => {
             >
               <View style={styles.groupInfo}>
                 <Avatar
-                  source={
-                    groupPics[group.id]
-                      ? { uri: groupPics[group.id] }
-                      : require('../../assets/images/default-avatar.png')
+                  uri={
+                    groupPics[group.id] ||
+                    Image.resolveAssetSource(DEFAULT_GROUP_IMAGE).uri
                   }
                   size={hp(5)}
+                  rounded={theme.radius.xl}
                 />
                 <View style={styles.groupTextContainer}>
                   <Text style={styles.groupName}>{group.name}</Text>
