@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -112,17 +113,42 @@ const Notifications = () => {
       await FriendService.acceptFriendRequest({
         user2username: notification.data.requesterName,
       });
-      await handleMarkAsRead(notification.id);
-      await loadData(); // Refresh notifications
+      
+      // Update local state to mark notification as read
+      setNotifications(notifications.map(notif => 
+        notif.id === notification.id 
+          ? { ...notif, read: true, status: 'accepted' }
+          : notif
+      ));
+
+      // Show success message
+      Alert.alert('Success', 'Friend request accepted!');
     } catch (error) {
       console.error('Error accepting friend request:', error);
+      Alert.alert('Error', 'Failed to accept friend request. Please try again.');
+    }
+  };
+
+  const handleDeclineFriendRequest = async (notification) => {
+    try {
+      await handleMarkAsRead(notification.id);
+      
+      // Update local state
+      setNotifications(notifications.map(notif => 
+        notif.id === notification.id 
+          ? { ...notif, read: true, status: 'declined' }
+          : notif
+      ));
+    } catch (error) {
+      console.error('Error declining friend request:', error);
+      Alert.alert('Error', 'Failed to decline friend request. Please try again.');
     }
   };
 
   const renderNotificationItem = (notification) => {
     const icon = NotificationIcons[notification.type] || {
       name: 'bell',
-      color: theme.colors.gray,
+      color: theme.colors.text,
     };
 
     return (
@@ -156,7 +182,7 @@ const Notifications = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.declineButton]}
-                onPress={() => handleMarkAsRead(notification.id)}
+                onPress={() => handleDeclineFriendRequest(notification)}
               >
                 <Text style={styles.actionButtonText}>Decline</Text>
               </TouchableOpacity>
@@ -165,6 +191,39 @@ const Notifications = () => {
         </View>
         {!notification.read && <View style={styles.unreadDot} />}
       </TouchableOpacity>
+    );
+  };
+
+  // Add function to group notifications
+  const groupNotifications = (notifs) => {
+    const now = new Date();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const oneWeek = 7 * oneDay;
+
+    return notifs.reduce((groups, notification) => {
+      const notifDate = new Date(notification.createdAt);
+      const timeDiff = now - notifDate;
+
+      if (timeDiff < oneDay) {
+        groups.new.push(notification);
+      } else if (timeDiff < oneWeek) {
+        groups.thisWeek.push(notification);
+      } else {
+        groups.earlier.push(notification);
+      }
+
+      return groups;
+    }, { new: [], thisWeek: [], earlier: [] });
+  };
+
+  const renderNotificationSection = (sectionTitle, sectionNotifications) => {
+    if (sectionNotifications.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+        {sectionNotifications.map(renderNotificationItem)}
+      </View>
     );
   };
 
@@ -177,6 +236,8 @@ const Notifications = () => {
       </ScreenWrapper>
     );
   }
+
+  const groupedNotifications = groupNotifications(notifications);
 
   return (
     <ScreenWrapper>
@@ -223,7 +284,11 @@ const Notifications = () => {
               <Text style={styles.emptyStateText}>No notifications</Text>
             </View>
           ) : (
-            notifications.map(renderNotificationItem)
+            <>
+              {renderNotificationSection('New', groupedNotifications.new)}
+              {renderNotificationSection('This week', groupedNotifications.thisWeek)}
+              {renderNotificationSection('Earlier', groupedNotifications.earlier)}
+            </>
           )}
         </ScrollView>
       </View>
@@ -297,7 +362,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   unreadItem: {
-    backgroundColor: theme.colors.dark + '08',
+    backgroundColor: theme.colors.primary + '30',
   },
   iconContainer: {
     width: hp(6),
@@ -329,7 +394,7 @@ const styles = StyleSheet.create({
     width: hp(1.2),
     height: hp(1.2),
     borderRadius: hp(0.6),
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.red,
     marginLeft: wp(2),
   },
   emptyState: {
@@ -349,21 +414,38 @@ const styles = StyleSheet.create({
     gap: wp(2),
   },
   actionButton: {
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(0.5),
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
     borderRadius: hp(1),
     minWidth: wp(20),
     alignItems: 'center',
   },
   acceptButton: {
-    backgroundColor: theme.colors.success + '20',
+    backgroundColor: theme.colors.text,
   },
   declineButton: {
-    backgroundColor: theme.colors.error + '20',
+    backgroundColor: theme.colors.red,
   },
   actionButtonText: {
     fontSize: hp(1.4),
-    fontWeight: '500',
+    fontWeight: '600',
+    color: 'white',
+  },
+  notificationStatus: {
+    fontSize: hp(1.4),
+    fontStyle: 'italic',
+    color: theme.colors.textLight,
+    marginTop: hp(0.5),
+  },
+  section: {
+    marginBottom: hp(3),
+  },
+  sectionTitle: {
+    fontSize: hp(2.2),
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginBottom: hp(2),
+    paddingHorizontal: wp(2),
   },
 });
 

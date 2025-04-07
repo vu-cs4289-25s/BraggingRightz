@@ -615,7 +615,7 @@ const BetDetails = () => {
           />
         }
       >
-        <Header title="Bet Details" showBackButton={true} />
+        <Header title="Bet Details" showBackButton={false} />
 
         <View style={styles.betInfo}>
           <View style={sharedStyles.groupHeader}>
@@ -1299,7 +1299,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   lockedBadge: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: theme.colors.dark,
   },
   completedBadge: {
     backgroundColor: theme.colors.success,
