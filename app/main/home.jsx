@@ -12,6 +12,7 @@ import {
   ImageBackground,
   ActivityIndicator,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -37,6 +38,7 @@ const Home = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [session, setSession] = useState(null);
   const [userGroups, setUserGroups] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -66,6 +68,15 @@ const Home = () => {
     }, [session?.uid]),
   );
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -83,6 +94,14 @@ const Home = () => {
       const betsWithInfo = await Promise.all(
         userBets.map(async (bet) => {
           try {
+            // Check if bet is expired and lock it if needed
+            const now = new Date();
+            const expiryDate = new Date(bet.expiresAt);
+            if (bet.status === 'open' && expiryDate <= now) {
+              await BetsService.lockBet(bet.id);
+              bet.status = 'locked';
+            }
+
             // Get group name
             let groupName = 'No Group';
             if (bet.groupId) {
@@ -458,7 +477,16 @@ const Home = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+          />
+        }
+      >
         {/* My Groups Preview */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>

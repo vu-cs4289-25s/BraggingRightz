@@ -180,10 +180,41 @@ class BetsService {
   async lockBet(betId) {
     try {
       const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const bet = betDoc.data();
+      const timestamp = serverTimestamp();
+
       await updateDoc(betRef, {
         status: 'locked',
-        updatedAt: new Date(),
+        updatedAt: timestamp,
       });
+
+      // Notify all participants that the bet is locked
+      const usersToNotify = new Set();
+      usersToNotify.add(bet.creatorId);
+
+      // Add all participants from each option
+      bet.answerOptions.forEach((option) => {
+        option.participants.forEach((id) => usersToNotify.add(id));
+      });
+
+      // Send notifications
+      for (const userId of usersToNotify) {
+        await NotificationsService.createNotification({
+          userId,
+          type: 'bet_locked',
+          title: 'Bet Locked',
+          message: `The bet "${bet.question}" has been locked. Waiting for results.`,
+          data: { betId },
+        });
+      }
+
+      return true;
     } catch (error) {
       console.error('Error locking bet:', error);
       throw error;
@@ -692,22 +723,31 @@ class BetsService {
         now.nanoseconds,
       );
 
-      // Get bets expiring in the next 24 hours or 3 hours
-      const expiringBetsQuery = query(
+      // Get both expiring and expired bets that are still open
+      const betsQuery = query(
         collection(db, 'bets'),
         where('status', '==', 'open'),
         where('expiresAt', '<=', oneDayFromNow),
-        where('expiresAt', '>', now),
       );
 
-      const snapshot = await getDocs(expiringBetsQuery);
+      const snapshot = await getDocs(betsQuery);
 
       for (const doc of snapshot.docs) {
         const bet = doc.data();
         const expiresAt = new Date(bet.expiresAt.seconds * 1000);
-        const hoursLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60));
+        const currentTime = new Date();
 
-        // Only notify at 24 hours and 3 hours before expiry
+        // If bet is expired, lock it
+        if (expiresAt <= currentTime) {
+          await this.lockBet(doc.id);
+          continue;
+        }
+
+        // For non-expired bets, send notifications at appropriate times
+        const hoursLeft = Math.ceil(
+          (expiresAt - currentTime) / (1000 * 60 * 60),
+        );
+
         if (
           (hoursLeft <= 24 && hoursLeft > 23) ||
           (hoursLeft <= 3 && hoursLeft > 2)
@@ -716,21 +756,21 @@ class BetsService {
 
           // Get all users to notify
           const usersToNotify = new Set();
-
-          // Add creator
           usersToNotify.add(bet.creatorId);
 
           // Add participants
-          if (bet.participants) {
-            bet.participants.forEach((id) => usersToNotify.add(id));
-          }
+          bet.answerOptions.forEach((option) => {
+            option.participants.forEach((id) => usersToNotify.add(id));
+          });
 
           // Add group members if it's a group bet
           if (bet.groupId) {
             const groupDoc = await getDoc(doc(db, 'groups', bet.groupId));
-            const groupData = groupDoc.data();
-            if (groupData.members) {
-              groupData.members.forEach((id) => usersToNotify.add(id));
+            if (groupDoc.exists()) {
+              const groupData = groupDoc.data();
+              if (groupData.members) {
+                groupData.members.forEach((id) => usersToNotify.add(id));
+              }
             }
           }
 
@@ -739,7 +779,7 @@ class BetsService {
             await NotificationsService.createBetExpirationNotification(
               userId,
               doc.id,
-              bet.title,
+              bet.question,
               expiresIn,
             );
           }

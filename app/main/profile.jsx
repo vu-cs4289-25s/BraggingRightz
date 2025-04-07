@@ -26,6 +26,7 @@ import NotificationsService from '../../src/endpoints/notifications.cjs';
 import loading from '../../components/Loading';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
+import UserService from '../../src/endpoints/user.cjs';
 
 const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
@@ -39,20 +40,39 @@ const Profile = () => {
   const [birthdate, setBirthdate] = useState('');
   const [bets, setBets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
 
-        // Fetch user's bets
+        const userProfile = await UserService.getUserProfile(sessionData.uid);
+        setUserProfile(userProfile);
+
         const userBets = await BetsService.getUserBets(sessionData.uid);
 
-        // Fetch creator info and group names for each bet
+        // Fix any inconsistent bet statuses and fetch additional info
         const betsWithInfo = await Promise.all(
           userBets.map(async (bet) => {
             try {
+              // Fix inconsistent status if needed
+              if (bet.winningOptionId && bet.status === 'locked') {
+                console.log('Fixing inconsistent bet status:', {
+                  id: bet.id,
+                  status: bet.status,
+                  winningOptionId: bet.winningOptionId,
+                });
+
+                await BetsService.updateBet(bet.id, {
+                  status: 'completed',
+                  updatedAt: new Date().toISOString(),
+                });
+                bet.status = 'completed';
+              }
+
               // Get group name
               let groupName = 'No Group';
               if (bet.groupId) {
@@ -96,7 +116,7 @@ const Profile = () => {
           }),
         );
 
-        // Sort bets by creation date
+        // Sort bets by creation date, newest first
         const sortedBets = betsWithInfo.sort((a, b) => {
           const dateA = a.createdAt?.seconds
             ? new Date(a.createdAt.seconds * 1000)
@@ -108,10 +128,10 @@ const Profile = () => {
         });
 
         setBets(sortedBets);
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert('Error', 'Failed to load data');
-      } finally {
         setLoading(false);
       }
     };
