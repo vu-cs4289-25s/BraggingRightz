@@ -22,12 +22,18 @@ import Header from '../../components/Header';
 import { useNavigation } from '@react-navigation/native';
 import AddFriendModal from '../../components/AddFriendModal';
 import FriendService from '../../src/endpoints/friend.cjs';
+import Avatar from '../../components/Avatar';
+import UserProfileModal from '../../components/UserProfileModal';
+
+const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
 const Friends = () => {
   const navigation = useNavigation();
   const [friendsList, setFriendsList] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   const fetchFriends = async () => {
     try {
@@ -68,12 +74,27 @@ const Friends = () => {
     }
   };
 
+  const handleAvatarPress = (userId) => {
+    setSelectedUserId(userId);
+    setShowUserProfile(true);
+  };
+
   const FriendCard = ({ friend }) => (
     <View style={styles.friendCard}>
       <View style={styles.friendInfo}>
-        <View style={styles.avatarContainer}>
-          <Icon name="user-circle" size={hp(6)} color={theme.colors.primary} />
-        </View>
+        <TouchableOpacity
+          onPress={() => handleAvatarPress(friend.userId)}
+          style={styles.avatarContainer}
+        >
+          <Avatar
+            uri={
+              friend.profilePicture ||
+              Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri
+            }
+            size={hp(6)}
+            rounded={theme.radius.xl}
+          />
+        </TouchableOpacity>
         <View style={styles.friendDetails}>
           <View style={styles.nameAndStatus}>
             <Text style={styles.username}>{friend.username}</Text>
@@ -202,6 +223,12 @@ const Friends = () => {
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           onAdd={handleAddFriend}
+        />
+
+        <UserProfileModal
+          visible={showUserProfile}
+          onClose={() => setShowUserProfile(false)}
+          userId={selectedUserId}
         />
       </View>
     </ScreenWrapper>

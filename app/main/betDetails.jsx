@@ -28,10 +28,9 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { sharedStyles } from '../styles/shared';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
 import Avatar from '../../components/Avatar';
+import UserProfileModal from '../../components/UserProfileModal';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; // Import FontAwesomeIcon
-import { faCrown } from '@fortawesome/free-solid-svg-icons'; // Import the specific crown icon
 
 const BetDetails = () => {
   const route = useRoute();
@@ -53,6 +52,8 @@ const BetDetails = () => {
   const [showResultModal, setShowResultModal] = useState(false);
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentError, setCommentError] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -404,6 +405,12 @@ const BetDetails = () => {
     }
   };
 
+  const handleAvatarPress = (userId) => {
+    if (userId === session?.uid) return; // Don't show modal for current user
+    setSelectedUserId(userId);
+    setShowUserProfile(true);
+  };
+
   if (loading) {
     return (
       <ScreenWrapper>
@@ -465,7 +472,7 @@ const BetDetails = () => {
         {/* Winner Crown for winning option */}
         {isWinner && (
           <View style={styles.crownContainer}>
-            <FontAwesomeIcon icon={faCrown} size={24} color="#FFD700" />
+            <Icon name="star" size={24} color="#FFD700" />
           </View>
         )}
 
@@ -734,11 +741,15 @@ const BetDetails = () => {
                   >
                     <View style={styles.commentHeader}>
                       <View style={styles.userInfo}>
-                        <Avatar
-                          uri={comment.profilePicture}
-                          size={hp(3)}
-                          rounded={theme.radius.xl}
-                        />
+                        <TouchableOpacity
+                          onPress={() => handleAvatarPress(comment.userId)}
+                        >
+                          <Avatar
+                            uri={comment.profilePicture}
+                            size={hp(3)}
+                            rounded={theme.radius.xl}
+                          />
+                        </TouchableOpacity>
                         <Text
                           style={[
                             styles.commentUser,
@@ -891,6 +902,11 @@ const BetDetails = () => {
           </TouchableOpacity>
         </View>
       )}
+      <UserProfileModal
+        visible={showUserProfile}
+        onClose={() => setShowUserProfile(false)}
+        userId={selectedUserId}
+      />
     </ScreenWrapper>
   );
 };

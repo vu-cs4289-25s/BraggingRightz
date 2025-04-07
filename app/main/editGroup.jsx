@@ -27,6 +27,7 @@ import GroupsService from '../../src/endpoints/groups.cjs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
+import UserProfileModal from '../../components/UserProfileModal';
 
 const DEFAULT_GROUP_IMAGE = require('../../assets/images/default-avatar.png');
 const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
@@ -46,6 +47,8 @@ const EditGroup = () => {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -282,6 +285,12 @@ const EditGroup = () => {
     );
   };
 
+  const handleMemberPress = (memberId) => {
+    if (memberId === session?.uid) return; // Don't show modal for current user
+    setSelectedUserId(memberId);
+    setShowUserProfile(true);
+  };
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -349,12 +358,26 @@ const EditGroup = () => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
               {members.map((member) => (
                 <View key={member.userId} style={styles.memberItem}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>{member.username}</Text>
-                    {member.isAdmin && (
-                      <Text style={styles.adminBadge}>Admin</Text>
-                    )}
-                  </View>
+                  <TouchableOpacity
+                    style={styles.memberInfo}
+                    onPress={() => handleMemberPress(member.userId)}
+                    disabled={member.userId === session?.uid}
+                  >
+                    <Avatar
+                      uri={
+                        member.profilePicture ||
+                        Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri
+                      }
+                      size={hp(4)}
+                      rounded={theme.radius.xl}
+                    />
+                    <View style={styles.memberDetails}>
+                      <Text style={styles.memberName}>{member.username}</Text>
+                      {member.isAdmin && (
+                        <Text style={styles.adminBadge}>Admin</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
                   {isAdmin && member.userId !== session.uid && (
                     <TouchableOpacity
                       onPress={() =>
@@ -417,6 +440,12 @@ const EditGroup = () => {
           </View>
         </View>
       </Modal>
+
+      <UserProfileModal
+        visible={showUserProfile}
+        onClose={() => setShowUserProfile(false)}
+        userId={selectedUserId}
+      />
     </ScreenWrapper>
   );
 };
@@ -590,5 +619,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  memberDetails: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: wp(2),
   },
 });
