@@ -836,6 +836,52 @@ class BetsService {
     }
   }
 
+  // Toggle comment reaction
+  async toggleCommentReaction(groupId, betId, commentId, userId, reaction) {
+    try {
+      const commentRef = doc(db, 'betComments', commentId);
+      const commentDoc = await getDoc(commentRef);
+
+      if (!commentDoc.exists()) {
+        throw new Error('Comment not found');
+      }
+
+      const commentData = commentDoc.data();
+      const reactions = commentData.reactions || {};
+      const reactionUsers = reactions[reaction] || [];
+
+      // Check if user already reacted with this emoji
+      const hasReacted = reactionUsers.includes(userId);
+
+      // Update the reaction
+      const updates = {};
+      if (hasReacted) {
+        // Remove reaction
+        updates[`reactions.${reaction}`] = arrayRemove(userId);
+      } else {
+        // Add reaction
+        updates[`reactions.${reaction}`] = arrayUnion(userId);
+      }
+
+      await updateDoc(commentRef, updates);
+
+      // If this is a new reaction and not from the comment author, send notification
+      if (!hasReacted && commentData.userId !== userId) {
+        await NotificationsService.createNewCommentNotification(
+          commentData.userId,
+          betId,
+          commentData.username,
+          commentData.content,
+        );
+      }
+
+      return { success: true };
+    } catch (error) {
+      this._handleError(error);
+      throw error;
+    }
+  }
+
   // Error handler
   _handleError(error) {
     console.error('BetsService Error:', error);
