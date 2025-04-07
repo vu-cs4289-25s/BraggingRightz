@@ -118,7 +118,9 @@ const UserProfileModal = ({ visible, onClose, userId }) => {
       await FriendService.addFriend({
         user2username: userProfile.username,
       });
-      setIsFriend(true);
+      // Update the friend status to pending_sent after successfully sending request
+      setFriendStatus('pending_sent');
+      setIsFriend(false);
     } catch (error) {
       console.error('Error adding friend:', error);
     }
@@ -196,7 +198,7 @@ const UserProfileModal = ({ visible, onClose, userId }) => {
               {/* Friend Status */}
               {userId !== currentUser?.uid && (
                 <View style={styles.friendSection}>
-                  {friendStatus === 'active' ? (
+                  {isFriend || friendStatus === 'active' ? (
                     <View style={styles.friendStatus}>
                       <Icon
                         name="check-circle"
