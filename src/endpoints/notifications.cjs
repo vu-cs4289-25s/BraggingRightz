@@ -13,6 +13,7 @@ const {
   serverTimestamp,
 } = require('firebase/firestore');
 const { db } = require('../firebase/config');
+const GroupsService = require('./groups.cjs');
 
 class NotificationsService {
   // Get user's notifications
@@ -95,15 +96,28 @@ class NotificationsService {
     betId,
     creatorName,
     betTitle,
-    groupName,
+    groupId,
   ) {
-    return this.createNotification({
-      userId,
-      type: 'new_bet',
-      title: `New bet in ${groupName}: "${betTitle}"`,
-      message: `${creatorName} created a new bet. Check it out!`,
-      data: { betId, creatorName, groupName },
-    });
+    try {
+      let groupName = 'Group';
+      if (groupId) {
+        try {
+          groupName = (await GroupsService.getGroupName(groupId)) || 'Group';
+        } catch (error) {
+          console.error('Error fetching group name:', error);
+        }
+      }
+
+      return this.createNotification({
+        userId,
+        type: 'new_bet',
+        title: `New bet in ${groupName}: "${betTitle}"`,
+        message: `${creatorName} created a new bet. Check it out!`,
+        data: { betId, creatorName, groupName, groupId },
+      });
+    } catch (error) {
+      this._handleError(error);
+    }
   }
 
   // Create a bet result notification
@@ -186,6 +200,17 @@ class NotificationsService {
     }
   }
 
+  // Create a friend request notification
+  async createFriendRequestNotification(userId, requesterId, requesterName) {
+    return this.createNotification({
+      userId,
+      type: 'friend_request',
+      title: `${requesterName} sent you a friend request`,
+      message: 'Tap to accept or decline the request',
+      data: { requesterId, requesterName },
+    });
+  }
+
   // Get unread count
   async getUnreadCount(userId) {
     try {
@@ -210,17 +235,6 @@ class NotificationsService {
       title: `${commenterName} commented on "${betTitle}"`,
       message: 'See what they said about your bet',
       data: { betId, commenterName },
-    });
-  }
-
-  // Create a friend request notification
-  async createFriendRequestNotification(userId, requesterId, requesterName) {
-    return this.createNotification({
-      userId,
-      type: 'follows',
-      title: `${requesterName} sent you a friend request`,
-      message: 'Tap to accept or decline the request',
-      data: { requesterId, requesterName },
     });
   }
 

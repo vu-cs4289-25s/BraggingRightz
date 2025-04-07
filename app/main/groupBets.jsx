@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import BetsService from '../../src/endpoints/bets.cjs';
@@ -17,6 +18,11 @@ import Avatar from '../../components/Avatar';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { hp, wp } from '../../helpers/common';
 import { theme } from '../../constants/theme';
+import { db } from '../../src/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
+
+const DEFAULT_GROUP_IMAGE = require('../../assets/images/default-avatar.png');
+const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
 const GroupBets = () => {
   const navigation = useNavigation();
@@ -33,16 +39,65 @@ const GroupBets = () => {
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
 
-        const tempName = await GroupsService.getGroupName(groupId);
+        // Get the actual group ID string if groupId is an object
+        const actualGroupId =
+          typeof groupId === 'object' ? groupId.id : groupId;
+
+        const tempName = await GroupsService.getGroupName(actualGroupId);
         setGroupName(tempName);
 
-        const tempGroup = await GroupsService.getGroup(groupId);
+        const tempGroup = await GroupsService.getGroup(actualGroupId);
         setGroup(tempGroup);
 
-        const groupBets = await BetsService.getGroupBets(groupId);
+        const groupBets = await BetsService.getGroupBets(actualGroupId);
+
+        // Fetch creator info for each bet
+        const betsWithCreatorInfo = await Promise.all(
+          groupBets.map(async (bet) => {
+            try {
+              if (!bet.creatorId) {
+                return {
+                  ...bet,
+                  creatorUsername: 'Unknown User',
+                  creatorProfilePicture:
+                    Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
+                };
+              }
+
+              const userDocRef = doc(db, 'users', bet.creatorId);
+              const userDocSnap = await getDoc(userDocRef);
+
+              if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                return {
+                  ...bet,
+                  creatorUsername: userData.username || 'Unknown User',
+                  creatorProfilePicture:
+                    userData.profilePicture ||
+                    Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
+                };
+              } else {
+                return {
+                  ...bet,
+                  creatorUsername: 'Unknown User',
+                  creatorProfilePicture:
+                    Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
+                };
+              }
+            } catch (error) {
+              console.error('Error fetching creator info:', error);
+              return {
+                ...bet,
+                creatorUsername: 'Unknown User',
+                creatorProfilePicture:
+                  Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
+              };
+            }
+          }),
+        );
 
         // Display bets with the newly created at the bottom
-        const sortedBets = groupBets.sort((a, b) => {
+        const sortedBets = betsWithCreatorInfo.sort((a, b) => {
           const dateA = a.createdAt?.seconds
             ? new Date(a.createdAt.seconds * 1000)
             : new Date(a.createdAt);
@@ -54,21 +109,11 @@ const GroupBets = () => {
 
         setBets(sortedBets);
       } catch (error) {
-        console.log('Error fetching bets:', error);
+        console.error('Error fetching bets:', error);
       }
     };
     fetchBets();
   }, [groupId]);
-
-  const fetchCreatorUsername = async (userId) => {
-    const user = await UserService.getUserProfile(userId);
-    return user.username;
-  };
-
-  const fetchCreatorProfilePic = async (userId) => {
-    const user = await UserService.getUserProfile(userId);
-    return user.profilePicture;
-  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -164,15 +209,12 @@ const GroupBets = () => {
             ]}
           >
             <Avatar
-              source={{
-                uri:
-                  fetchCreatorProfilePic(bet.creatorId) ||
-                  require('../../assets/images/default-avatar.png'),
-              }}
+              uri={bet.creatorProfilePicture}
               size={hp(3)}
+              rounded={theme.radius.xl}
             />
             <Text style={styles.creatorName}>
-              {fetchCreatorUsername(bet.creatorId)}
+              {bet.creatorUsername || 'Unknown User'}
             </Text>
           </View>
           <TouchableOpacity
@@ -302,20 +344,21 @@ const GroupBets = () => {
             showBackButton={true}
             rightComponent={
               <TouchableOpacity
-                /* Click to edit group */
                 onPress={() =>
-                  navigation.navigate('EditGroup', { groupId: group })
+                  navigation.navigate('EditGroup', {
+                    groupId: typeof group === 'object' ? group.id : group,
+                  })
                 }
                 style={styles.header}
                 paddingRight={wp(4)}
               >
                 <Avatar
-                  source={{
-                    uri:
-                      group?.avatar ||
-                      require('../../assets/images/default-avatar.png'),
-                  }}
+                  uri={
+                    group?.photoUrl ||
+                    Image.resolveAssetSource(DEFAULT_GROUP_IMAGE).uri
+                  }
                   size={hp(4)}
+                  rounded={theme.radius.xl}
                   style={styles.groupIcon}
                 />
               </TouchableOpacity>
@@ -330,7 +373,11 @@ const GroupBets = () => {
             </View>
           )}
           <TouchableOpacity
-            onPress={() => navigation.navigate('NewBet', { groupId: groupId })} //  add param here
+            onPress={() =>
+              navigation.navigate('NewBet', {
+                groupId: typeof groupId === 'object' ? groupId.id : groupId,
+              })
+            }
             style={styles.createButton}
           >
             <Text style={styles.createButtonText}>Create a New Bet</Text>

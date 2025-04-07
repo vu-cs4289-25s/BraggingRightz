@@ -530,13 +530,45 @@ describe('BetsService', () => {
         profilePicture: 'profile.jpg',
       };
 
+      const mockBetData = {
+        creatorId: 'creator123',
+        question: 'Test bet',
+      };
+
       const mockCommentRef = { id: 'comment1' };
+      const mockTimestamp = new Date('2024-01-01').toISOString();
+
+      // Mock document references and collections
+      const mockUserRef = { toString: () => 'users/user123' };
+      const mockBetRef = { toString: () => 'bets/bet123' };
+
+      doc.mockImplementation((db, collection, id) => {
+        if (collection === 'users') return mockUserRef;
+        if (collection === 'bets') return mockBetRef;
+        return {};
+      });
+
       collection.mockReturnValue({});
       addDoc.mockResolvedValue(mockCommentRef);
+      serverTimestamp.mockReturnValue(mockTimestamp);
 
-      getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => mockUserData,
+      // Mock user and bet document retrieval
+      getDoc.mockImplementation((ref) => {
+        if (ref === mockUserRef) {
+          return Promise.resolve({
+            exists: () => true,
+            data: () => mockUserData,
+          });
+        }
+        if (ref === mockBetRef) {
+          return Promise.resolve({
+            exists: () => true,
+            data: () => mockBetData,
+          });
+        }
+        return Promise.resolve({
+          exists: () => false,
+        });
       });
 
       const result = await BetsService.addComment(
@@ -551,16 +583,32 @@ describe('BetsService', () => {
         betId: 'bet123',
         userId: 'user123',
         username: 'testuser',
+        profilePicture: 'profile.jpg',
         content: 'Test comment',
-        createdAt: expect.any(String),
+        createdAt: expect.any(Date),
+        updatedAt: expect.any(Date),
       });
 
-      // Verify bet update with comment count
-      expect(updateDoc).toHaveBeenCalledWith(
+      // Verify comment was added to betComments collection
+      expect(addDoc).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
+          betId: 'bet123',
+          userId: 'user123',
+          username: 'testuser',
+          profilePicture: 'profile.jpg',
+          content: 'Test comment',
+          createdAt: mockTimestamp,
+          updatedAt: mockTimestamp,
+        }),
+      );
+
+      // Verify bet was updated with comment count
+      expect(updateDoc).toHaveBeenCalledWith(
+        mockBetRef,
+        expect.objectContaining({
           commentCount: 1,
-          updatedAt: expect.any(String),
+          updatedAt: mockTimestamp,
         }),
       );
     });
