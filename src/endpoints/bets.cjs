@@ -458,10 +458,20 @@ class BetsService {
         throw new Error('Invalid option selected');
       }
 
-      // Update the bet with new participant
+      // Update bet with new participant
+      const updatedOptions = bet.answerOptions.map(opt => {
+        if (opt.id === optionId) {
+          return {
+            ...opt,
+            participants: [...opt.participants, userId],
+            totalWager: opt.totalWager + bet.wagerAmount,
+          };
+        }
+        return opt;
+      });
+      
       await updateDoc(betRef, {
-        [`answerOptions.${optionId}.participants`]: arrayUnion(userId),
-        [`answerOptions.${optionId}.totalWager`]: increment(bet.wagerAmount),
+        answerOptions: updatedOptions,
         totalWager: increment(bet.wagerAmount),
         updatedAt: new Date(),
       });

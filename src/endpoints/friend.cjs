@@ -12,7 +12,6 @@ const NotificationsService = require('./notifications.cjs');
 
 class FriendService {
   // Add a new friend
-  // TODO: handle friend requests
   async addFriend({ user2username }) {
     try {
       // Get curr user information
