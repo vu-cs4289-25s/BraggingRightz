@@ -25,6 +25,11 @@ import AuthService from '../../src/endpoints/auth.cjs';
 import UserService from '../../src/endpoints/user.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../src/firebase/config';
+
+const DEFAULT_GROUP_IMAGE = require('../../assets/images/default-avatar.png');
+const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
 const EditGroup = () => {
   const navigation = useNavigation();
@@ -32,13 +37,14 @@ const EditGroup = () => {
   const [groupImage, setGroupImage] = useState(null);
   const [session, setSession] = useState(null);
   const [group, setGroup] = useState(null);
-  const [groupName, setGroupName] = useState(null);
+  const [groupName, setGroupName] = useState('');
   const route = useRoute();
   const { groupId } = route.params;
   const [members, setMembers] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newMemberUsername, setNewMemberUsername] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -46,14 +52,39 @@ const EditGroup = () => {
         const sessionData = await AuthService.getSession();
         setSession(sessionData);
 
-        setGroupName(groupId.name);
-        setInviteCode(groupId.inviteCode || '');
+        // Get the actual group ID string if groupId is an object
+        const actualGroupId =
+          typeof groupId === 'object' ? groupId.id : groupId;
 
-        const tempMembers = await Promise.all(
-          groupId.members.map(async (memberId) => {
+        // Fetch group data
+        const groupData = await GroupsService.getGroup(actualGroupId);
+        if (!groupData) {
+          throw new Error('Group not found');
+        }
+
+        setGroup(groupData);
+        setGroupName(groupData.name);
+        setInviteCode(groupData.inviteCode || '');
+        setGroupImage(groupData.photoUrl || null);
+
+        // Fetch member profiles
+        const memberProfiles = await Promise.all(
+          groupData.members.map(async (memberId) => {
             try {
-              const memberProfile = await UserService.getUserProfile(memberId);
-              return memberProfile;
+              const userDocRef = doc(db, 'users', memberId);
+              const userDocSnap = await getDoc(userDocRef);
+
+              if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                return {
+                  userId: memberId,
+                  username: userData.username || 'Unknown User',
+                  profilePicture:
+                    userData.profilePicture ||
+                    Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
+                };
+              }
+              return null;
             } catch (error) {
               console.error(
                 `Error fetching profile for UID: ${memberId}`,
@@ -64,13 +95,43 @@ const EditGroup = () => {
           }),
         );
 
-        setMembers(tempMembers.filter((profile) => profile !== null));
+        setMembers(memberProfiles.filter((profile) => profile !== null));
       } catch (error) {
-        console.log('Error fetching session:', error);
+        console.error('Error fetching session:', error);
+        Alert.alert('Error', 'Failed to load group information');
       }
     };
     fetchSession();
-  }, [members]);
+  }, [groupId]);
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+
+      if (!groupName?.trim()) {
+        Alert.alert('Error', 'Group name is required');
+        return;
+      }
+
+      const updateData = {
+        name: groupName.trim(),
+        photoUrl: groupImage,
+      };
+
+      await GroupsService.updateGroup(groupId.id, updateData);
+      Alert.alert('Success', 'Group updated successfully', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Groups'),
+        },
+      ]);
+    } catch (error) {
+      console.error('Error saving group:', error);
+      Alert.alert('Error', error.message || 'Failed to update group');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     try {
@@ -163,9 +224,7 @@ const EditGroup = () => {
                 <Avatar
                   uri={
                     groupImage ||
-                    Image.resolveAssetSource(
-                      require('../../assets/images/default-avatar.png'),
-                    ).uri
+                    Image.resolveAssetSource(DEFAULT_GROUP_IMAGE).uri
                   }
                   size={hp(15)}
                   rounded={theme.radius.xl}
@@ -207,6 +266,12 @@ const EditGroup = () => {
               placeholder="Edit Group Name"
               value={groupName}
               onChangeText={setGroupName}
+            />
+            <Button
+              title="Save Changes"
+              onPress={handleSave}
+              loading={loading}
+              style={styles.saveButton}
             />
             <Text style={styles.sectionTitle}>Group Members</Text>
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -384,5 +449,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
     textAlign: 'center',
     marginTop: hp(1),
+  },
+  saveButton: {
+    marginTop: hp(2),
+    marginBottom: hp(4),
+    width: '100%',
   },
 });

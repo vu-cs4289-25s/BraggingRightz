@@ -21,9 +21,13 @@ import Edit from '../../assets/icons/Edit';
 import AuthService from '../../src/endpoints/auth.cjs';
 import BetsService from '../../src/endpoints/bets.cjs';
 import Header from '../../components/Header';
-import GroupsService from '../../src/endpoints/groups';
-import NotificationsService from '../../src/endpoints/notifications';
+import GroupsService from '../../src/endpoints/groups.cjs';
+import NotificationsService from '../../src/endpoints/notifications.cjs';
 import loading from '../../components/Loading';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../src/firebase/config';
+
+const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
 const Profile = () => {
   const navigation = useNavigation();
@@ -45,24 +49,65 @@ const Profile = () => {
         // Fetch user's bets
         const userBets = await BetsService.getUserBets(sessionData.uid);
 
-        // Fetch group names for each bet
-        const betsWithGroupNames = await Promise.all(
+        // Fetch creator info and group names for each bet
+        const betsWithInfo = await Promise.all(
           userBets.map(async (bet) => {
-            if (bet.groupId) {
-              const groupName = await GroupsService.getGroupName(bet.groupId);
+            try {
+              // Get group name
+              let groupName = 'No Group';
+              if (bet.groupId) {
+                groupName = await GroupsService.getGroupName(bet.groupId);
+              }
+
+              // Get creator info
+              let creatorUsername = 'Unknown User';
+              let creatorProfilePicture =
+                Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri;
+
+              if (bet.creatorId) {
+                const userDocRef = doc(db, 'users', bet.creatorId);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                  const userData = userDocSnap.data();
+                  creatorUsername = userData.username || 'Unknown User';
+                  creatorProfilePicture =
+                    userData.profilePicture ||
+                    Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri;
+                }
+              }
+
               return {
                 ...bet,
                 groupName,
+                creatorUsername,
+                creatorProfilePicture,
+              };
+            } catch (error) {
+              console.error('Error fetching bet info:', error);
+              return {
+                ...bet,
+                groupName: 'No Group',
+                creatorUsername: 'Unknown User',
+                creatorProfilePicture:
+                  Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
               };
             }
-            return {
-              ...bet,
-              groupName: 'No Group',
-            };
           }),
         );
 
-        setBets(betsWithGroupNames);
+        // Sort bets by creation date
+        const sortedBets = betsWithInfo.sort((a, b) => {
+          const dateA = a.createdAt?.seconds
+            ? new Date(a.createdAt.seconds * 1000)
+            : new Date(a.createdAt);
+          const dateB = b.createdAt?.seconds
+            ? new Date(b.createdAt.seconds * 1000)
+            : new Date(b.createdAt);
+          return dateB - dateA;
+        });
+
+        setBets(sortedBets);
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert('Error', 'Failed to load data');

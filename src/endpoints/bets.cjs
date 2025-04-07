@@ -179,64 +179,28 @@ class BetsService {
   // Get bet by ID
   async getBet(betId) {
     try {
-      const betRef = doc(db, 'bets', betId);
-      const betDoc = await getDoc(betRef);
-
+      const betDoc = await getDoc(doc(db, 'bets', betId));
       if (!betDoc.exists()) {
         throw new Error('Bet not found');
       }
 
-      const bet = {
-        id: betId,
-        ...betDoc.data(),
-        createdAt:
-          betDoc.data().createdAt?.toDate?.() ||
-          new Date(betDoc.data().createdAt),
-        updatedAt:
-          betDoc.data().updatedAt?.toDate?.() ||
-          new Date(betDoc.data().updatedAt),
-      };
+      const data = betDoc.data();
 
-      // Check if bet should be locked
-      if (bet.status === 'open' && new Date(bet.expiresAt) <= new Date()) {
-        await updateDoc(betRef, {
-          status: 'locked',
-          updatedAt: new Date().toISOString(),
-        });
-        bet.status = 'locked';
-
-        // Notify creator
-        await NotificationsService.createNotification({
-          userId: bet.creatorId,
-          type: 'bets',
-          title: `Bet "${bet.question}" has expired`,
-          message: 'Please select the winning option to distribute coins.',
-          data: { betId },
-        });
+      // Get creator profile info
+      const creatorDoc = await getDoc(doc(db, 'users', data.creatorId));
+      if (creatorDoc.exists()) {
+        const creatorData = creatorDoc.data();
+        data.creatorUsername = creatorData.username;
+        data.creatorProfilePicture = creatorData.profilePicture;
       }
 
-      // Fetch participant names
-      const voterNames = {};
-      const participantPromises = bet.answerOptions.flatMap((option) =>
-        option.participants.map(async (participantId) => {
-          if (!voterNames[participantId]) {
-            try {
-              const userDoc = await getDoc(doc(db, 'users', participantId));
-              if (userDoc.exists()) {
-                voterNames[participantId] = userDoc.data().username;
-              }
-            } catch (error) {
-              console.error(`Error fetching user ${participantId}:`, error);
-              voterNames[participantId] = 'Unknown User';
-            }
-          }
-        }),
-      );
-
-      await Promise.all(participantPromises);
-      bet.voterNames = voterNames;
-
-      return bet;
+      return {
+        id: betDoc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+        expiresAt: data.expiresAt?.toDate?.() || new Date(data.expiresAt),
+        updatedAt: data.updatedAt?.toDate?.() || new Date(data.updatedAt),
+      };
     } catch (error) {
       console.error('Error getting bet:', error);
       throw error;
@@ -385,102 +349,77 @@ class BetsService {
   }
 
   // Get user's bets
-  async getUserBets(userId, status = null) {
+  async getUserBets(userId) {
     try {
-      // First get bets where user is a participant
-      const participantQuery = query(
-        collection(db, 'bets'),
-        where('participants', 'array-contains', userId),
-      );
-      const participantSnapshot = await getDocs(participantQuery);
-
-      // Then get bets where user is the creator
-      const creatorQuery = query(
+      // Query for bets where user is creator or participant
+      const createdBetsQuery = query(
         collection(db, 'bets'),
         where('creatorId', '==', userId),
+        orderBy('createdAt', 'desc'),
       );
-      const creatorSnapshot = await getDocs(creatorQuery);
 
-      // Combine results using a Map to remove duplicates
-      const betsMap = new Map();
+      const participatedBetsQuery = query(
+        collection(db, 'bets'),
+        where('participants', 'array-contains', userId),
+        orderBy('createdAt', 'desc'),
+      );
 
-      // Process and update status for each bet
-      const processSnapshot = async (snapshot) => {
-        for (const betDoc of snapshot.docs) {
-          const data = { id: betDoc.id, ...betDoc.data() };
-
-          // Ensure dates are properly formatted
-          if (data.createdAt) {
-            data.createdAt = data.createdAt.toDate
-              ? data.createdAt.toDate().toISOString()
-              : new Date(data.createdAt).toISOString();
-          }
-
-          if (data.updatedAt) {
-            data.updatedAt = data.updatedAt.toDate
-              ? data.updatedAt.toDate().toISOString()
-              : new Date(data.updatedAt).toISOString();
-          }
-
-          if (data.expiresAt) {
-            data.expiresAt = data.expiresAt.toDate
-              ? data.expiresAt.toDate().toISOString()
-              : new Date(data.expiresAt).toISOString();
-          }
-
-          // Check if bet should be locked
-          if (
-            data.status === 'open' &&
-            new Date(data.expiresAt) <= new Date()
-          ) {
-            const betRef = doc(db, 'bets', betDoc.id);
-            await updateDoc(betRef, {
-              status: 'locked',
-              updatedAt: new Date().toISOString(),
-            });
-            data.status = 'locked';
-
-            // Notify creator
-            await NotificationsService.createNotification({
-              userId: data.creatorId,
-              type: 'bets',
-              title: `Bet "${data.question}" has expired`,
-              message: 'Please select the winning option to distribute coins.',
-              data: { betId: betDoc.id },
-            });
-          }
-
-          // Get group name if groupId exists
-          if (data.groupId) {
-            try {
-              const groupDoc = await getDoc(doc(db, 'groups', data.groupId));
-              if (groupDoc.exists()) {
-                data.groupName = groupDoc.data().name;
-              }
-            } catch (error) {
-              console.error('Error fetching group name:', error);
-            }
-          }
-
-          betsMap.set(betDoc.id, data);
-        }
-      };
-
-      await Promise.all([
-        processSnapshot(participantSnapshot),
-        processSnapshot(creatorSnapshot),
+      // Get both sets of bets
+      const [createdSnapshot, participatedSnapshot] = await Promise.all([
+        getDocs(createdBetsQuery),
+        getDocs(participatedBetsQuery),
       ]);
 
-      // Convert map to array and filter by status if needed
-      let bets = Array.from(betsMap.values());
-      if (status) {
-        bets = bets.filter((bet) => bet.status === status);
-      }
+      // Combine and deduplicate bets
+      const betsMap = new Map();
 
-      // Sort by creation date, newest first
-      bets.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      // Add created bets
+      createdSnapshot.docs.forEach((doc) => {
+        betsMap.set(doc.id, { id: doc.id, ...doc.data() });
+      });
 
-      return bets;
+      // Add participated bets
+      participatedSnapshot.docs.forEach((doc) => {
+        if (!betsMap.has(doc.id)) {
+          betsMap.set(doc.id, { id: doc.id, ...doc.data() });
+        }
+      });
+
+      // Convert bets to array and process each one
+      const bets = Array.from(betsMap.values());
+
+      // Process each bet to include creator info
+      return await Promise.all(
+        bets.map(async (bet) => {
+          try {
+            if (bet.creatorId) {
+              const creatorDoc = await getDoc(doc(db, 'users', bet.creatorId));
+              if (creatorDoc.exists()) {
+                const creatorData = creatorDoc.data();
+                bet.creatorUsername = creatorData.username || 'Unknown User';
+                bet.creatorProfilePicture = creatorData.profilePicture || null;
+              }
+            }
+
+            return {
+              ...bet,
+              createdAt: bet.createdAt?.toDate?.() || new Date(bet.createdAt),
+              expiresAt: bet.expiresAt?.toDate?.() || new Date(bet.expiresAt),
+              updatedAt: bet.updatedAt?.toDate?.() || new Date(bet.updatedAt),
+            };
+          } catch (error) {
+            console.error('Error processing bet:', error);
+            return {
+              ...bet,
+              creatorUsername: 'Unknown User',
+              creatorProfilePicture: null,
+              createdAt: bet.createdAt?.toDate?.() || new Date(bet.createdAt),
+              expiresAt: bet.expiresAt?.toDate?.() || new Date(bet.expiresAt),
+              updatedAt: bet.updatedAt?.toDate?.() || new Date(bet.updatedAt),
+            };
+          }
+        }),
+      );
     } catch (error) {
       console.error('Error getting user bets:', error);
       throw error;

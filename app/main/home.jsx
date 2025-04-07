@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,6 +11,7 @@ import {
   Pressable,
   ImageBackground,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -25,9 +26,11 @@ import FriendService from '../../src/endpoints/friend.cjs';
 import BetsService from '../../src/endpoints/bets';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
-import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 import { sharedStyles } from '../styles/shared';
+const DEFAULT_GROUP_IMAGE = require('../../assets/images/default-avatar.png');
+const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
 const Home = () => {
   const navigation = useNavigation();
@@ -76,20 +79,68 @@ const Home = () => {
       // Load user's bets
       const userBets = await BetsService.getUserBets(sessionData.uid);
 
+      // Fetch creator info and group names for each bet
+      const betsWithInfo = await Promise.all(
+        userBets.map(async (bet) => {
+          try {
+            // Get group name
+            let groupName = 'No Group';
+            if (bet.groupId) {
+              groupName = await GroupsService.getGroupName(bet.groupId);
+            }
+
+            // Get creator info
+            let creatorUsername = 'Unknown User';
+            let creatorProfilePicture =
+              Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri;
+
+            if (bet.creatorId) {
+              const userDocRef = doc(db, 'users', bet.creatorId);
+              const userDocSnap = await getDoc(userDocRef);
+
+              if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                creatorUsername = userData.username || 'Unknown User';
+                creatorProfilePicture =
+                  userData.profilePicture ||
+                  Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri;
+              }
+            }
+
+            return {
+              ...bet,
+              groupName,
+              creatorUsername,
+              creatorProfilePicture,
+            };
+          } catch (error) {
+            console.error('Error fetching bet info:', error);
+            return {
+              ...bet,
+              groupName: 'No Group',
+              creatorUsername: 'Unknown User',
+              creatorProfilePicture:
+                Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
+            };
+          }
+        }),
+      );
+
       // Filter active bets (not expired and not completed)
       const now = new Date();
-      const activeBets = userBets.filter((bet) => {
+      const activeBets = betsWithInfo.filter((bet) => {
         const expiryDate = new Date(bet.expiresAt);
         return expiryDate > now && bet.status !== 'completed';
       });
 
-      // Filter completed bets
-      const completedBets = userBets.filter(
-        (bet) => bet.status === 'completed',
-      );
+      // Sort active bets by expiry date (soonest first)
+      activeBets.sort((a, b) => {
+        const dateA = new Date(a.expiresAt);
+        const dateB = new Date(b.expiresAt);
+        return dateA - dateB;
+      });
 
       setBets(activeBets);
-      setBets(completedBets);
 
       // Load unread notifications count
       const unreadCount = await NotificationsService.getUnreadCount(
@@ -432,7 +483,14 @@ const Home = () => {
                       navigation.navigate('GroupBets', { groupId: group.id })
                     }
                   >
-                    <Avatar size={hp(6)} source={{ uri: group.avatar }} />
+                    <Avatar
+                      uri={
+                        group.photoUrl ||
+                        Image.resolveAssetSource(DEFAULT_GROUP_IMAGE).uri
+                      }
+                      size={hp(6)}
+                      rounded={theme.radius.xl}
+                    />
                     <Text style={styles.groupName} numberOfLines={1}>
                       {group.name}
                     </Text>

@@ -22,7 +22,7 @@ export const sharedStyles = StyleSheet.create({
   },
   title: {
     color: theme.colors.text,
-    fontSize: hp(3.2),
+    fontSize: hp(2.7),
     fontWeight: 'bold',
   },
   sectionTitle: {

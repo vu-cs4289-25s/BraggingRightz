@@ -22,6 +22,7 @@ import Button from '../../components/Button';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { sharedStyles } from '../styles/shared';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
+import Avatar from '../../components/Avatar';
 
 const BetDetails = () => {
   const route = useRoute();
@@ -637,6 +638,11 @@ const BetDetails = () => {
                   >
                     <View style={styles.commentHeader}>
                       <View style={styles.userInfo}>
+                        <Avatar
+                          uri={comment.profilePicture}
+                          size={hp(3)}
+                          rounded={theme.radius.xl}
+                        />
                         <Text
                           style={[
                             styles.commentUser,
@@ -981,7 +987,7 @@ const styles = StyleSheet.create({
   },
   commentUser: {
     fontWeight: 'bold',
-    marginBottom: hp(0.5),
+    marginBottom: 0,
   },
   commentText: {
     fontSize: hp(2),
@@ -1235,7 +1241,7 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: wp(1),
+    gap: wp(2),
   },
   loadingIndicator: {
     marginLeft: wp(1),
