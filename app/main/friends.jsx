@@ -141,7 +141,7 @@ const Friends = () => {
                 onPress={() => handleDeleteRequest(friend.username)}
                 style={[styles.requestButton, styles.cancelButton]}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>Cancel Request</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.requestButtons}>
@@ -223,7 +223,9 @@ const Friends = () => {
             ) : (
               <>
                 {friendsList.filter(
-                  (f) => f.status === 'pending' && f.direction === 'recieved',
+                  (f) =>
+                    f.status === 'pending' &&
+                    (f.direction === 'recieved' || f.direction === 'received'),
                 ).length > 0 && (
                   <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Friend Requests</Text>
@@ -231,7 +233,8 @@ const Friends = () => {
                       .filter(
                         (friend) =>
                           friend.status === 'pending' &&
-                          friend.direction === 'recieved',
+                          (friend.direction === 'recieved' ||
+                            friend.direction === 'received'),
                       )
                       .map((friend) => (
                         <FriendCard key={friend.userId} friend={friend} />
@@ -391,6 +394,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     alignItems: 'flex-end',
     justifyContent: 'center',
+    minWidth: wp(25),
   },
   requestButtons: {
     flexDirection: 'row',
@@ -402,30 +406,32 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: wp(20),
+    minWidth: wp(25),
   },
   acceptButton: {
     backgroundColor: theme.colors.primary,
+    minWidth: wp(15),
   },
   declineButton: {
     backgroundColor: theme.colors.red,
+    minWidth: wp(15),
   },
   cancelButton: {
     backgroundColor: theme.colors.red,
   },
   acceptButtonText: {
     color: 'white',
-    fontSize: hp(1.6),
+    fontSize: hp(1.2),
     fontWeight: '600',
   },
   declineButtonText: {
     color: 'white',
-    fontSize: hp(1.6),
+    fontSize: hp(1.2),
     fontWeight: '600',
   },
   cancelButtonText: {
     color: 'white',
-    fontSize: hp(1.6),
+    fontSize: hp(1.2),
     fontWeight: '600',
   },
   activeBadge: {

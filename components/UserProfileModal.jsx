@@ -60,7 +60,11 @@ const UserProfileModal = ({ visible, onClose, userId }) => {
       const friends = await FriendService.getFriendList('all');
       const friendData = friends.find((friend) => friend.userId === userId);
       if (friendData) {
-        setFriendStatus(friendData.status + '_' + (friendData.direction || ''));
+        const direction =
+          friendData.direction === 'recieved'
+            ? 'received'
+            : friendData.direction;
+        setFriendStatus(friendData.status + '_' + (direction || ''));
         setIsFriend(friendData.status === 'active');
       } else {
         setFriendStatus('none');
@@ -215,10 +219,16 @@ const UserProfileModal = ({ visible, onClose, userId }) => {
                         <Text style={styles.pendingRequestText}>
                           Friend Request Sent
                         </Text>
-                        <Text style={styles.cancelText}>Cancel</Text>
+                        <Text
+                          style={styles.cancelText}
+                          onPress={handleCancelRequest}
+                        >
+                          Cancel
+                        </Text>
                       </TouchableOpacity>
                     </View>
-                  ) : friendStatus === 'pending_recieved' ? (
+                  ) : friendStatus === 'pending_recieved' ||
+                    friendStatus === 'pending_received' ? (
                     <View style={styles.requestButtons}>
                       <TouchableOpacity
                         style={styles.acceptButton}
@@ -372,19 +382,19 @@ const styles = StyleSheet.create({
   cancelRequestButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${theme.colors.warning}20`,
+    backgroundColor: `${theme.colors.blue}20`,
     paddingVertical: hp(1),
     paddingHorizontal: wp(4),
     borderRadius: theme.radius.xl,
   },
   pendingRequestText: {
-    color: theme.colors.warning,
+    color: theme.colors.blue,
     marginLeft: wp(2),
     fontWeight: '600',
   },
   cancelText: {
-    color: theme.colors.error,
-    marginLeft: wp(2),
+    color: theme.colors.red,
+    marginLeft: wp(4.5),
     fontWeight: '600',
   },
   requestButtons: {
@@ -399,7 +409,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.xl,
   },
   declineButton: {
-    backgroundColor: theme.colors.error,
+    backgroundColor: theme.colors.red,
     paddingVertical: hp(1),
     paddingHorizontal: wp(4),
     borderRadius: theme.radius.xl,
