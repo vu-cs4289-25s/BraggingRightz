@@ -92,14 +92,57 @@ class BetsService {
     }
   }
 
-  async createBet(betData) {
+  async createBet({
+    creatorId,
+    question,
+    wagerAmount,
+    answerOptions,
+    expiresAt,
+    groupId = null,
+  }) {
     try {
-      const betRef = await addDoc(collection(db, 'bets'), {
-        ...betData,
+      // Validate answer options
+      if (!Array.isArray(answerOptions) || answerOptions.length < 2) {
+        throw new Error('Bet must have at least 2 answer options');
+      }
+
+      // validate wager amount is a number
+      if (typeof wagerAmount !== 'number' || wagerAmount <= 0) {
+        throw new Error('Wager amount must be a positive number');
+      }
+
+      // validate expiresAt is a date and in the future
+      if (typeof expiresAt !== 'string' || new Date(expiresAt) < new Date()) {
+        throw new Error('Expires at must be a future date');
+      }
+
+      // Format answer options with IDs
+      const formattedOptions = answerOptions.map((option, index) => ({
+        id: `option_${index + 1}`,
+        text: option,
+        participants: [],
+        totalWager: 0,
+      }));
+
+      const betRef = doc(collection(db, 'bets'));
+      const betData = {
+        id: betRef.id,
+        creatorId,
+        question,
+        wagerAmount,
+        answerOptions: formattedOptions,
+        status: 'open',
         createdAt: new Date(),
         updatedAt: new Date(),
-      });
-      return betRef.id;
+        expiresAt,
+        resultReleasedAt: null,
+        participants: [],
+        groupId,
+        totalWager: 0,
+      };
+
+      await setDoc(betRef, betData);
+      return betData;
     } catch (error) {
       console.error('Error creating bet:', error);
       throw error;
@@ -109,10 +152,25 @@ class BetsService {
   async updateBet(betId, updateData) {
     try {
       const betRef = doc(db, 'bets', betId);
-      await updateDoc(betRef, {
+      const betDoc = await getDoc(betRef);
+
+      if (!betDoc.exists()) {
+        throw new Error('Bet not found');
+      }
+
+      const updates = {
         ...updateData,
         updatedAt: new Date(),
-      });
+      };
+
+      await updateDoc(betRef, updates);
+
+      // Get updated bet data
+      const updatedDoc = await getDoc(betRef);
+      return {
+        id: betId,
+        ...updatedDoc.data(),
+      };
     } catch (error) {
       console.error('Error updating bet:', error);
       throw error;
@@ -347,7 +405,7 @@ class BetsService {
   }
 
   // Place a bet
-  async placeBet(betId, userId, optionId, amount) {
+  async placeBet(betId, userId, optionId) {
     try {
       const betRef = doc(db, 'bets', betId);
       const betDoc = await getDoc(betRef);
@@ -371,13 +429,16 @@ class BetsService {
 
       // Update the bet with new participant
       await updateDoc(betRef, {
-        [`answerOptions.${option.id}.participants`]: arrayUnion(userId),
-        [`answerOptions.${option.id}.totalWager`]: increment(amount),
-        totalPool: increment(amount),
+        [`answerOptions.${optionId}.participants`]: arrayUnion(userId),
+        [`answerOptions.${optionId}.totalWager`]: increment(bet.wagerAmount),
+        totalWager: increment(bet.wagerAmount),
         updatedAt: new Date(),
       });
 
-      return true;
+      return {
+        success: true,
+        message: 'Bet placed successfully',
+      };
     } catch (error) {
       console.error('Error placing bet:', error);
       throw error;
@@ -448,96 +509,89 @@ class BetsService {
   // Get bet comments
   async getBetComments(betId) {
     try {
-      const commentsRef = collection(db, 'bets', betId, 'comments');
-      const commentsSnapshot = await getDocs(commentsRef);
+      const commentsQuery = query(
+        collection(db, 'betComments'),
+        where('betId', '==', betId),
+        orderBy('createdAt', 'desc'),
+      );
 
-      return commentsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt:
-          doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
-      }));
+      const commentsSnapshot = await getDocs(commentsQuery);
+      return commentsSnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        };
+      });
     } catch (error) {
-      console.error('Error getting bet comments:', error);
-      throw error;
+      this._handleError(error);
     }
   }
 
   // Add comment with user details
   async addComment(groupId, betId, userId, content) {
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      // Get user data
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+
       if (!userDoc.exists()) {
         throw new Error('User not found');
       }
-      const userData = userDoc.data();
 
-      const betDoc = await getDoc(doc(db, 'bets', betId));
+      // Get bet data to verify it exists
+      const betRef = doc(db, 'bets', betId);
+      const betDoc = await getDoc(betRef);
+
       if (!betDoc.exists()) {
         throw new Error('Bet not found');
       }
-      const betData = betDoc.data();
 
-      const comment = {
+      const userData = userDoc.data();
+      const timestamp = serverTimestamp();
+
+      // Create comment data
+      const commentData = {
         betId,
         userId,
         username: userData.username,
-        profilePicture: userData.profilePicture,
+        profilePicture: userData.profilePicture || null,
         content,
-        createdAt: serverTimestamp(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
       };
 
-      const commentRef = await addDoc(collection(db, 'betComments'), comment);
+      // Add comment to betComments collection
+      const commentRef = await addDoc(
+        collection(db, 'betComments'),
+        commentData,
+      );
 
-      // Update bet with comment count
-      await updateDoc(doc(db, 'bets', betId), {
+      // Update bet's comment count and timestamp
+      await updateDoc(betRef, {
         commentCount: increment(1),
-        updatedAt: serverTimestamp(),
+        updatedAt: timestamp,
       });
 
-      // Get all users to notify
-      const usersToNotify = new Set();
-
-      // Add bet creator
-      if (userId !== betData.creatorId) {
-        usersToNotify.add(betData.creatorId);
-      }
-
-      // Add participants
-      if (betData.participants) {
-        betData.participants.forEach((participantId) => {
-          if (participantId !== userId) {
-            usersToNotify.add(participantId);
-          }
-        });
-      }
-
-      // Add group members if it's a group bet
-      if (groupId) {
-        const groupDoc = await getDoc(doc(db, 'groups', groupId));
-        const groupData = groupDoc.data();
-        if (groupData.members) {
-          groupData.members.forEach((memberId) => {
-            if (memberId !== userId) {
-              usersToNotify.add(memberId);
-            }
-          });
-        }
-      }
-
-      // Send notifications
-      for (const recipientId of usersToNotify) {
+      // If this is a group bet, notify the bet creator
+      const betData = betDoc.data();
+      if (betData.creatorId && betData.creatorId !== userId) {
         await NotificationsService.createNewCommentNotification(
-          recipientId,
+          betData.creatorId,
           betId,
           userData.username,
-          betData.title,
+          betData.question,
         );
       }
 
+      // Return comment data with the generated ID
       return {
         id: commentRef.id,
-        ...comment,
+        ...commentData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
     } catch (error) {
       this._handleError(error);
