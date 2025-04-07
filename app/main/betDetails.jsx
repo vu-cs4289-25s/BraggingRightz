@@ -30,6 +30,8 @@ import NotificationsService from '../../src/endpoints/notifications.cjs';
 import Avatar from '../../components/Avatar';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'; // Import FontAwesomeIcon
+import { faCrown } from '@fortawesome/free-solid-svg-icons'; // Import the specific crown icon
 
 const BetDetails = () => {
   const route = useRoute();
@@ -463,7 +465,7 @@ const BetDetails = () => {
         {/* Winner Crown for winning option */}
         {isWinner && (
           <View style={styles.crownContainer}>
-            <Icon name="crown" size={24} color="#FFD700" />
+            <FontAwesomeIcon icon={faCrown} size={24} color="#FFD700" />
           </View>
         )}
 

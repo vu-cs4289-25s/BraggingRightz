@@ -45,6 +45,7 @@ const EditGroup = () => {
   const [newMemberUsername, setNewMemberUsername] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -67,6 +68,9 @@ const EditGroup = () => {
         setInviteCode(groupData.inviteCode || '');
         setGroupImage(groupData.photoUrl || null);
 
+        // Check if user is an admin
+        setIsAdmin(groupData.admins?.includes(sessionData.uid));
+
         // Fetch member profiles
         const memberProfiles = await Promise.all(
           groupData.members.map(async (memberId) => {
@@ -82,6 +86,7 @@ const EditGroup = () => {
                   profilePicture:
                     userData.profilePicture ||
                     Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri,
+                  isAdmin: groupData.admins?.includes(memberId),
                 };
               }
               return null;
@@ -206,8 +211,75 @@ const EditGroup = () => {
     }
   };
 
-  const handleRemoveMember = (memberId) => {
-    setMembers(members.filter((id) => id !== memberId));
+  const handleDeleteGroup = () => {
+    Alert.alert(
+      'Delete Group',
+      'Are you sure you want to delete this group? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await GroupsService.deleteGroup(groupId.id, session.uid);
+              Alert.alert('Success', 'Group deleted successfully');
+              navigation.navigate('Groups');
+            } catch (error) {
+              console.error('Error deleting group:', error);
+              Alert.alert('Error', error.message || 'Failed to delete group');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleRemoveMember = (memberId, username) => {
+    if (memberId === session.uid) {
+      Alert.alert('Error', 'You cannot remove yourself from the group');
+      return;
+    }
+
+    Alert.alert(
+      'Remove Member',
+      `Are you sure you want to remove ${username} from the group?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await GroupsService.removeMember(
+                groupId.id,
+                session.uid,
+                memberId,
+              );
+              setMembers(
+                members.filter((member) => member.userId !== memberId),
+              );
+              Alert.alert('Success', 'Member removed successfully');
+            } catch (error) {
+              console.error('Error removing member:', error);
+              Alert.alert('Error', error.message || 'Failed to remove member');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -276,15 +348,42 @@ const EditGroup = () => {
             <Text style={styles.sectionTitle}>Group Members</Text>
             <ScrollView contentContainerStyle={styles.scrollContent}>
               {members.map((member) => (
-                <TouchableOpacity key={member.userId} style={styles.memberItem}>
-                  <Text style={styles.memberName}>{member.username}</Text>
-                </TouchableOpacity>
+                <View key={member.userId} style={styles.memberItem}>
+                  <View style={styles.memberInfo}>
+                    <Text style={styles.memberName}>{member.username}</Text>
+                    {member.isAdmin && (
+                      <Text style={styles.adminBadge}>Admin</Text>
+                    )}
+                  </View>
+                  {isAdmin && member.userId !== session.uid && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleRemoveMember(member.userId, member.username)
+                      }
+                      style={styles.removeButton}
+                    >
+                      <Icon name="close" size={20} color={theme.colors.error} />
+                    </TouchableOpacity>
+                  )}
+                </View>
               ))}
               <Button
                 title="Add Member"
                 onPress={() => setModalVisible(true)}
               />
             </ScrollView>
+
+            {isAdmin && (
+              <View style={styles.dangerZone}>
+                <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
+                <Button
+                  title="Delete Group"
+                  onPress={handleDeleteGroup}
+                  style={styles.deleteButton}
+                  textStyle={styles.deleteButtonText}
+                />
+              </View>
+            )}
           </View>
         </ScrollView>
       </View>
@@ -369,6 +468,9 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   memberItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 10,
     borderWidth: 1,
     borderColor: '#ccc',
@@ -376,12 +478,81 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     backgroundColor: 'white',
   },
-  selectedMemberItem: {
-    borderColor: theme.colors.primary,
+  memberInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   memberName: {
     fontSize: 16,
     color: theme.colors.text,
+  },
+  adminBadge: {
+    fontSize: 12,
+    color: theme.colors.primary,
+    backgroundColor: `${theme.colors.primary}20`,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  removeButton: {
+    padding: 5,
+  },
+  dangerZone: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#fff5f5',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+  },
+  dangerZoneTitle: {
+    color: theme.colors.error,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  deleteButton: {
+    backgroundColor: theme.colors.error,
+  },
+  deleteButtonText: {
+    color: 'white',
+  },
+  inviteCodeContainer: {
+    marginVertical: hp(2),
+    padding: wp(4),
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.lg,
+  },
+  inviteCodeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'white',
+    padding: wp(4),
+    borderRadius: theme.radius.lg,
+    marginVertical: hp(1),
+  },
+  inviteCodeText: {
+    fontSize: hp(2.5),
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    letterSpacing: 2,
+  },
+  copyButton: {
+    padding: wp(2),
+  },
+  inviteCodeDescription: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+    textAlign: 'center',
+    marginTop: hp(1),
+  },
+  saveButton: {
+    marginTop: hp(2),
+    marginBottom: hp(4),
+    width: '100%',
   },
   centeredView: {
     flex: 1,
@@ -419,40 +590,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
-  },
-  inviteCodeContainer: {
-    marginVertical: hp(2),
-    padding: wp(4),
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radius.lg,
-  },
-  inviteCodeBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    padding: wp(4),
-    borderRadius: theme.radius.lg,
-    marginVertical: hp(1),
-  },
-  inviteCodeText: {
-    fontSize: hp(2.5),
-    fontWeight: 'bold',
-    color: theme.colors.primary,
-    letterSpacing: 2,
-  },
-  copyButton: {
-    padding: wp(2),
-  },
-  inviteCodeDescription: {
-    fontSize: hp(1.6),
-    color: theme.colors.textLight,
-    textAlign: 'center',
-    marginTop: hp(1),
-  },
-  saveButton: {
-    marginTop: hp(2),
-    marginBottom: hp(4),
-    width: '100%',
   },
 });
