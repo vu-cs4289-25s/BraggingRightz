@@ -459,7 +459,7 @@ class BetsService {
       }
 
       // Update bet with new participant
-      const updatedOptions = bet.answerOptions.map(opt => {
+      const updatedOptions = bet.answerOptions.map((opt) => {
         if (opt.id === optionId) {
           return {
             ...opt,
@@ -469,7 +469,7 @@ class BetsService {
         }
         return opt;
       });
-      
+
       await updateDoc(betRef, {
         answerOptions: updatedOptions,
         totalWager: increment(bet.wagerAmount),
