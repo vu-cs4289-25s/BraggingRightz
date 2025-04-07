@@ -20,6 +20,7 @@ import Groups from './app/main/groups';
 import Leaderboard from './app/main/leaderboard';
 import GroupBets from './app/main/groupBets';
 import EditGroup from './app/main/editGroup';
+import EditBet from './app/main/EditBet';
 
 const Stack = createStackNavigator();
 
@@ -47,6 +48,7 @@ export default function App() {
           <Stack.Screen name="Leaderboard" component={Leaderboard} />
           <Stack.Screen name="GroupBets" component={GroupBets} />
           <Stack.Screen name="EditGroup" component={EditGroup} />
+          <Stack.Screen name="EditBet" component={EditBet} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
