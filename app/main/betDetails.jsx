@@ -9,8 +9,13 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  RefreshControl,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
 import { hp, wp } from '../../helpers/common';
@@ -22,6 +27,10 @@ import Button from '../../components/Button';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { sharedStyles } from '../styles/shared';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
+import Avatar from '../../components/Avatar';
+import UserProfileModal from '../../components/UserProfileModal';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../src/firebase/config';
 
 const BetDetails = () => {
   const route = useRoute();
@@ -29,6 +38,7 @@ const BetDetails = () => {
   const { betId } = route.params;
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [betData, setBetData] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -42,10 +52,33 @@ const BetDetails = () => {
   const [showResultModal, setShowResultModal] = useState(false);
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentError, setCommentError] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   useEffect(() => {
     loadData();
     checkExpiredBet();
+  }, [betId]);
+
+  // Add refresh on focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const refresh = async () => {
+        await loadData();
+        await checkExpiredBet();
+      };
+      refresh();
+    }, [betId]),
+  );
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadData();
+      await checkExpiredBet();
+    } finally {
+      setRefreshing(false);
+    }
   }, [betId]);
 
   const loadData = async () => {
@@ -61,13 +94,56 @@ const BetDetails = () => {
         return;
       }
 
+      console.log('Loaded bet details:', {
+        id: betDetails.id,
+        status: betDetails.status,
+        winningOptionId: betDetails.winningOptionId,
+        resultReleasedAt: betDetails.resultReleasedAt,
+      });
+
+      // If bet has a winning option but status is still locked, update it to completed
+      if (betDetails.winningOptionId && betDetails.status === 'locked') {
+        console.log('Fixing inconsistent bet status: updating to completed');
+        await BetsService.updateBet(betId, {
+          status: 'completed',
+          updatedAt: new Date().toISOString(),
+        });
+        betDetails.status = 'completed';
+      }
+
+      // Fetch usernames for all participants
+      const voterNames = {};
+      const userPromises = betDetails.answerOptions.flatMap((option) =>
+        option.participants.map(async (participantId) => {
+          const userDocRef = doc(db, 'users', participantId);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            voterNames[participantId] = userData.username || 'Unknown User';
+          } else {
+            voterNames[participantId] = 'Unknown User';
+          }
+        }),
+      );
+      await Promise.all(userPromises);
+      betDetails.voterNames = voterNames;
+
+      // Check if bet is expired and lock it if needed
+      const now = new Date();
+      const expiryDate = new Date(betDetails.expiresAt);
+      if (betDetails.status === 'open' && expiryDate <= now) {
+        console.log('Locking expired bet');
+        await BetsService.lockBet(betId);
+        betDetails.status = 'locked';
+      }
+
       // If bet has a group, fetch group name
       if (betDetails.groupId) {
         const groupName = await GroupsService.getGroupName(betDetails.groupId);
         betDetails.groupName = groupName;
       }
 
-      // Process reactions - only mark as selected if user has actually reacted
+      // Process reactions
       const reactionCounts = {};
       const userReactionMap = {};
 
@@ -78,7 +154,6 @@ const BetDetails = () => {
           }
           reactionCounts[reaction.reaction]++;
 
-          // Only mark as selected if this user made the reaction
           if (reaction.userId === sessionData.uid) {
             userReactionMap[reaction.reaction] = true;
           }
@@ -87,6 +162,8 @@ const BetDetails = () => {
 
       betDetails.reactionCounts = reactionCounts;
       setUserReactions(userReactionMap);
+
+      console.log('Setting bet data with status:', betDetails.status);
       setBetData(betDetails);
 
       // Get comments
@@ -295,15 +372,27 @@ const BetDetails = () => {
 
       await Promise.all(notificationPromises);
 
+      // Update local state immediately
+      setBetData((prevData) => ({
+        ...prevData,
+        status: 'completed',
+        winningOptionId: optionId,
+        winningsPerPerson,
+      }));
+
+      // Close modal and show success message
+      setShowResultModal(false);
       Alert.alert(
         'Success',
         `Winner selected! ${winningsPerPerson} coins distributed to each winner.`,
         [
           {
             text: 'OK',
-            onPress: () => {
-              setShowResultModal(false);
-              loadData(); // Refresh bet data to show updated state
+            onPress: async () => {
+              // Refresh data after a short delay to ensure backend update is complete
+              setTimeout(async () => {
+                await loadData();
+              }, 500);
             },
           },
         ],
@@ -314,6 +403,12 @@ const BetDetails = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleAvatarPress = (userId) => {
+    if (userId === session?.uid) return; // Don't show modal for current user
+    setSelectedUserId(userId);
+    setShowUserProfile(true);
   };
 
   if (loading) {
@@ -377,7 +472,7 @@ const BetDetails = () => {
         {/* Winner Crown for winning option */}
         {isWinner && (
           <View style={styles.crownContainer}>
-            <Icon name="crown" size={24} color="#FFD700" />
+            <Icon name="star" size={24} color="#FFD700" />
           </View>
         )}
 
@@ -473,7 +568,16 @@ const BetDetails = () => {
 
   return (
     <ScreenWrapper>
-      <ScrollView style={sharedStyles.container}>
+      <ScrollView
+        style={sharedStyles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+          />
+        }
+      >
         <Header title="Bet Details" showBackButton={true} />
 
         <View style={styles.betInfo}>
@@ -637,6 +741,15 @@ const BetDetails = () => {
                   >
                     <View style={styles.commentHeader}>
                       <View style={styles.userInfo}>
+                        <TouchableOpacity
+                          onPress={() => handleAvatarPress(comment.userId)}
+                        >
+                          <Avatar
+                            uri={comment.profilePicture}
+                            size={hp(3)}
+                            rounded={theme.radius.xl}
+                          />
+                        </TouchableOpacity>
                         <Text
                           style={[
                             styles.commentUser,
@@ -789,6 +902,11 @@ const BetDetails = () => {
           </TouchableOpacity>
         </View>
       )}
+      <UserProfileModal
+        visible={showUserProfile}
+        onClose={() => setShowUserProfile(false)}
+        userId={selectedUserId}
+      />
     </ScreenWrapper>
   );
 };
@@ -981,7 +1099,7 @@ const styles = StyleSheet.create({
   },
   commentUser: {
     fontWeight: 'bold',
-    marginBottom: hp(0.5),
+    marginBottom: 0,
   },
   commentText: {
     fontSize: hp(2),
@@ -1235,7 +1353,7 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: wp(1),
+    gap: wp(2),
   },
   loadingIndicator: {
     marginLeft: wp(1),
