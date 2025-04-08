@@ -331,11 +331,7 @@ const EditGroup = () => {
           onPress: async () => {
             try {
               setLoading(true);
-              await GroupsService.removeMember(
-                groupId.id,
-                session.uid,
-                memberId,
-              );
+              await GroupsService.removeMember(groupId, session.uid, memberId);
               setMembers(
                 members.filter((member) => member.userId !== memberId),
               );

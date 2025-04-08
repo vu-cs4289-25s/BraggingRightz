@@ -20,7 +20,7 @@ import Groups from './app/main/groups';
 import Leaderboard from './app/main/leaderboard';
 import GroupBets from './app/main/groupBets';
 import EditGroup from './app/main/editGroup';
-import EditBet from './app/main/editBet';
+import EditBet from './app/main/EditBet';
 import { ThemeProvider } from './app/context/ThemeContext';
 
 const Stack = createStackNavigator();
