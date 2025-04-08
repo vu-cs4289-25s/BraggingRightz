@@ -308,8 +308,12 @@ const BetDetails = () => {
     try {
       setSubmitting(true);
       await BetsService.deleteBet(betId);
-      Alert.alert('Success', 'Bet deleted successfully');
-      navigation.goBack();
+      Alert.alert('Success', 'Bet deleted successfully', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Main'),
+        },
+      ]);
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to delete bet');
     } finally {

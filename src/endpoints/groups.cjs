@@ -196,6 +196,9 @@ class GroupsService {
       }
 
       const groupData = groupDoc.data();
+      if (!groupData.members || !groupData.admins) {
+        throw new Error('Invalid group data');
+      }
 
       // Check if admin is an admin or if user is removing themselves
       if (!groupData.admins.includes(adminId) && adminId !== memberId) {
@@ -206,20 +209,14 @@ class GroupsService {
         throw new Error('User is not a member of this group');
       }
 
-      // Allow users to remove themselves
-      if (memberId === adminId) {
-        // Check if they're the last admin
-        if (
-          groupData.admins.length === 1 &&
-          groupData.admins.includes(memberId)
-        ) {
-          throw new Error('Cannot remove the last admin');
-        }
+      // Allow users to remove themselves, but check if they're the last admin
+      if (
+        memberId === adminId &&
+        groupData.admins.length === 1 &&
+        groupData.admins.includes(memberId)
+      ) {
+        throw new Error('Cannot remove the last admin');
       }
-
-      // Get removed member's name
-      const userDoc = await getDoc(doc(db, 'users', memberId));
-      const userName = userDoc.data().username;
 
       const timestamp = new Date().toISOString();
 
@@ -230,37 +227,27 @@ class GroupsService {
         updatedAt: timestamp,
       });
 
-      // Notify removed member
-      await NotificationsService.createNotification({
-        userId: memberId,
-        type: 'groups',
-        title: `Removed from ${groupData.name}`,
-        message: 'You have been removed from the group',
-        data: { groupId },
+      // Update removed member's groups array
+      const userRef = doc(db, 'users', memberId);
+      await updateDoc(userRef, {
+        groups: arrayRemove(groupId),
+        updatedAt: timestamp,
       });
-
-      // Notify remaining members
-      for (const remainingMemberId of groupData.members) {
-        if (remainingMemberId !== memberId && remainingMemberId !== adminId) {
-          await NotificationsService.createNotification({
-            userId: remainingMemberId,
-            type: 'groups',
-            title: `${userName} was removed from ${groupData.name}`,
-            message: 'A member has been removed from your group',
-            data: { groupId },
-          });
-        }
-      }
 
       return true;
     } catch (error) {
-      this._handleError(error);
+      console.error('Error in removeMember:', error);
+      throw error;
     }
   }
 
   // Delete group
   async deleteGroup(groupId, userId) {
     try {
+      if (!groupId || !userId) {
+        throw new Error('Group ID and user ID are required');
+      }
+
       const groupRef = doc(db, 'groups', groupId);
       const groupDoc = await getDoc(groupRef);
 
@@ -269,26 +256,47 @@ class GroupsService {
       }
 
       const groupData = groupDoc.data();
+      if (!groupData.members) {
+        throw new Error('Invalid group data');
+      }
 
       // Check if user is creator
       if (groupData.creatorId !== userId) {
         throw new Error('Only the group creator can delete the group');
       }
 
+      // Delete all bets associated with the group
+      const betsQuery = query(
+        collection(db, 'bets'),
+        where('groupId', '==', groupId),
+      );
+      const betsSnapshot = await getDocs(betsQuery);
+      const betDeletions = betsSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(betDeletions);
+
       // Remove group from all members' groups arrays
-      const promises = groupData.members.map((memberId) => {
-        const userRef = doc(db, 'users', memberId);
-        return updateDoc(userRef, {
-          groups: arrayRemove(groupId),
-          updatedAt: new Date().toISOString(),
-        });
+      const memberUpdates = groupData.members.map(async (memberId) => {
+        try {
+          const userRef = doc(db, 'users', memberId);
+          await updateDoc(userRef, {
+            groups: arrayRemove(groupId),
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (error) {
+          console.error(`Error updating member ${memberId}:`, error);
+        }
       });
 
-      await Promise.all(promises);
+      // Wait for all member updates to complete
+      await Promise.all(memberUpdates);
+
+      // Finally delete the group document
       await deleteDoc(groupRef);
+
       return true;
     } catch (error) {
-      this._handleError(error);
+      console.error('Error in deleteGroup:', error);
+      throw error;
     }
   }
 
