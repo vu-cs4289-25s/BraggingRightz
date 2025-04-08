@@ -156,7 +156,7 @@ const EditGroup = () => {
         photoUrl: groupImage,
       };
 
-      await GroupsService.updateGroup(groupId.id, updateData);
+      await GroupsService.updateGroup(groupId, updateData);
       Alert.alert('Success', 'Group updated successfully', [
         {
           text: 'OK',
@@ -331,11 +331,7 @@ const EditGroup = () => {
           onPress: async () => {
             try {
               setLoading(true);
-              await GroupsService.removeMember(
-                groupId.id,
-                session.uid,
-                memberId,
-              );
+              await GroupsService.removeMember(groupId, session.uid, memberId);
               setMembers(
                 members.filter((member) => member.userId !== memberId),
               );
