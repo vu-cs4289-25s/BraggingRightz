@@ -124,10 +124,9 @@ const NewGroup = () => {
       Alert.alert('Group Successfully Created!', 'Create Some Bets!', [
         {
           text: 'OK',
-          onPress: () => navigation.navigate('Groups'),
+          onPress: () => navigation.replace('Main', { screen: 'Groups' }),
         },
       ]);
-      navigation.navigate('Groups');
     } catch (error) {
       Alert.alert('Group Creation Failed', error.message);
     } finally {
@@ -183,10 +182,9 @@ const NewGroup = () => {
       Alert.alert('Success', 'You have joined the group!', [
         {
           text: 'OK',
-          onPress: () => navigation.navigate('Groups'),
+          onPress: () => navigation.replace('Main', { screen: 'Groups' }),
         },
       ]);
-      navigation.navigate('Groups');
     } catch (error) {
       console.error('Join group error:', error);
       Alert.alert('Error', error.message);
@@ -223,7 +221,6 @@ const NewGroup = () => {
       <View style={styles.container}>
         <Header title="Groups" showBackButton={true} />
 
-        {/* Tabs */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'create' && styles.activeTab]}
@@ -256,10 +253,7 @@ const NewGroup = () => {
         {activeTab === 'create' ? (
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.avatarContainer}>
-              <TouchableOpacity
-                onPress={pickImage}
-                style={styles.avatarContainer}
-              >
+              <TouchableOpacity onPress={pickImage}>
                 <Avatar
                   uri={
                     groupPhoto ||
@@ -271,37 +265,37 @@ const NewGroup = () => {
                   rounded={theme.radius.xl}
                 />
                 <View style={styles.editIcon}>
-                  <Camera size={hp(2)} color={theme.colors.dark} />
+                  <Camera
+                    size={hp(2)}
+                    color={theme.colors.dark}
+                    rounded={theme.radius.xl}
+                  />
                 </View>
               </TouchableOpacity>
             </View>
-            {/*form*/}
+
             <View style={styles.form}>
-              <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
-                Group Name
-              </Text>
-              <View style={styles.inputContainer}>
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Group Name</Text>
                 <Input
-                  icon={<User name="User" size={26} strokeWidth={1.6} />}
                   placeholder="Name your new group"
                   onChangeText={(value) => (groupName.current = value)}
+                  style={{ width: '100%' }}
                 />
               </View>
 
-              <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
-                Description
-              </Text>
-              <View style={styles.inputContainer}>
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Group Description</Text>
                 <Input
-                  placeholder="Add group description"
+                  placeholder="Add your group description"
                   onChangeText={(value) => (description.current = value)}
+                  multiline
+                  style={{ width: '100%' }}
                 />
               </View>
 
-              <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
-                Visibility
-              </Text>
-              <View style={styles.inputContainer}>
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Visibility</Text>
                 <Dropdown
                   data={[
                     { label: 'Private', value: true },
@@ -313,57 +307,79 @@ const NewGroup = () => {
                   value={isPrivate}
                   onChange={(item) => setIsPrivate(item.value)}
                   style={styles.dropdown}
+                  placeholderStyle={styles.dropdownPlaceholder}
+                  selectedTextStyle={styles.dropdownSelected}
                 />
               </View>
 
-              <Text style={{ fontSize: hp(2), color: theme.colors.text }}>
-                Add Members
-              </Text>
-              <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.inputContainer}>
-                  {friends.length == 0 ? (
-                    <View style={styles.emptyContainer}>
-                      <Text style={styles.emptyText}>
-                        You have no friends yet.
-                      </Text>
-                    </View>
-                  ) : null}
-                  {friends.map((friend) => (
-                    <TouchableOpacity
-                      key={friend.userId}
-                      style={[
-                        styles.friendItem,
-                        selectedMembers.includes(friend.userId) &&
-                          styles.selectedFriendItem,
-                      ]}
-                      onPress={() => toggleSelection(friend.userId)}
-                    >
-                      <Text style={styles.friendName}>{friend.username}</Text>
-                    </TouchableOpacity>
-                  ))}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Add Members</Text>
+                <View style={styles.membersContainer}>
+                  {friends.length === 0 ? (
+                    <Text style={styles.emptyText}>
+                      You have no friends yet.
+                    </Text>
+                  ) : (
+                    friends.map((friend) => (
+                      <TouchableOpacity
+                        key={friend.userId}
+                        style={[
+                          styles.friendItem,
+                          selectedMembers.includes(friend.userId) &&
+                            styles.selectedFriendItem,
+                        ]}
+                        onPress={() => toggleSelection(friend.userId)}
+                      >
+                        <View style={styles.friendInfo}>
+                          <Avatar
+                            uri={friend.profilePicture}
+                            size={hp(4)}
+                            rounded={theme.radius.full}
+                          />
+                          <Text style={styles.friendName}>
+                            {friend.username}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </View>
-              </ScrollView>
+              </View>
+
               <Button
-                title={'Create Group'}
+                title="Create Group"
                 loading={loading}
                 onPress={onSubmit}
-                marginTop={10}
+                style={{ height: hp(7) }}
               />
             </View>
           </ScrollView>
         ) : (
           <View style={styles.joinContainer}>
-            <Text style={styles.joinTitle}>Join a Group</Text>
-            <Text style={styles.joinDescription}>
-              Enter the invite code to join a group
-            </Text>
-            <Input
-              placeholder="Enter invite code"
-              value={inviteCode}
-              onChangeText={setInviteCode}
-              autoCapitalize="characters"
-              style={styles.inviteCodeInput}
-            />
+            <View style={styles.joinContent}>
+              <Text style={styles.joinTitle}>Join a Group</Text>
+              <Text style={styles.joinDescription}>
+                Enter the invite code to join a group
+              </Text>
+              <View style={styles.codeInputContainer}>
+                <Input
+                  placeholder="Enter invite code"
+                  value={inviteCode}
+                  onChangeText={setInviteCode}
+                  autoCapitalize="characters"
+                  containerStyle={styles.inviteCodeInput}
+                />
+                <TouchableOpacity
+                  style={styles.pasteButton}
+                  onPress={async () => {
+                    const text = await Clipboard.getStringAsync();
+                    setInviteCode(text);
+                  }}
+                >
+                  <Text>Paste</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
             <Button
               title="Join Group"
               onPress={handleJoinGroup}
@@ -382,47 +398,52 @@ export default NewGroup;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    padding: wp(4),
   },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: hp(2),
+    marginBottom: hp(3),
     borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.background,
-    padding: 4,
+    padding: wp(1),
   },
   tab: {
     flex: 1,
     paddingVertical: hp(1.5),
     alignItems: 'center',
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xxl,
   },
   activeTab: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: 'white',
+    shadowColor: theme.colors.blue,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   tabText: {
     fontSize: hp(1.8),
-    color: theme.colors.text,
+    color: theme.colors.textLight,
     fontWeight: '500',
   },
   activeTabText: {
-    color: 'white',
+    color: theme.colors.blue,
+    fontWeight: '600',
   },
   scrollContent: {
-    paddingVertical: 20,
+    paddingBottom: hp(4),
   },
   avatarContainer: {
-    height: hp(14),
-    width: hp(14),
-    alignSelf: 'center',
+    alignItems: 'center',
+    marginBottom: hp(3),
   },
   editIcon: {
     position: 'absolute',
     bottom: 0,
-    right: -10,
+    right: -5,
     backgroundColor: 'white',
     borderRadius: 50,
-    padding: 8,
+    padding: 5,
     shadowColor: theme.colors.textLight,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
@@ -430,62 +451,128 @@ const styles = StyleSheet.create({
     elevation: 7,
   },
   form: {
-    marginVertical: 20,
-    padding: 16,
-    borderRadius: 8,
+    width: '100%',
+    gap: hp(2.5),
+    paddingHorizontal: wp(2),
   },
-  groupDetailsText: {
-    fontSize: hp(1.5),
+  formSection: {
+    width: '100%',
+    gap: hp(1),
+  },
+  sectionTitle: {
+    fontSize: hp(1.8),
+    fontWeight: '600',
     color: theme.colors.text,
-    marginBottom: 10,
+    marginBottom: hp(0.5),
   },
   inputContainer: {
-    marginBottom: 20,
+    width: '100%',
+    gap: hp(1),
+  },
+  textArea: {
+    height: hp(10),
+    textAlignVertical: 'top',
+    paddingTop: hp(1),
+    width: '100%',
   },
   dropdown: {
-    borderWidth: 2,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    height: hp(6),
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: wp(4),
+    width: '100%',
+  },
+  dropdownPlaceholder: {
+    color: theme.colors.textLight,
+    fontSize: hp(1.8),
+  },
+  dropdownSelected: {
+    color: theme.colors.text,
+    fontSize: hp(1.8),
+  },
+  membersContainer: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.lg,
+    padding: wp(4),
+    minHeight: hp(20),
+    marginBottom: hp(2),
   },
   friendItem: {
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    marginBottom: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: wp(3),
     backgroundColor: 'white',
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: hp(1),
   },
   selectedFriendItem: {
     borderColor: theme.colors.primary,
+    backgroundColor: `${theme.colors.primary}10`,
+  },
+  friendInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
   },
   friendName: {
-    fontSize: 16,
+    fontSize: hp(1.8),
+    color: theme.colors.text,
+    fontWeight: '500',
   },
   joinContainer: {
     flex: 1,
-    padding: wp(4),
+    justifyContent: 'flex-start',
+    width: '100%',
+    paddingHorizontal: wp(4),
+  },
+  joinContent: {
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: hp(4),
+    gap: hp(2),
+    width: '100%',
+    paddingHorizontal: wp(4),
   },
   joinTitle: {
-    fontSize: hp(2.5),
-    fontWeight: 'bold',
+    fontSize: hp(2.4),
+    fontWeight: '600',
     color: theme.colors.text,
-    marginBottom: hp(1),
+    marginBottom: hp(0.2),
   },
   joinDescription: {
     fontSize: hp(1.8),
     color: theme.colors.textLight,
-    marginBottom: hp(3),
     textAlign: 'center',
+    marginBottom: hp(1),
+  },
+  codeInputContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+    marginBottom: hp(2),
   },
   inviteCodeInput: {
-    width: '100%',
-    marginBottom: hp(3),
+    flex: 1,
+    height: hp(8),
+  },
+  pasteButton: {
+    height: hp(8),
+    width: hp(8),
+    borderRadius: theme.radius.xxl,
+    backgroundColor: theme.colors.blue + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   joinButton: {
-    width: '100%',
+    width: '90%',
+    height: hp(8),
+    marginTop: hp(2),
+    paddingVertical: hp(1.5),
+    paddingHorizontal: wp(4),
+    borderRadius: theme.radius.xxl,
   },
 });

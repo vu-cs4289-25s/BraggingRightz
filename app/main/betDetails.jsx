@@ -25,12 +25,14 @@ import AuthService from '../../src/endpoints/auth.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import Button from '../../components/Button';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { sharedStyles } from '../styles/shared';
+import { createSharedStyles } from '../styles/shared';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
 import Avatar from '../../components/Avatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
+
+const sharedStyles = createSharedStyles(theme);
 
 const BetDetails = () => {
   const route = useRoute();
@@ -54,6 +56,12 @@ const BetDetails = () => {
   const [commentError, setCommentError] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showReactionPopup, setShowReactionPopup] = useState(false);
+  const [selectedComment, setSelectedComment] = useState(null);
+  const [reactionPopupPosition, setReactionPopupPosition] = useState({
+    x: 0,
+    y: 0,
+  });
 
   useEffect(() => {
     loadData();
@@ -302,8 +310,12 @@ const BetDetails = () => {
     try {
       setSubmitting(true);
       await BetsService.deleteBet(betId);
-      Alert.alert('Success', 'Bet deleted successfully');
-      navigation.goBack();
+      Alert.alert('Success', 'Bet deleted successfully', [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Main'),
+        },
+      ]);
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to delete bet');
     } finally {
@@ -409,6 +421,40 @@ const BetDetails = () => {
     if (userId === session?.uid) return; // Don't show modal for current user
     setSelectedUserId(userId);
     setShowUserProfile(true);
+  };
+
+  const handleCommentLongPress = (comment, event) => {
+    const { pageY, pageX } = event.nativeEvent;
+    setSelectedComment(comment);
+    setReactionPopupPosition({ x: pageX, y: pageY });
+    setShowReactionPopup(true);
+  };
+
+  const handleCommentReaction = async (reaction) => {
+    if (!selectedComment) return;
+
+    try {
+      setSubmitting(true);
+      await BetsService.toggleCommentReaction(
+        betData.groupId,
+        betId,
+        selectedComment.id,
+        session.uid,
+        reaction,
+      );
+
+      // Refresh comments
+      const updatedComments = await BetsService.getBetComments(betId);
+      setComments(updatedComments);
+
+      // Close popup
+      setShowReactionPopup(false);
+      setSelectedComment(null);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to add reaction');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -569,7 +615,7 @@ const BetDetails = () => {
   return (
     <ScreenWrapper>
       <ScrollView
-        style={sharedStyles.container}
+        style={styles.container}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -670,30 +716,6 @@ const BetDetails = () => {
             </View>
           )}
 
-        <View style={styles.reactionsContainer}>
-          <Text style={styles.sectionTitle}>Reactions</Text>
-          <View style={styles.reactions}>
-            {reactions.map((reaction) => (
-              <TouchableOpacity
-                key={reaction}
-                style={[
-                  styles.reactionButton,
-                  userReactions[reaction] && styles.selectedReaction,
-                ]}
-                onPress={() => handleReaction(reaction)}
-                disabled={submitting}
-              >
-                <Text style={styles.reactionEmoji}>{reaction}</Text>
-                {betData.reactionCounts?.[reaction] > 0 && (
-                  <Text style={styles.reactionCount}>
-                    {betData.reactionCounts[reaction]}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
         <View style={styles.commentsSection}>
           <Text style={styles.sectionTitle}>Comments</Text>
           <View style={styles.commentInput}>
@@ -732,48 +754,75 @@ const BetDetails = () => {
               comments.map((comment) => {
                 const isCurrentUser = comment.userId === session?.uid;
                 return (
-                  <View
+                  <TouchableOpacity
                     key={comment.id}
-                    style={[
-                      styles.comment,
-                      isCurrentUser && styles.currentUserComment,
-                    ]}
+                    onLongPress={(event) =>
+                      handleCommentLongPress(comment, event)
+                    }
+                    delayLongPress={500}
                   >
-                    <View style={styles.commentHeader}>
-                      <View style={styles.userInfo}>
-                        <TouchableOpacity
-                          onPress={() => handleAvatarPress(comment.userId)}
-                        >
-                          <Avatar
-                            uri={comment.profilePicture}
-                            size={hp(3)}
-                            rounded={theme.radius.xl}
-                          />
-                        </TouchableOpacity>
-                        <Text
-                          style={[
-                            styles.commentUser,
-                            isCurrentUser && styles.currentUserText,
-                          ]}
-                        >
-                          {isCurrentUser
-                            ? 'You'
-                            : comment.username || 'Loading...'}
+                    <View
+                      style={[
+                        styles.comment,
+                        isCurrentUser && styles.currentUserComment,
+                      ]}
+                    >
+                      <View style={styles.commentHeader}>
+                        <View style={styles.userInfo}>
+                          <TouchableOpacity
+                            onPress={() => handleAvatarPress(comment.userId)}
+                          >
+                            <Avatar
+                              uri={comment.profilePicture}
+                              size={hp(3)}
+                              rounded={theme.radius.xl}
+                            />
+                          </TouchableOpacity>
+                          <Text
+                            style={[
+                              styles.commentUser,
+                              isCurrentUser && styles.currentUserText,
+                            ]}
+                          >
+                            {isCurrentUser
+                              ? 'You'
+                              : comment.username || 'Loading...'}
+                          </Text>
+                          {comment.username === 'Unknown User' && (
+                            <ActivityIndicator
+                              size="small"
+                              color={theme.colors.primary}
+                              style={styles.loadingIndicator}
+                            />
+                          )}
+                        </View>
+                        <Text style={styles.commentTime}>
+                          {new Date(comment.createdAt).toLocaleString()}
                         </Text>
-                        {comment.username === 'Unknown User' && (
-                          <ActivityIndicator
-                            size="small"
-                            color={theme.colors.primary}
-                            style={styles.loadingIndicator}
-                          />
-                        )}
                       </View>
-                      <Text style={styles.commentTime}>
-                        {new Date(comment.createdAt).toLocaleString()}
-                      </Text>
+                      <Text style={styles.commentText}>{comment.content}</Text>
+                      {comment.reactions &&
+                        Object.keys(comment.reactions).length > 0 && (
+                          <View style={styles.commentReactions}>
+                            {Object.entries(comment.reactions).map(
+                              ([reaction, users]) => (
+                                <View
+                                  key={reaction}
+                                  style={styles.commentReaction}
+                                >
+                                  <Text style={styles.reactionEmoji}>
+                                    {reaction}
+                                  </Text>
+                                  <Text style={styles.reactionCount}>
+                                    {users.length}
+                                  </Text>
+                                </View>
+                              ),
+                            )}
+                          </View>
+                        )}
                     </View>
-                    <Text style={styles.commentText}>{comment.content}</Text>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}
@@ -860,6 +909,41 @@ const BetDetails = () => {
               </View>
             </View>
           </View>
+        </Modal>
+
+        {/* Add Reaction Popup Modal */}
+        <Modal
+          visible={showReactionPopup}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowReactionPopup(false)}
+        >
+          <TouchableOpacity
+            style={styles.reactionPopupOverlay}
+            activeOpacity={1}
+            onPress={() => setShowReactionPopup(false)}
+          >
+            <View
+              style={[
+                styles.reactionPopup,
+                {
+                  top: reactionPopupPosition.y - 60,
+                  left: reactionPopupPosition.x - 100,
+                },
+              ]}
+            >
+              {reactions.map((reaction) => (
+                <TouchableOpacity
+                  key={reaction}
+                  style={styles.reactionPopupOption}
+                  onPress={() => handleCommentReaction(reaction)}
+                  disabled={submitting}
+                >
+                  <Text style={styles.reactionPopupEmoji}>{reaction}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
         </Modal>
       </ScrollView>
       {/* Creator Controls */}
@@ -1057,22 +1141,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginVertical: hp(2),
   },
-  reactionsContainer: {
-    marginTop: hp(2),
-  },
-  reactions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: wp(2),
-  },
-  reactionButton: {
-    padding: hp(1),
-    backgroundColor: '#f0f0f0',
-    borderRadius: theme.radius.lg,
-  },
-  reactionEmoji: {
-    fontSize: hp(2.5),
-  },
   commentsSection: {
     marginTop: hp(2),
   },
@@ -1252,7 +1320,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   lockedBadge: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: theme.colors.dark,
   },
   completedBadge: {
     backgroundColor: theme.colors.success,
@@ -1357,6 +1425,45 @@ const styles = StyleSheet.create({
   },
   loadingIndicator: {
     marginLeft: wp(1),
+  },
+  commentReactions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(1),
+    marginTop: hp(0.5),
+  },
+  commentReaction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1),
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  reactionPopupOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  reactionPopup: {
+    position: 'absolute',
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderRadius: hp(2),
+    padding: hp(1),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  reactionPopupOption: {
+    padding: hp(1),
+  },
+  reactionPopupEmoji: {
+    fontSize: hp(2.5),
   },
 });
 

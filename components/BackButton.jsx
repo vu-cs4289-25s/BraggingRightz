@@ -1,9 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import React from 'react';
 import Icon from '../assets/icons';
-import { theme } from '../constants/theme';
+import { useTheme } from '../app/context/ThemeContext';
 
 const BackButton = ({ size = 26, navigation }) => {
+  const { theme } = useTheme();
+
   return (
     <Pressable onPress={() => navigation.goBack()} style={styles.button}>
       <Icon
@@ -22,7 +24,7 @@ const styles = StyleSheet.create({
   button: {
     alignSelf: 'flex-start',
     padding: 5,
-    borderRadius: theme.radius.sm,
+    borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.07)',
   },
 });

@@ -231,7 +231,7 @@ const SignUp = () => {
                 onChangeText={(value) => (nameRef.current = value)}
               />
               <Input
-                icon={<Icon name="video" size={26} strokeWidth={1.6} />}
+                icon={<Icon name="user" size={26} strokeWidth={1.6} />}
                 placeholder="Enter your username"
                 onChangeText={(value) => (usernameRef.current = value)}
               />
