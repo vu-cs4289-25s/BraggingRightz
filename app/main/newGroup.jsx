@@ -124,10 +124,9 @@ const NewGroup = () => {
       Alert.alert('Group Successfully Created!', 'Create Some Bets!', [
         {
           text: 'OK',
-          onPress: () => navigation.navigate('Groups'),
+          onPress: () => navigation.replace('Main', { screen: 'Groups' }),
         },
       ]);
-      navigation.navigate('Groups');
     } catch (error) {
       Alert.alert('Group Creation Failed', error.message);
     } finally {
@@ -183,10 +182,9 @@ const NewGroup = () => {
       Alert.alert('Success', 'You have joined the group!', [
         {
           text: 'OK',
-          onPress: () => navigation.navigate('Groups'),
+          onPress: () => navigation.replace('Main', { screen: 'Groups' }),
         },
       ]);
-      navigation.navigate('Groups');
     } catch (error) {
       console.error('Join group error:', error);
       Alert.alert('Error', error.message);
