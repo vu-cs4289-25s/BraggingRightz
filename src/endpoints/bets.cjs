@@ -215,8 +215,6 @@ class BetsService {
         option.participants.forEach((id) => usersToNotify.add(id));
       });
 
-      // TODO: change bet status to completed if no participants have placed a bet
-
       // Send notifications
       for (const userId of usersToNotify) {
         await NotificationsService.createNotification({
