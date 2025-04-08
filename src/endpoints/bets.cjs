@@ -194,6 +194,18 @@ class BetsService {
         updatedAt: timestamp,
       });
 
+      // Auto-complete bet if no participants voted
+      const noParticipants = bet.answerOptions.every(
+        (opt) => !opt.participants || opt.participants.length === 0
+      );
+
+      if (noParticipants) {
+        await updateDoc(betRef, {
+          status: 'completed',
+          updatedAt: timestamp,
+        });
+      }
+
       // Notify all participants that the bet is locked
       const usersToNotify = new Set();
       usersToNotify.add(bet.creatorId);
@@ -202,6 +214,8 @@ class BetsService {
       bet.answerOptions.forEach((option) => {
         option.participants.forEach((id) => usersToNotify.add(id));
       });
+
+      // TODO: change bet status to completed if no participants have placed a bet
 
       // Send notifications
       for (const userId of usersToNotify) {
