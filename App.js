@@ -27,59 +27,35 @@ const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }} id={'root'}>
-          <Stack.Screen name="Welcome" component={Welcome} />
-          <Stack.Screen name="SignUp" component={SignUp} />
-          <Stack.Screen name="Login" component={Login} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
-          {/* replaced Home, NewBet screens with our bottom tab navigator */}
-          <Stack.Screen name="Main" component={BottomTabNavigator} />
-          <Stack.Screen name="Notifications" component={Notifications} />
-          <Stack.Screen name="NewGroup" component={NewGroup} />
-          <Stack.Screen name="Profile" component={Profile} />
-          <Stack.Screen name="EditProfile" component={EditProfile} />
-          <Stack.Screen name="Settings" component={Settings} />
-          <Stack.Screen name="Friends" component={Friends} />
-          <Stack.Screen name="BetDetails" component={BetDetails} />
-          <Stack.Screen name="MyBets" component={MyBets} />
-          <Stack.Screen name="NewBet" component={NewBet} />
-          <Stack.Screen name="Groups" component={Groups} />
-          <Stack.Screen name="Leaderboard" component={Leaderboard} />
-          <Stack.Screen name="GroupBets" component={GroupBets} />
-          <Stack.Screen name="EditGroup" component={EditGroup} />
-          <Stack.Screen name="EditBet" component={EditBet} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
-    <ThemeProvider>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }} id={'root'}>
-            <Stack.Screen name="Welcome" component={Welcome} />
-            <Stack.Screen name="SignUp" component={SignUp} />
-            <Stack.Screen name="Login" component={Login} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
-            {/* replaced Home, NewBet screens with our bottom tab navigator */}
-            <Stack.Screen name="Main" component={BottomTabNavigator} />
-            <Stack.Screen name="Notifications" component={Notifications} />
-            <Stack.Screen name="NewGroup" component={NewGroup} />
-            <Stack.Screen name="Profile" component={Profile} />
-            <Stack.Screen name="EditProfile" component={EditProfile} />
-            <Stack.Screen name="Settings" component={Settings} />
-            <Stack.Screen name="Friends" component={Friends} />
-            <Stack.Screen name="BetDetails" component={BetDetails} />
-            <Stack.Screen name="MyBets" component={MyBets} />
-            <Stack.Screen name="NewBet" component={NewBet} />
-            <Stack.Screen name="Groups" component={Groups} />
-            <Stack.Screen name="Leaderboard" component={Leaderboard} />
-            <Stack.Screen name="GroupBets" component={GroupBets} />
-            <Stack.Screen name="EditGroup" component={EditGroup} />
-            <Stack.Screen name="EditBet" component={EditBet} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </ThemeProvider>
+    <>
+      <ThemeProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <Stack.Navigator screenOptions={{ headerShown: false }} id={'root'}>
+              <Stack.Screen name="Welcome" component={Welcome} />
+              <Stack.Screen name="SignUp" component={SignUp} />
+              <Stack.Screen name="Login" component={Login} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+              {/* replaced Home, NewBet screens with our bottom tab navigator */}
+              <Stack.Screen name="Main" component={BottomTabNavigator} />
+              <Stack.Screen name="Notifications" component={Notifications} />
+              <Stack.Screen name="NewGroup" component={NewGroup} />
+              <Stack.Screen name="Profile" component={Profile} />
+              <Stack.Screen name="EditProfile" component={EditProfile} />
+              <Stack.Screen name="Settings" component={Settings} />
+              <Stack.Screen name="Friends" component={Friends} />
+              <Stack.Screen name="BetDetails" component={BetDetails} />
+              <Stack.Screen name="MyBets" component={MyBets} />
+              <Stack.Screen name="NewBet" component={NewBet} />
+              <Stack.Screen name="Groups" component={Groups} />
+              <Stack.Screen name="Leaderboard" component={Leaderboard} />
+              <Stack.Screen name="GroupBets" component={GroupBets} />
+              <Stack.Screen name="EditGroup" component={EditGroup} />
+              <Stack.Screen name="EditBet" component={EditBet} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </>
   );
 }
