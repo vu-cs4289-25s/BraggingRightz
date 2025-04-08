@@ -405,6 +405,34 @@ class UserService {
       this._handleError(error);
     }
   }
+
+  // Search users by username
+  async searchUsers(searchQuery) {
+    try {
+      if (!searchQuery || searchQuery.length < 2) return [];
+
+      const usersRef = collection(db, 'users');
+      const q = query(
+        usersRef,
+        orderBy('username'),
+        where('username', '>=', searchQuery.toLowerCase()),
+        where('username', '<=', searchQuery.toLowerCase() + '\uf8ff'),
+        limit(5),
+      );
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map((doc) => ({
+        userId: doc.id,
+        username: doc.data().username,
+        trophies: doc.data().trophies || 0,
+        winRate: this._calculateWinRate(doc.data()),
+        profilePicture: doc.data().profilePicture,
+      }));
+    } catch (error) {
+      console.error('Error searching users:', error);
+      return [];
+    }
+  }
 }
 
 module.exports = new UserService();
