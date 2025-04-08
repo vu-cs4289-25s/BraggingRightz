@@ -909,7 +909,7 @@ const Home = () => {
   return (
     <ScreenWrapper style={styles.container}>
       <View style={sharedStyles.header}>
-        <Text style={sharedStyles.title}>BraggingRightz</Text>
+        <Text style={sharedStyles.title}>BraggingRights</Text>
         <View style={styles.headerIcons}>
           <Pressable
             onPress={() => navigation.navigate('Notifications')}
