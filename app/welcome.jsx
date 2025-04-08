@@ -37,6 +37,7 @@ const Welcome = () => {
       color: theme.colors.text,
     },
     footer: {
+      marginBottom: hp(12),
       gap: 30,
       width: '100%',
     },
@@ -66,14 +67,14 @@ const Welcome = () => {
 
         {/*title*/}
         <View style={{ gap: 10 }}>
-          <Text style={styles.title}>Bragging Rightz!</Text>
+          <Text style={styles.title}>Bragging Rights!</Text>
           <Text style={styles.punchline}>Bet Big, Brag Bigger</Text>
         </View>
         {/*footer*/}
         <View style={styles.footer}>
           <Button
-            title="Getting Started"
-            buttonStyle={{ marginHorizontal: wp(3) }}
+            title="Get Started!"
+            buttonStyle={{ marginHorizontal: wp() }}
             onPress={() => navigation.navigate('SignUp')}
           />
           <View style={styles.bottomTextContainer}>
