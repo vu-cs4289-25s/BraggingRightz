@@ -196,7 +196,7 @@ class BetsService {
 
       // Auto-complete bet if no participants voted
       const noParticipants = bet.answerOptions.every(
-        (opt) => !opt.participants || opt.participants.length === 0
+        (opt) => !opt.participants || opt.participants.length === 0,
       );
 
       if (noParticipants) {
@@ -473,17 +473,17 @@ class BetsService {
       // Get user doc to subtract wager from coins
       const userRef = doc(db, 'users', userId);
       const userDoc = await getDoc(userRef);
-  
+
       if (!userDoc.exists()) {
         throw new Error('User not found');
       }
-  
+
       const userData = userDoc.data();
-  
+
       if (userData.numCoins < bet.wagerAmount) {
         throw new Error('Insufficient coins to place this bet');
       }
-  
+
       await updateDoc(userRef, {
         numCoins: increment(-bet.wagerAmount),
       });
