@@ -156,7 +156,7 @@ const EditGroup = () => {
         photoUrl: groupImage,
       };
 
-      await GroupsService.updateGroup(groupId.id, updateData);
+      await GroupsService.updateGroup(groupId, updateData);
       Alert.alert('Success', 'Group updated successfully', [
         {
           text: 'OK',
