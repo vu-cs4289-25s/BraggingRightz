@@ -427,6 +427,8 @@ class UserService {
     } catch (error) {
       console.error('Error awarding coins:', error);
       throw new Error('Failed to award coins');
+    }
+  }
   // Search users by username
   async searchUsers(searchQuery) {
     try {
