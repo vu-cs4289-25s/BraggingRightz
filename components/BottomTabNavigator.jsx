@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Home from '../app/main/home'; // adjust paths as needed
 import NewBet from '../app/main/newBet';
 import Profile from '../app/main/profile';
-import { theme } from '../constants/theme';
 import Location from '../assets/icons/Location';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { hp } from '../helpers/common';
@@ -12,12 +11,14 @@ import LeaderboardScreen from '../app/main/leaderboard';
 import FriendService from '../src/endpoints/friend.cjs';
 import { useState, useEffect } from 'react';
 import { auth } from '../src/firebase/config';
+import { useTheme } from '../app/context/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 
 const BottomTabNavigator = () => {
   const [friends, setFriends] = useState([]);
   const currentUser = auth.currentUser;
+  const { theme } = useTheme();
 
   useEffect(() => {
     const fetchFriends = async () => {
@@ -32,11 +33,13 @@ const BottomTabNavigator = () => {
       screenOptions={{
         headerShown: false, // we use our custom header inside screens if needed
         tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textLight,
         tabBarStyle: {
           height: hp(7) + hp(2),
           paddingBottom: hp(1),
           marginBottom: 0,
-          backgroundColor: theme.colors.background,
+          backgroundColor: theme.colors.card,
+          borderTopColor: theme.colors.border,
         },
       }}
     >

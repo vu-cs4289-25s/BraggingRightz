@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenWrapper from '../../components/ScreenWrapper';
@@ -139,94 +141,107 @@ const NewBet = () => {
 
   return (
     <ScreenWrapper>
-      <ScrollView style={styles.container}>
-        <Header title="Create New Bet" showBackButton={true} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <ScrollView
+          style={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Header title="Create New Bet" showBackButton={true} />
 
-        <View style={styles.form}>
-          <Text style={styles.label}>Select Group</Text>
-          <Dropdown
-            style={styles.dropdown}
-            data={groups}
-            labelField="label"
-            valueField="value"
-            placeholder="Select a group"
-            value={selectedGroup}
-            onChange={(item) => setSelectedGroup(item.value)}
-          />
-
-          <Text style={styles.label}>Question</Text>
-          <Input
-            placeholder="What's your bet?"
-            value={question}
-            onChangeText={setQuestion}
-            returnKeyType="done"
-            blurOnSubmit={true}
-          />
-
-          <Text style={styles.label}>Options</Text>
-          {options.map((option, index) => (
-            <View key={index} style={styles.optionContainer}>
-              <Input
-                style={styles.optionInput}
-                placeholder={`Option ${index + 1}`}
-                value={option}
-                onChangeText={(text) => updateOption(text, index)}
-                returnKeyType="done"
-                blurOnSubmit={true}
-              />
-              {options.length > 2 && (
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => removeOption(index)}
-                >
-                  <Text style={styles.removeButtonText}>×</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
-
-          <TouchableOpacity style={styles.addButton} onPress={addOption}>
-            <Text style={styles.addButtonText}>+ Add Option</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Wager Amount (coins)</Text>
-          <Input
-            placeholder="Enter wager amount"
-            value={wagerAmount}
-            onChangeText={setWagerAmount}
-            keyboardType="numeric"
-            returnKeyType="done"
-            blurOnSubmit={true}
-          />
-
-          <Text style={styles.label}>Voting Ends</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateButtonText}>
-              {endTime.toLocaleString()}
-            </Text>
-          </TouchableOpacity>
-
-          {showDatePicker && (
-            <DateTimePickerModal
-              isVisible={showDatePicker}
-              mode="datetime"
-              onConfirm={handleDateConfirm}
-              onCancel={() => setShowDatePicker(false)}
-              minimumDate={new Date()}
+          <View style={styles.form}>
+            <Text style={styles.label}>Select Group</Text>
+            <Dropdown
+              style={styles.dropdown}
+              data={groups}
+              labelField="label"
+              valueField="value"
+              placeholder="Select a group"
+              value={selectedGroup}
+              onChange={(item) => setSelectedGroup(item.value)}
             />
-          )}
 
-          <Button
-            title="Create Bet"
-            onPress={submitBet}
-            loading={loading}
-            style={styles.submitButton}
-          />
-        </View>
-      </ScrollView>
+            <Text style={styles.label}>Question</Text>
+            <Input
+              placeholder="What's your bet?"
+              value={question}
+              onChangeText={setQuestion}
+              returnKeyType="done"
+              blurOnSubmit={true}
+            />
+
+            <Text style={styles.label}>Options</Text>
+            {options.map((option, index) => (
+              <View key={index} style={styles.optionContainer}>
+                <Input
+                  style={styles.optionInput}
+                  placeholder={`Option ${index + 1}`}
+                  value={option}
+                  onChangeText={(text) => updateOption(text, index)}
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                />
+                {options.length > 2 && (
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeOption(index)}
+                  >
+                    <Text style={styles.removeButtonText}>×</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+
+            <TouchableOpacity style={styles.addButton} onPress={addOption}>
+              <Text style={styles.addButtonText}>+ Add Option</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.label}>Wager Amount (coins)</Text>
+            <Input
+              placeholder="Enter wager amount"
+              value={wagerAmount}
+              onChangeText={setWagerAmount}
+              keyboardType="numeric"
+              returnKeyType="done"
+              blurOnSubmit={true}
+            />
+
+            <Text style={styles.label}>Voting Ends</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.dateButtonText}>
+                {endTime.toLocaleString()}
+              </Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePickerModal
+                isVisible={showDatePicker}
+                mode="datetime"
+                onConfirm={handleDateConfirm}
+                onCancel={() => setShowDatePicker(false)}
+                minimumDate={new Date()}
+              />
+            )}
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Create Bet"
+              onPress={submitBet}
+              loading={loading}
+              style={styles.submitButton}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 };
@@ -237,6 +252,7 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: wp(4),
+    flex: 1,
   },
   label: {
     fontSize: hp(2),
@@ -291,8 +307,19 @@ const styles = StyleSheet.create({
     fontSize: hp(1.8),
     color: theme.colors.text,
   },
+  buttonContainer: {
+    padding: wp(4),
+    paddingTop: hp(4),
+    paddingBottom: Platform.OS === 'ios' ? hp(8) : hp(4),
+    backgroundColor: 'light gray',
+  },
   submitButton: {
-    marginTop: hp(3),
+    height: hp(7),
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
   },
 });
 

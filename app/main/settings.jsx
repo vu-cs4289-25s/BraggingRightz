@@ -20,15 +20,15 @@ import AuthService from '../../src/endpoints/auth.cjs';
 import SettingsService from '../../src/endpoints/settings.cjs';
 import UserService from '../../src/endpoints/user.cjs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useTheme } from '../context/ThemeContext';
 
 const Settings = () => {
   const navigation = useNavigation();
   const fadeAnim = new Animated.Value(0);
+  const { theme, isDarkMode, toggleTheme } = useTheme();
   const [settings, setSettings] = useState({
     pushNotifications: true,
     emailNotifications: true,
-    privateProfile: false,
-    showOnlineStatus: true,
     darkMode: false,
   });
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,12 @@ const Settings = () => {
         return;
       }
       const userSettings = await SettingsService.getSettings(session.uid);
-      setSettings(userSettings);
+      setSettings({
+        pushNotifications: userSettings.notifications?.betInvites ?? true,
+        emailNotifications:
+          userSettings.notifications?.emailNotifications ?? true,
+        darkMode: userSettings.theme === 'dark',
+      });
     } catch (error) {
       Alert.alert('Error', 'Failed to load settings');
       console.error(error);
@@ -118,13 +123,26 @@ const Settings = () => {
 
   const toggleSetting = async (key) => {
     try {
+      console.log('Toggle setting called for:', key);
       const session = await AuthService.getSession();
-      if (!session) return;
+      if (!session) {
+        console.log('No session found');
+        return;
+      }
 
-      const newValue = !settings[key];
-      await SettingsService.updateSetting(session.uid, key, newValue);
-      setSettings((prev) => ({ ...prev, [key]: newValue }));
+      if (key === 'darkMode') {
+        console.log('Toggling dark mode, current value:', settings.darkMode);
+        const newValue = !settings.darkMode;
+        setSettings((prev) => ({ ...prev, darkMode: newValue }));
+        await toggleTheme();
+      } else {
+        const newValue = !settings[key];
+        console.log('Updating setting:', key, 'to:', newValue);
+        await SettingsService.updateSetting(session.uid, key, newValue);
+        setSettings((prev) => ({ ...prev, [key]: newValue }));
+      }
     } catch (error) {
+      console.error('Error in toggleSetting:', error);
       Alert.alert('Error', 'Failed to update setting');
     }
   };
@@ -171,22 +189,7 @@ const Settings = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.mainContainer}>
-        <Header
-          title="Settings"
-          showBackButton={true}
-          rightComponent={
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={styles.headerLogout}
-            >
-              <LogoutIcon
-                strokeWidth={2}
-                size={hp(2.5)}
-                color={theme.colors.rose}
-              />
-            </TouchableOpacity>
-          }
-        />
+        <Header title="Settings" showBackButton={true} />
 
         <ScrollView
           style={styles.scrollView}
@@ -207,22 +210,6 @@ const Settings = () => {
                 value={settings.emailNotifications}
                 onToggle={() => toggleSetting('emailNotifications')}
                 icon="email"
-              />
-            </View>
-
-            <Text style={styles.sectionTitle}>Privacy</Text>
-            <View style={styles.section}>
-              <SettingOption
-                title="Private Profile"
-                value={settings.privateProfile}
-                onToggle={() => toggleSetting('privateProfile')}
-                icon="lock"
-              />
-              <SettingOption
-                title="Show Online Status"
-                value={settings.showOnlineStatus}
-                onToggle={() => toggleSetting('showOnlineStatus')}
-                icon="visibility"
               />
             </View>
 
@@ -267,6 +254,7 @@ const styles = StyleSheet.create({
   },
   mainContainer: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
@@ -283,6 +271,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.background,
   },
   sectionTitle: {
     fontSize: hp(2.2),
@@ -292,7 +281,7 @@ const styles = StyleSheet.create({
     marginBottom: hp(1),
   },
   section: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.card,
     borderRadius: hp(2),
     padding: hp(2),
     marginBottom: hp(2),
@@ -321,9 +310,6 @@ const styles = StyleSheet.create({
     fontSize: hp(2),
     marginLeft: wp(3),
     color: theme.colors.text,
-  },
-  headerLogout: {
-    padding: wp(2),
   },
 });
 
