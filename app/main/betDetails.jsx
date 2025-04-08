@@ -25,12 +25,14 @@ import AuthService from '../../src/endpoints/auth.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import Button from '../../components/Button';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { sharedStyles } from '../styles/shared';
+import { createSharedStyles } from '../styles/shared';
 import NotificationsService from '../../src/endpoints/notifications.cjs';
 import Avatar from '../../components/Avatar';
 import UserProfileModal from '../../components/UserProfileModal';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
+
+const sharedStyles = createSharedStyles(theme);
 
 const BetDetails = () => {
   const route = useRoute();
@@ -613,7 +615,7 @@ const BetDetails = () => {
   return (
     <ScreenWrapper>
       <ScrollView
-        style={sharedStyles.container}
+        style={styles.container}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -622,7 +624,7 @@ const BetDetails = () => {
           />
         }
       >
-        <Header title="Bet Details" showBackButton={false} />
+        <Header title="Bet Details" showBackButton={true} />
 
         <View style={styles.betInfo}>
           <View style={sharedStyles.groupHeader}>
