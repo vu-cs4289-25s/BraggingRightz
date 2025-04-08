@@ -24,6 +24,7 @@ const {
   limit,
   getDocs,
   arrayRemove,
+  increment,
 } = require('firebase/firestore');
 const { deleteUser } = require('firebase/auth');
 const {
@@ -405,7 +406,29 @@ class UserService {
       this._handleError(error);
     }
   }
+  // Award coins to user after watching ad
+  async awardCoinsForAd(userId) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
 
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      await updateDoc(userRef, {
+        numCoins: increment(20),
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Get updated user data
+      const updatedDoc = await getDoc(userRef);
+      return updatedDoc.data();
+    } catch (error) {
+      console.error('Error awarding coins:', error);
+      throw new Error('Failed to award coins');
+    }
+  }
   // Search users by username
   async searchUsers(searchQuery) {
     try {
