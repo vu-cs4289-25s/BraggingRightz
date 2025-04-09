@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     fontWeight: theme.fonts.bold,
     color: theme.colors.text,
     marginTop: hp(-2),
-    marginBottom: hp(-8),
+    marginBottom: hp(-5),
   },
   form: {
     gap: 25,

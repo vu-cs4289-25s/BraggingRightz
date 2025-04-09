@@ -408,6 +408,27 @@ const Profile = () => {
     }, []),
   );
 
+  const handleWatchAd = async () => {
+    try {
+      if (!session) return;
+
+      // Here you would typically show an ad
+      // For now, we'll just award the coins directly
+      const updatedUser = await UserService.awardCoinsForAd(session.uid);
+
+      // Update the local state with new coin count
+      setSession((prev) => ({
+        ...prev,
+        numCoins: updatedUser.numCoins,
+      }));
+
+      Alert.alert('Success', 'You earned 20 coins!');
+    } catch (error) {
+      console.error('Error watching ad:', error);
+      Alert.alert('Error', 'Failed to award coins. Please try again.');
+    }
+  };
+
   return (
     <ScreenWrapper bg="white">
       <ScrollView
@@ -479,7 +500,7 @@ const Profile = () => {
             )}
             {session && (
               <View style={styles.statItem}>
-                <Icon name="star-o" size={24} color="#FFD700" />
+                <Icon name="star" size={24} color="#FFD700" />
                 <Text style={styles.statValue}>{session.numCoins || 0}</Text>
                 <Text style={styles.statLabel}>Coins</Text>
               </View>
@@ -500,6 +521,10 @@ const Profile = () => {
             )}
           </View>
         </View>
+        <TouchableOpacity style={styles.watchAdButton} onPress={handleWatchAd}>
+          <Icon name="play-circle" size={20} color="white" />
+          <Text style={styles.watchAdButtonText}> Watch Ad for 20 Coins</Text>
+        </TouchableOpacity>
 
         <View style={styles.sectionDivider} />
 
@@ -829,6 +854,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.text,
     fontWeight: '500',
+  },
+  watchAdButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(4),
+    borderRadius: theme.radius.xl,
+    marginHorizontal: wp(4),
+    marginBottom: hp(1),
+  },
+  watchAdButtonText: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '600',
   },
 });
 
