@@ -344,6 +344,10 @@ const BetDetails = () => {
       const totalPool = betData.wagerAmount * totalParticipants;
       const winnersCount = winningOption.participants.length;
 
+      if (winnersCount === 0) {
+        throw new Error('No participants in the winning option');
+      }
+
       const winningsPerPerson = Math.floor(totalPool / winnersCount);
 
       // Release result and distribute coins
@@ -1060,6 +1064,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(2),
     paddingVertical: hp(0.5),
     borderRadius: hp(1),
+    color: theme.colors.white,
   },
   voteCountText: {
     fontSize: hp(1.6),
@@ -1110,7 +1115,7 @@ const styles = StyleSheet.create({
     marginTop: hp(1.5),
   },
   voteButtonText: {
-    color: 'white',
+    color: theme.colors.white,
     fontSize: hp(1.8),
     fontWeight: '600',
   },
