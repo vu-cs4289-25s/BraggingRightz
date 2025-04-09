@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Modal,
   RefreshControl,
-  Pressable,
 } from 'react-native';
 import {
   useRoute,
@@ -1455,22 +1454,6 @@ const styles = StyleSheet.create({
   },
   reactionPopupEmoji: {
     fontSize: hp(2.5),
-  },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: '#ccc',
-    marginVertical: 10,
-  },
-  sectionTitle2: {
-    fontSize: hp(3),
-    fontWeight: '600',
-    color: '#0050c8',
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    padding: 5,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.07)',
   },
 });
 
