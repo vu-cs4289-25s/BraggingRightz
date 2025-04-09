@@ -194,6 +194,18 @@ class BetsService {
         updatedAt: timestamp,
       });
 
+      // Auto-complete bet if no participants voted
+      const noParticipants = bet.answerOptions.every(
+        (opt) => !opt.participants || opt.participants.length === 0,
+      );
+
+      if (noParticipants) {
+        await updateDoc(betRef, {
+          status: 'completed',
+          updatedAt: timestamp,
+        });
+      }
+
       // Notify all participants that the bet is locked
       const usersToNotify = new Set();
       usersToNotify.add(bet.creatorId);
@@ -457,6 +469,24 @@ class BetsService {
       if (!option) {
         throw new Error('Invalid option selected');
       }
+
+      // Get user doc to subtract wager from coins
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const userData = userDoc.data();
+
+      if (userData.numCoins < bet.wagerAmount) {
+        throw new Error('Insufficient coins to place this bet');
+      }
+
+      await updateDoc(userRef, {
+        numCoins: increment(-bet.wagerAmount),
+      });
 
       // Update bet with new participant
       const updatedOptions = bet.answerOptions.map((opt) => {
