@@ -3,10 +3,24 @@ import React from 'react';
 import Icon from '../assets/icons';
 import { useTheme } from '../app/context/ThemeContext';
 
-const BackButton = ({ size = 26, navigation }) => {
+const BackButton = ({ size = 26, navigation, doubleBack = false }) => {
   const { theme } = useTheme();
 
-  return (
+  return doubleBack ? (
+    <Pressable
+      onPress={() => {
+        navigation.goBack();
+        setTimeout(() => navigation.goBack(), 5);
+      }}
+    >
+      <Icon
+        name="arrowLeft"
+        strokeWidth={2.5}
+        size={size}
+        color={theme.colors.text}
+      />
+    </Pressable>
+  ) : (
     <Pressable onPress={() => navigation.goBack()} style={styles.button}>
       <Icon
         name="arrowLeft"

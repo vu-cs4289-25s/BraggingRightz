@@ -130,7 +130,7 @@ const NewBet = () => {
 
       const result = await BetsService.createBet(betData);
       // navigate to bet details
-      navigation.navigate('BetDetails', { betId: result.id });
+      navigation.navigate('BetDetails', { betId: result.id, doubleBack: true });
     } catch (error) {
       console.error('Error creating bet:', error);
       Alert.alert('Error', error.message || 'Failed to create bet');

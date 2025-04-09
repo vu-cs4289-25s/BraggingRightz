@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
   RefreshControl,
+  Pressable,
 } from 'react-native';
 import {
   useRoute,
@@ -37,7 +38,7 @@ const sharedStyles = createSharedStyles(theme);
 const BetDetails = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { betId } = route.params;
+  const { betId, doubleBack = false } = route.params;
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -620,15 +621,9 @@ const BetDetails = () => {
           />
         }
       >
-        <Header title="Bet Details" showBackButton={true} />
+        <Header title="Bet Details" showBackButton={true} doubleBack={true} />
 
         <View style={styles.betInfo}>
-          <View style={sharedStyles.groupHeader}>
-            <Icon name="users" size={20} color={theme.colors.textLight} />
-            <Text style={sharedStyles.groupName}>
-              {betData.groupName || 'No Group'}
-            </Text>
-          </View>
           <Text style={styles.question}>{betData.question}</Text>
           <View style={styles.betMetaInfo}>
             <View
@@ -1460,6 +1455,22 @@ const styles = StyleSheet.create({
   },
   reactionPopupEmoji: {
     fontSize: hp(2.5),
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#ccc',
+    marginVertical: 10,
+  },
+  sectionTitle2: {
+    fontSize: hp(3),
+    fontWeight: '600',
+    color: '#0050c8',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: 5,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.07)',
   },
 });
 

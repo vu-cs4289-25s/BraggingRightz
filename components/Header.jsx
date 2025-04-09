@@ -5,7 +5,13 @@ import { useNavigation } from '@react-navigation/native';
 import { hp, wp } from '../helpers/common';
 import { useTheme } from '../app/context/ThemeContext';
 
-const Header = ({ title, showBackButton = false, rightComponent, mb = 10 }) => {
+const Header = ({
+  title,
+  showBackButton = false,
+  doubleBack = false,
+  rightComponent,
+  mb = 10,
+}) => {
   const navigation = useNavigation();
   const { theme } = useTheme();
 
@@ -13,7 +19,7 @@ const Header = ({ title, showBackButton = false, rightComponent, mb = 10 }) => {
     <View style={[styles.container, { marginBottom: mb }]}>
       {showBackButton && (
         <View style={styles.backButton}>
-          <BackButton navigation={navigation} />
+          <BackButton navigation={navigation} doubleBack={doubleBack} />
         </View>
       )}
       <Text style={[styles.title, { color: theme.colors.text }]}>

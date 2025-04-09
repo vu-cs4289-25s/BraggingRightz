@@ -237,7 +237,7 @@ const MyBets = () => {
       <View style={styles.container}>
         <Header
           title="My Bets"
-          showBackButton={false}
+          showBackButton={true}
           rightComponent={
             <View style={styles.pointsContainer}>
               <Text style={styles.points}>🪙 {session?.numCoins || 0}</Text>
