@@ -48,7 +48,6 @@ describe('GroupsService', () => {
         description: 'Test Description',
         creatorId: 'user123',
         members: ['member1', 'member2'],
-        isPrivate: false,
       };
 
       const mockGroupRef = { id: 'group123' };
@@ -65,32 +64,9 @@ describe('GroupsService', () => {
         creatorId: 'user123',
         members: expect.arrayContaining(['user123', 'member1', 'member2']),
         admins: ['user123'],
-        isPrivate: false,
       });
       expect(setDoc).toHaveBeenCalled();
       expect(updateDoc).toHaveBeenCalled(); // Updates user's groups
-    });
-
-    it('should create a private group with invite code', async () => {
-      const mockGroupData = {
-        name: 'Private Group',
-        description: 'Test Description',
-        creatorId: 'user123',
-        members: [],
-        isPrivate: true,
-      };
-
-      const mockGroupRef = { id: 'group123' };
-      doc.mockReturnValue(mockGroupRef);
-      setDoc.mockResolvedValue();
-      updateDoc.mockResolvedValue();
-
-      const result = await GroupsService.createGroup(mockGroupData);
-
-      expect(result.isPrivate).toBe(true);
-      expect(result.inviteCode).toBeDefined();
-      expect(result.inviteCode).toHaveLength(6);
-      expect(result.members).toEqual(['user123']);
     });
   });
 
@@ -185,7 +161,6 @@ describe('GroupsService', () => {
       getDoc.mockResolvedValue({
         exists: () => true,
         data: () => ({
-          isPrivate: false,
           members: ['user123'],
         }),
       });
@@ -200,7 +175,6 @@ describe('GroupsService', () => {
       getDoc.mockResolvedValue({
         exists: () => true,
         data: () => ({
-          isPrivate: true,
           inviteCode: 'ABC123',
           members: ['user123'],
         }),
@@ -215,21 +189,6 @@ describe('GroupsService', () => {
       expect(result).toBe(true);
       expect(updateDoc).toHaveBeenCalledTimes(2);
     });
-
-    // it('should throw error if invite code is invalid', async () => {
-    //   getDoc.mockResolvedValue({
-    //     exists: () => true,
-    //     data: () => ({
-    //       isPrivate: true,
-    //       inviteCode: 'ABC123',
-    //       members: ['user123'],
-    //     }),
-    //   });
-
-    //   await expect(
-    //     GroupsService.addMember('group123', 'user456', 'WRONG'),
-    //   ).rejects.toThrow('Invalid invite code');
-    // });
 
     it('should throw error if user is already a member', async () => {
       getDoc.mockResolvedValue({

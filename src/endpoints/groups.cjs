@@ -38,7 +38,6 @@ class GroupsService {
     description,
     creatorId,
     members = [],
-    isPrivate = false,
     photoUrl = null,
   }) {
     try {
@@ -55,7 +54,6 @@ class GroupsService {
         creatorId,
         members: allMembers,
         admins: [creatorId],
-        isPrivate,
         bets: [],
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -152,7 +150,6 @@ class GroupsService {
       console.log('Group data:', {
         name: groupData.name,
         currentMembers: groupData.members,
-        isPrivate: groupData.isPrivate,
       });
 
       if (groupData.members.includes(userId)) {
