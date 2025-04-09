@@ -344,10 +344,6 @@ const BetDetails = () => {
       const totalPool = betData.wagerAmount * totalParticipants;
       const winnersCount = winningOption.participants.length;
 
-      if (winnersCount === 0) {
-        throw new Error('No participants in the winning option');
-      }
-
       const winningsPerPerson = Math.floor(totalPool / winnersCount);
 
       // Release result and distribute coins
