@@ -896,6 +896,49 @@ const Home = () => {
       fontWeight: '500',
       textAlign: 'center',
     },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: hp(4),
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.radius.lg,
+      marginVertical: hp(2),
+    },
+    emptyTitle: {
+      fontSize: hp(2.4),
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginTop: hp(2),
+      marginBottom: hp(1),
+    },
+    emptyText: {
+      fontSize: hp(1.8),
+      color: theme.colors.textLight,
+      textAlign: 'center',
+      marginBottom: hp(3),
+      paddingHorizontal: wp(4),
+    },
+    createBetButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: wp(6),
+      paddingVertical: hp(1.5),
+      borderRadius: theme.radius.xl,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+    createBetIcon: {
+      marginRight: wp(2),
+    },
+    createBetText: {
+      color: 'white',
+      fontSize: hp(1.8),
+      fontWeight: '600',
+    },
   });
 
   if (loading) {
@@ -1030,7 +1073,24 @@ const Home = () => {
               bets.map((bet) => renderBetCard(bet))
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No bets found</Text>
+                <Icon name="ticket" size={hp(8)} color={theme.colors.grey} />
+                <Text style={styles.emptyTitle}>No Active Bets</Text>
+                <Text style={styles.emptyText}>
+                  Click the + button below to create your first bet and start
+                  challenging your friends!
+                </Text>
+                <TouchableOpacity
+                  style={styles.createBetButton}
+                  onPress={() => navigation.navigate('NewBet')}
+                >
+                  <Icon
+                    name="plus"
+                    size={hp(2)}
+                    color="white"
+                    style={styles.createBetIcon}
+                  />
+                  <Text style={styles.createBetText}>Create New Bet</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
