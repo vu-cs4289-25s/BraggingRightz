@@ -333,6 +333,7 @@ class UserService {
         userId: doc.id,
         username: doc.data().username,
         trophies: doc.data().trophies || 0,
+        numCoins: doc.data().numCoins || 0,
         winRate: this._calculateWinRate(doc.data()),
       }));
     } catch (error) {
