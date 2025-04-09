@@ -356,7 +356,27 @@ class UserService {
       }
       const userData = userDoc.data();
 
-      // Delete user's bets
+      // 1. Clean up friend relationships
+      if (userData.friends) {
+        const friendUpdates = userData.friends.map(async (friend) => {
+          try {
+            const friendRef = doc(db, 'users', friend.userId);
+            const friendDoc = await getDoc(friendRef);
+            if (friendDoc.exists()) {
+              const friendData = friendDoc.data();
+              const updatedFriends = friendData.friends.filter(
+                (f) => f.userId !== userId,
+              );
+              await updateDoc(friendRef, { friends: updatedFriends });
+            }
+          } catch (error) {
+            console.error(`Error updating friend ${friend.userId}:`, error);
+          }
+        });
+        await Promise.all(friendUpdates);
+      }
+
+      // 2. Delete user's bets
       const betsQuery = query(
         collection(db, 'bets'),
         where('creatorId', '==', userId),
@@ -366,7 +386,7 @@ class UserService {
         await deleteDoc(betDoc.ref);
       }
 
-      // Delete user's notifications
+      // 3. Delete user's notifications
       const notificationsQuery = query(
         collection(db, 'notifications'),
         where('userId', '==', userId),
@@ -376,26 +396,25 @@ class UserService {
         await deleteDoc(notifDoc.ref);
       }
 
-      // Remove user from groups
+      // 4. Remove user from groups
       if (userData.groups) {
         for (const groupId of userData.groups) {
           const groupRef = doc(db, 'groups', groupId);
           await updateDoc(groupRef, {
             members: arrayRemove(userId),
+            admins: arrayRemove(userId),
           });
         }
       }
 
-      // Delete user's settings
+      // 5. Delete auxiliary data
       await deleteDoc(doc(db, 'settings', userId));
-
-      // Delete user's points
       await deleteDoc(doc(db, 'points', userId));
 
-      // Delete user document
+      // 6. Delete user document (do this second to last)
       await deleteDoc(doc(db, 'users', userId));
 
-      // Delete user from authentication
+      // 7. Delete user from authentication (do this last)
       const user = auth.currentUser;
       if (user) {
         await deleteUser(user);
@@ -406,6 +425,7 @@ class UserService {
       this._handleError(error);
     }
   }
+
   // Award coins to user after watching ad
   async awardCoinsForAd(userId) {
     try {
@@ -429,6 +449,7 @@ class UserService {
       throw new Error('Failed to award coins');
     }
   }
+
   // Search users by username
   async searchUsers(searchQuery) {
     try {
