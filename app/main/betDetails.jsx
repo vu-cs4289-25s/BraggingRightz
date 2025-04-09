@@ -620,7 +620,7 @@ const BetDetails = () => {
           />
         }
       >
-        <Header title="Bet Details" showBackButton={true} doubleBack={true} />
+        <Header title="Bet Details" showBackButton={true} doubleBack={doubleBack} />
 
         <View style={styles.betInfo}>
           <Text style={styles.question}>{betData.question}</Text>

@@ -1,18 +1,30 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import React from 'react';
+import React, { useRef } from 'react';
 import Icon from '../assets/icons';
 import { useTheme } from '../app/context/ThemeContext';
 
 const BackButton = ({ size = 26, navigation, doubleBack = false }) => {
   const { theme } = useTheme();
 
-  return doubleBack ? (
-    <Pressable
-      onPress={() => {
+  const handlePress = () => {
+    if (doubleBack) {
+      navigation.goBack();
+      // TODO: DELETE
+      console.log("BACK ONCE");
+      setTimeout(() => {
         navigation.goBack();
-        setTimeout(() => navigation.goBack(), 5);
-      }}
-    >
+        // TODO: DELETE
+        console.log("BACK TWICE");
+      }, 10);
+    } else {
+      navigation.goBack();
+      // TODO: DELETE
+      console.log("BACK ONCE AND ONLY ONCE");
+    }
+  }
+
+  return (
+    <Pressable onPress={handlePress} style={styles.button}>
       <Icon
         name="arrowLeft"
         strokeWidth={2.5}
@@ -20,16 +32,7 @@ const BackButton = ({ size = 26, navigation, doubleBack = false }) => {
         color={theme.colors.text}
       />
     </Pressable>
-  ) : (
-    <Pressable onPress={() => navigation.goBack()} style={styles.button}>
-      <Icon
-        name="arrowLeft"
-        strokeWidth={2.5}
-        size={size}
-        color={theme.colors.text}
-      />
-    </Pressable>
-  );
+  )
 };
 
 export default BackButton;
