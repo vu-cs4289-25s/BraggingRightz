@@ -16,6 +16,7 @@ import { theme } from '../../constants/theme';
 import BetsService from '../../src/endpoints/bets.cjs';
 import AuthService from '../../src/endpoints/auth.cjs';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import GroupsService from '../../src/endpoints/groups.cjs';
 
 const MyBets = () => {
   const navigation = useNavigation();
@@ -34,7 +35,41 @@ const MyBets = () => {
       setSession(sessionData);
 
       const userBets = await BetsService.getUserBets(sessionData.uid);
-      setBets(userBets);
+      
+      // Fetch additional info for each bet
+      const betsWithInfo = await Promise.all(
+        userBets.map(async (bet) => {
+          try {
+            // Get group name
+            let groupName = 'No Group';
+            if (bet.groupId) {
+              groupName = await GroupsService.getGroupName(bet.groupId);
+            }
+
+            return {
+              ...bet,
+              groupName,
+              // Ensure wagerAmount is properly set
+              wagerAmount: bet.wagerAmount || 0,
+              // Calculate total pool
+              totalPool: bet.answerOptions.reduce(
+                (sum, option) => sum + (option.participants.length * bet.wagerAmount),
+                0
+              ),
+            };
+          } catch (error) {
+            console.error('Error fetching bet info:', error);
+            return {
+              ...bet,
+              groupName: 'No Group',
+              wagerAmount: bet.wagerAmount || 0,
+              totalPool: 0,
+            };
+          }
+        }),
+      );
+
+      setBets(betsWithInfo);
     } catch (error) {
       console.error('Error loading bets:', error);
       Alert.alert('Error', 'Failed to load your bets');
@@ -199,7 +234,15 @@ const MyBets = () => {
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        <Header title="My Bets" showBackButton={true} />
+        <Header 
+          title="My Bets" 
+          showBackButton={false} 
+          rightComponent={
+            <View style={styles.pointsContainer}>
+              <Text style={styles.points}>🪙 {session?.numCoins || 0}</Text>
+            </View>
+          }
+        />
 
         <View style={styles.filterContainer}>
           <TouchableOpacity
@@ -428,6 +471,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: hp(1.8),
     fontWeight: '500',
+  },
+  pointsContainer: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.5),
+    borderRadius: hp(1.5),
+  },
+  points: {
+    color: 'white',
+    fontSize: hp(1.8),
+    fontWeight: '600',
   },
 });
 
