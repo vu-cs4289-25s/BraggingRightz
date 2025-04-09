@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
   coinsText: {
     fontSize: hp(1.7),
     color: '#FBBF24',
+    fontWeight: '600',
   },
   bold: {
     fontWeight: 'bold',
