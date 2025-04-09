@@ -226,34 +226,42 @@ const EditGroup = () => {
           return;
         }
 
-        const actualGroupId = typeof groupId === 'object' ? groupId.id : groupId;
-        
+        const actualGroupId =
+          typeof groupId === 'object' ? groupId.id : groupId;
+
         // Add all selected friends
         const results = await Promise.all(
           selectedFriends.map(async (friend) => {
             try {
-              await GroupsService.addMember(actualGroupId, friend.userId, inviteCode);
+              await GroupsService.addMember(
+                actualGroupId,
+                friend.userId,
+                inviteCode,
+              );
               return { success: true, user: friend };
             } catch (error) {
               console.error(`Error adding member ${friend.username}:`, error);
               return { success: false, user: friend };
             }
-          })
+          }),
         );
 
-        const successful = results.filter(r => r.success);
-        const failed = results.filter(r => !r.success);
+        const successful = results.filter((r) => r.success);
+        const failed = results.filter((r) => !r.success);
 
         if (successful.length > 0) {
-          setMembers([...members, ...successful.map(r => r.user)]);
+          setMembers([...members, ...successful.map((r) => r.user)]);
         }
 
         if (failed.length === 0) {
-          Alert.alert('Success!', `Added ${successful.length} member${successful.length > 1 ? 's' : ''} to the group`);
+          Alert.alert(
+            'Success!',
+            `Added ${successful.length} member${successful.length > 1 ? 's' : ''} to the group`,
+          );
         } else {
           Alert.alert(
             'Partial Success',
-            `Added ${successful.length} member${successful.length > 1 ? 's' : ''}, but failed to add ${failed.length} member${failed.length > 1 ? 's' : ''}`
+            `Added ${successful.length} member${successful.length > 1 ? 's' : ''}, but failed to add ${failed.length} member${failed.length > 1 ? 's' : ''}`,
           );
         }
 
@@ -539,10 +547,12 @@ const EditGroup = () => {
                 ) : (
                   friends.map((friend) => {
                     const isAlreadyMember = members.some(
-                      (member) => member.userId === friend.userId
+                      (member) => member.userId === friend.userId,
                     );
-                    const isSelected = selectedFriends.some(f => f.userId === friend.userId);
-                    
+                    const isSelected = selectedFriends.some(
+                      (f) => f.userId === friend.userId,
+                    );
+
                     return (
                       <TouchableOpacity
                         key={friend.userId}
@@ -554,7 +564,11 @@ const EditGroup = () => {
                         onPress={() => {
                           if (isAlreadyMember) return;
                           if (isSelected) {
-                            setSelectedFriends(selectedFriends.filter(f => f.userId !== friend.userId));
+                            setSelectedFriends(
+                              selectedFriends.filter(
+                                (f) => f.userId !== friend.userId,
+                              ),
+                            );
                           } else {
                             setSelectedFriends([...selectedFriends, friend]);
                           }
@@ -571,16 +585,26 @@ const EditGroup = () => {
                             rounded={theme.radius.xl}
                           />
                           <View style={styles.friendNameContainer}>
-                            <Text style={[
-                              styles.friendName,
-                              isAlreadyMember && styles.disabledText
-                            ]}>
+                            <Text
+                              style={[
+                                styles.friendName,
+                                isAlreadyMember && styles.disabledText,
+                              ]}
+                            >
                               {friend.username}
                             </Text>
                             {isAlreadyMember ? (
-                              <Text style={styles.alreadyMemberText}>Already in group</Text>
-                            ) : isSelected && (
-                              <Icon name="checkmark-circle" size={20} color={theme.colors.primary} />
+                              <Text style={styles.alreadyMemberText}>
+                                Already in group
+                              </Text>
+                            ) : (
+                              isSelected && (
+                                <Icon
+                                  name="checkmark-circle"
+                                  size={20}
+                                  color={theme.colors.primary}
+                                />
+                              )
                             )}
                           </View>
                         </View>

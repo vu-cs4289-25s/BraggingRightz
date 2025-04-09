@@ -35,7 +35,7 @@ const MyBets = () => {
       setSession(sessionData);
 
       const userBets = await BetsService.getUserBets(sessionData.uid);
-      
+
       // Fetch additional info for each bet
       const betsWithInfo = await Promise.all(
         userBets.map(async (bet) => {
@@ -53,8 +53,9 @@ const MyBets = () => {
               wagerAmount: bet.wagerAmount || 0,
               // Calculate total pool
               totalPool: bet.answerOptions.reduce(
-                (sum, option) => sum + (option.participants.length * bet.wagerAmount),
-                0
+                (sum, option) =>
+                  sum + option.participants.length * bet.wagerAmount,
+                0,
               ),
             };
           } catch (error) {
@@ -234,9 +235,9 @@ const MyBets = () => {
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        <Header 
-          title="My Bets" 
-          showBackButton={false} 
+        <Header
+          title="My Bets"
+          showBackButton={false}
           rightComponent={
             <View style={styles.pointsContainer}>
               <Text style={styles.points}>🪙 {session?.numCoins || 0}</Text>
