@@ -36,7 +36,6 @@ const NewGroup = () => {
   const groupName = useRef('');
   const [friends, setFriends] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
-  const [isPrivate, setIsPrivate] = useState(true);
   const description = useRef('');
   const [groupPhoto, setGroupPhoto] = useState(null);
   const [activeTab, setActiveTab] = useState(initialTab || 'create');
@@ -102,14 +101,7 @@ const NewGroup = () => {
       return;
     }
 
-    if (selectedMembers.length === 0) {
-      Alert.alert('Create New Group', 'Please select at least one member');
-      return;
-    }
-
     setLoading(true);
-
-    console.log(`Creating group with members: ${selectedMembers}`);
 
     try {
       await GroupsService.createGroup({
@@ -117,7 +109,6 @@ const NewGroup = () => {
         name: groupName.current,
         description: description.current,
         members: selectedMembers,
-        isPrivate: isPrivate,
         photoUrl: groupPhoto,
       });
 
@@ -293,27 +284,8 @@ const NewGroup = () => {
                   style={{ width: '100%' }}
                 />
               </View>
-
               <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>Visibility</Text>
-                <Dropdown
-                  data={[
-                    { label: 'Private', value: true },
-                    { label: 'Public', value: false },
-                  ]}
-                  labelField="label"
-                  valueField="value"
-                  placeholder="Select visibility"
-                  value={isPrivate}
-                  onChange={(item) => setIsPrivate(item.value)}
-                  style={styles.dropdown}
-                  placeholderStyle={styles.dropdownPlaceholder}
-                  selectedTextStyle={styles.dropdownSelected}
-                />
-              </View>
-
-              <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>Add Members</Text>
+                <Text style={styles.sectionTitle}>Add Members (Optional)</Text>
                 <View style={styles.membersContainer}>
                   {friends.length === 0 ? (
                     <Text style={styles.emptyText}>
@@ -344,6 +316,9 @@ const NewGroup = () => {
                     ))
                   )}
                 </View>
+                <Text style={styles.helperText}>
+                  You can add or remove members later
+                </Text>
               </View>
 
               <Button
@@ -574,5 +549,12 @@ const styles = StyleSheet.create({
     paddingVertical: hp(1.5),
     paddingHorizontal: wp(4),
     borderRadius: theme.radius.xxl,
+  },
+  helperText: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: hp(1),
   },
 });
