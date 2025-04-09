@@ -52,7 +52,7 @@ const EditGroup = () => {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [friends, setFriends] = useState([]);
   const [activeTab, setActiveTab] = useState('friends');
-  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [selectedFriends, setSelectedFriends] = useState([]);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -220,50 +220,64 @@ const EditGroup = () => {
 
   const handleAddMember = async () => {
     try {
-      let userIdToAdd;
-      let username;
+      if (activeTab === 'friends') {
+        if (selectedFriends.length === 0) {
+          Alert.alert('Error', 'Please select at least one friend');
+          return;
+        }
 
-      if (activeTab === 'friends' && selectedFriend) {
-        userIdToAdd = selectedFriend.userId;
-        username = selectedFriend.username;
-      } else if (activeTab === 'username' && newMemberUsername) {
-        userIdToAdd = await UserService.getUid({ username: newMemberUsername });
-        username = newMemberUsername;
-      } else {
-        Alert.alert('Error', 'Please select a friend or enter a username');
-        return;
-      }
-
-      if (!userIdToAdd) {
-        Alert.alert('Error', 'User not found');
-        return;
-      }
-
-      // Check if user is already a member
-      if (members.some((member) => member.userId === userIdToAdd)) {
-        Alert.alert('Error', 'User is already a member of this group');
-        return;
-      }
-
-      const userProfile = await UserService.getUserProfile(userIdToAdd);
-
-      if (userProfile) {
-        // Get the actual group ID string if groupId is an object
         const actualGroupId =
           typeof groupId === 'object' ? groupId.id : groupId;
-        await GroupsService.addMember(actualGroupId, userIdToAdd, inviteCode);
-        setMembers([...members, userProfile]);
-        Alert.alert('Success!', 'User successfully added!');
+
+        // Add all selected friends
+        const results = await Promise.all(
+          selectedFriends.map(async (friend) => {
+            try {
+              await GroupsService.addMember(
+                actualGroupId,
+                friend.userId,
+                inviteCode,
+              );
+              return { success: true, user: friend };
+            } catch (error) {
+              console.error(`Error adding member ${friend.username}:`, error);
+              return { success: false, user: friend };
+            }
+          }),
+        );
+
+        const successful = results.filter((r) => r.success);
+        const failed = results.filter((r) => !r.success);
+
+        if (successful.length > 0) {
+          setMembers([...members, ...successful.map((r) => r.user)]);
+        }
+
+        if (failed.length === 0) {
+          Alert.alert(
+            'Success!',
+            `Added ${successful.length} member${successful.length > 1 ? 's' : ''} to the group`,
+          );
+        } else {
+          Alert.alert(
+            'Partial Success',
+            `Added ${successful.length} member${successful.length > 1 ? 's' : ''}, but failed to add ${failed.length} member${failed.length > 1 ? 's' : ''}`,
+          );
+        }
+
         setModalVisible(false);
-        setNewMemberUsername('');
-        setSelectedFriend(null);
-        setActiveTab('friends');
+        setSelectedFriends([]);
       } else {
-        Alert.alert('Error', 'Failed to add member. Please try again.');
+        // Existing username logic
+        if (!newMemberUsername) {
+          Alert.alert('Error', 'Please enter a username');
+          return;
+        }
+        // ... rest of the existing username logic
       }
     } catch (error) {
-      console.error('Error adding member:', error);
-      Alert.alert('Error', 'Failed to add member. Please try again.');
+      console.error('Error adding members:', error);
+      Alert.alert('Error', 'Failed to add members. Please try again.');
     }
   };
 
@@ -460,15 +474,12 @@ const EditGroup = () => {
             </ScrollView>
 
             {isAdmin && (
-              <View style={styles.dangerZone}>
-                <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
-                <Button
-                  title="Delete Group"
-                  onPress={handleDeleteGroup}
-                  style={styles.deleteButton}
-                  textStyle={styles.deleteButtonText}
-                />
-              </View>
+              <Button
+                title="Delete Group"
+                onPress={handleDeleteGroup}
+                buttonStyle={styles.deleteButton}
+                textStyle={styles.deleteButtonText}
+              />
             )}
           </View>
         </ScrollView>
@@ -534,29 +545,72 @@ const EditGroup = () => {
                     <Text style={styles.emptyText}>No friends yet</Text>
                   </View>
                 ) : (
-                  friends.map((friend) => (
-                    <TouchableOpacity
-                      key={friend.userId}
-                      style={[
-                        styles.friendItem,
-                        selectedFriend?.userId === friend.userId &&
-                          styles.selectedFriendItem,
-                      ]}
-                      onPress={() => setSelectedFriend(friend)}
-                    >
-                      <View style={styles.friendInfo}>
-                        <Avatar
-                          uri={
-                            friend.profilePicture ||
-                            Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri
+                  friends.map((friend) => {
+                    const isAlreadyMember = members.some(
+                      (member) => member.userId === friend.userId,
+                    );
+                    const isSelected = selectedFriends.some(
+                      (f) => f.userId === friend.userId,
+                    );
+
+                    return (
+                      <TouchableOpacity
+                        key={friend.userId}
+                        style={[
+                          styles.friendItem,
+                          isSelected && styles.selectedFriendItem,
+                          isAlreadyMember && styles.disabledFriendItem,
+                        ]}
+                        onPress={() => {
+                          if (isAlreadyMember) return;
+                          if (isSelected) {
+                            setSelectedFriends(
+                              selectedFriends.filter(
+                                (f) => f.userId !== friend.userId,
+                              ),
+                            );
+                          } else {
+                            setSelectedFriends([...selectedFriends, friend]);
                           }
-                          size={hp(4)}
-                          rounded={theme.radius.xl}
-                        />
-                        <Text style={styles.friendName}>{friend.username}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
+                        }}
+                        disabled={isAlreadyMember}
+                      >
+                        <View style={styles.friendInfo}>
+                          <Avatar
+                            uri={
+                              friend.profilePicture ||
+                              Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri
+                            }
+                            size={hp(4)}
+                            rounded={theme.radius.xl}
+                          />
+                          <View style={styles.friendNameContainer}>
+                            <Text
+                              style={[
+                                styles.friendName,
+                                isAlreadyMember && styles.disabledText,
+                              ]}
+                            >
+                              {friend.username}
+                            </Text>
+                            {isAlreadyMember ? (
+                              <Text style={styles.alreadyMemberText}>
+                                Already in group
+                              </Text>
+                            ) : (
+                              isSelected && (
+                                <Icon
+                                  name="checkmark-circle"
+                                  size={20}
+                                  color={theme.colors.primary}
+                                />
+                              )
+                            )}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
                 )}
               </ScrollView>
             ) : (
@@ -582,16 +636,15 @@ const EditGroup = () => {
                 onPress={() => {
                   setModalVisible(false);
                   setNewMemberUsername('');
-                  setSelectedFriend(null);
+                  setSelectedFriends([]);
                   setActiveTab('friends');
                 }}
-                style={[styles.modalButton, styles.cancelButton]}
-                textStyle={styles.cancelButtonText}
+                buttonStyle={styles.modalCancelButton}
               />
               <Button
                 title="Add Member"
                 onPress={handleAddMember}
-                style={[styles.modalButton, styles.addButton]}
+                buttonStyle={styles.modalAddButton}
               />
             </View>
           </View>
@@ -715,29 +768,6 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: wp(2),
   },
-  dangerZone: {
-    marginTop: hp(4),
-    padding: wp(4),
-    backgroundColor: '#fff5f5',
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.error,
-  },
-  dangerZoneTitle: {
-    color: theme.colors.error,
-    fontSize: hp(2),
-    fontWeight: 'bold',
-    marginBottom: hp(2),
-  },
-  deleteButton: {
-    backgroundColor: theme.colors.error,
-  },
-  deleteButtonText: {
-    color: 'white',
-  },
-  copyButton: {
-    padding: wp(2),
-  },
   saveButton: {
     marginTop: hp(2),
     marginBottom: hp(4),
@@ -781,7 +811,8 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: wp(3),
+    gap: wp(4),
+    marginTop: hp(1),
   },
   modalHeader: {
     width: '100%',
@@ -803,14 +834,22 @@ const styles = StyleSheet.create({
     flex: 1,
     height: hp(6),
   },
-  cancelButton: {
-    backgroundColor: theme.colors.background,
-  },
-  cancelButtonText: {
-    color: theme.colors.text,
-  },
-  addButton: {
+  modalCancelButton: {
     backgroundColor: theme.colors.primary,
+    flex: 1,
+    marginRight: wp(2),
+    height: hp(7),
+  },
+  modalAddButton: {
+    backgroundColor: theme.colors.primary,
+    flex: 1,
+    marginLeft: wp(2),
+    height: hp(7),
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: hp(2),
+    fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -853,7 +892,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   selectedFriendItem: {
-    backgroundColor: `${theme.colors.primary}20`,
+    backgroundColor: `${theme.colors.primary}10`,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
   },
   friendInfo: {
     flexDirection: 'row',
@@ -874,5 +915,34 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: hp(1.8),
     color: theme.colors.textLight,
+  },
+  deleteButton: {
+    backgroundColor: 'red',
+    marginTop: hp(0.5),
+    marginBottom: hp(4),
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  disabledFriendItem: {
+    backgroundColor: theme.colors.background,
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: theme.colors.textLight,
+  },
+  friendNameContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  alreadyMemberText: {
+    fontSize: hp(1.4),
+    color: theme.colors.textLight,
+    fontStyle: 'italic',
+  },
+  checkIcon: {
+    position: 'absolute',
+    right: wp(2),
   },
 });
