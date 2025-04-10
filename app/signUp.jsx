@@ -181,7 +181,7 @@ const SignUp = () => {
     const thirteenYearsAgo = new Date(
       today.getFullYear() - 13,
       today.getMonth(),
-      today.getDate()
+      today.getDate(),
     );
     return birthDate <= thirteenYearsAgo;
   };
@@ -190,12 +190,14 @@ const SignUp = () => {
     if (!isAtLeast13(date)) {
       Alert.alert(
         'Age Requirement',
-        'You must be at least 13 years old to create an account.', [
+        'You must be at least 13 years old to create an account.',
+        [
           {
             text: 'OK',
-            onPress: () => navigation.navigate("Welcome"),
+            onPress: () => navigation.navigate('Welcome'),
           },
-        ]);
+        ],
+      );
       setShowDatePicker(false);
       return;
     }

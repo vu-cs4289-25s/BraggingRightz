@@ -155,114 +155,118 @@ const NewBet = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-     {groups.length === 0 ? (
-  <>
-    <Header title="Create New Bet" showBackButton={true} />
-    <View style={styles.noGroups}>
-      <View style={styles.noGroupsContent}>
-        <Text style={styles.noGroupsTitle}>You have no groups yet.</Text>
-        <Text style={styles.noGroupsSubHead}>Create a group or join a group to bet!</Text>
-        <View style={{width: "100%"}}>
-        <Button
-          title="Create or Join Group"
-          onPress={() => navigation.navigate('NewGroup')}
-          style={styles.noGroupsButton}
-        />
-        </View>
-      </View>
-    </View>
-  </>
-) : (
-  <>
-    <Header title="Create New Bet" showBackButton={true} />
-          <View style={styles.form}>
-            <Text style={styles.label}>Select Group</Text>
-            <Dropdown
-              style={styles.dropdown}
-              data={groups}
-              labelField="label"
-              valueField="value"
-              placeholder="Select a group"
-              value={selectedGroup}
-              onChange={(item) => setSelectedGroup(item.value)}
-            />
+          {groups.length === 0 ? (
+            <>
+              <Header title="Create New Bet" showBackButton={true} />
+              <View style={styles.noGroups}>
+                <View style={styles.noGroupsContent}>
+                  <Text style={styles.noGroupsTitle}>
+                    You have no groups yet.
+                  </Text>
+                  <Text style={styles.noGroupsSubHead}>
+                    Create a group or join a group to bet!
+                  </Text>
+                  <View style={{ width: '100%' }}>
+                    <Button
+                      title="Create or Join Group"
+                      onPress={() => navigation.navigate('NewGroup')}
+                      style={styles.noGroupsButton}
+                    />
+                  </View>
+                </View>
+              </View>
+            </>
+          ) : (
+            <>
+              <Header title="Create New Bet" showBackButton={true} />
+              <View style={styles.form}>
+                <Text style={styles.label}>Select Group</Text>
+                <Dropdown
+                  style={styles.dropdown}
+                  data={groups}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select a group"
+                  value={selectedGroup}
+                  onChange={(item) => setSelectedGroup(item.value)}
+                />
 
-            <Text style={styles.label}>Question</Text>
-            <Input
-              placeholder="What's your bet?"
-              value={question}
-              onChangeText={setQuestion}
-              returnKeyType="done"
-              blurOnSubmit={true}
-            />
-
-            <Text style={styles.label}>Options</Text>
-            {options.map((option, index) => (
-              <View key={index} style={styles.optionContainer}>
+                <Text style={styles.label}>Question</Text>
                 <Input
-                  style={styles.optionInput}
-                  placeholder={`Option ${index + 1}`}
-                  value={option}
-                  onChangeText={(text) => updateOption(text, index)}
+                  placeholder="What's your bet?"
+                  value={question}
+                  onChangeText={setQuestion}
                   returnKeyType="done"
                   blurOnSubmit={true}
                 />
-                {options.length > 2 && (
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => removeOption(index)}
-                  >
-                    <Text style={styles.removeButtonText}>×</Text>
-                  </TouchableOpacity>
+
+                <Text style={styles.label}>Options</Text>
+                {options.map((option, index) => (
+                  <View key={index} style={styles.optionContainer}>
+                    <Input
+                      style={styles.optionInput}
+                      placeholder={`Option ${index + 1}`}
+                      value={option}
+                      onChangeText={(text) => updateOption(text, index)}
+                      returnKeyType="done"
+                      blurOnSubmit={true}
+                    />
+                    {options.length > 2 && (
+                      <TouchableOpacity
+                        style={styles.removeButton}
+                        onPress={() => removeOption(index)}
+                      >
+                        <Text style={styles.removeButtonText}>×</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+
+                <TouchableOpacity style={styles.addButton} onPress={addOption}>
+                  <Text style={styles.addButtonText}>+ Add Option</Text>
+                </TouchableOpacity>
+
+                <Text style={styles.label}>Wager Amount (coins)</Text>
+                <Input
+                  placeholder="Enter wager amount"
+                  value={wagerAmount}
+                  onChangeText={setWagerAmount}
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                  blurOnSubmit={true}
+                />
+
+                <Text style={styles.label}>Voting Ends</Text>
+                <TouchableOpacity
+                  style={styles.dateButton}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={styles.dateButtonText}>
+                    {endTime.toLocaleString()}
+                  </Text>
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePickerModal
+                    isVisible={showDatePicker}
+                    mode="datetime"
+                    onConfirm={handleDateConfirm}
+                    onCancel={() => setShowDatePicker(false)}
+                    minimumDate={new Date()}
+                  />
                 )}
               </View>
-            ))}
 
-            <TouchableOpacity style={styles.addButton} onPress={addOption}>
-              <Text style={styles.addButtonText}>+ Add Option</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.label}>Wager Amount (coins)</Text>
-            <Input
-              placeholder="Enter wager amount"
-              value={wagerAmount}
-              onChangeText={setWagerAmount}
-              keyboardType="numeric"
-              returnKeyType="done"
-              blurOnSubmit={true}
-            />
-
-            <Text style={styles.label}>Voting Ends</Text>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.dateButtonText}>
-                {endTime.toLocaleString()}
-              </Text>
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePickerModal
-                isVisible={showDatePicker}
-                mode="datetime"
-                onConfirm={handleDateConfirm}
-                onCancel={() => setShowDatePicker(false)}
-                minimumDate={new Date()}
-              />
-            )}
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Create Bet"
-              onPress={submitBet}
-              loading={loading}
-              style={styles.submitButton}
-            />
-          </View>
-          </>
-      )}
+              <View style={styles.buttonContainer}>
+                <Button
+                  title="Create Bet"
+                  onPress={submitBet}
+                  loading={loading}
+                  style={styles.submitButton}
+                />
+              </View>
+            </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenWrapper>
@@ -277,30 +281,30 @@ const styles = StyleSheet.create({
     padding: wp(4),
     flex: 1,
   },
-  noGroups:{
+  noGroups: {
     flex: 1,
     width: '100%',
     paddingHorizontal: wp(4),
   },
-  noGroupsContent:{
+  noGroupsContent: {
     alignItems: 'center',
     paddingTop: hp(4),
     gap: hp(2),
     width: '100%',
   },
-  noGroupsTitle:{
+  noGroupsTitle: {
     fontSize: hp(2.4),
     fontWeight: '600',
     color: theme.colors.text,
     marginBottom: hp(0.2),
   },
-  noGroupsSubHead:{
+  noGroupsSubHead: {
     fontSize: hp(1.8),
     color: theme.colors.textLight,
     textAlign: 'center',
     marginBottom: hp(1),
   },
-  noGroupsButton:{
+  noGroupsButton: {
     height: hp(7),
     width: '100%',
     marginTop: hp(2),
