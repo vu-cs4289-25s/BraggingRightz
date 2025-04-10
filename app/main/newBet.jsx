@@ -23,6 +23,7 @@ import AuthService from '../../src/endpoints/auth.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import { Dropdown } from 'react-native-element-dropdown';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import NewGroup from './newGroup';
 
 const NewBet = () => {
   const navigation = useNavigation();
@@ -46,6 +47,7 @@ const NewBet = () => {
         setSession(sessionData);
 
         const userGroups = await GroupsService.getUserGroups(sessionData.uid);
+
         const groupOptions = userGroups.map((group) => ({
           label: group.name,
           value: group.id,
@@ -139,6 +141,7 @@ const NewBet = () => {
     }
   };
 
+  // Prompt user to create or join group to make bets if they have no groups, else render form
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView
@@ -152,8 +155,26 @@ const NewBet = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <Header title="Create New Bet" showBackButton={true} />
-
+     {groups.length === 0 ? (
+  <>
+    <Header title="Create New Bet" showBackButton={true} />
+    <View style={styles.noGroups}>
+      <View style={styles.noGroupsContent}>
+        <Text style={styles.noGroupsTitle}>You have no groups yet.</Text>
+        <Text style={styles.noGroupsSubHead}>Create a group or join a group to bet!</Text>
+        <View style={{width: "100%"}}>
+        <Button
+          title="Create or Join Group"
+          onPress={() => navigation.navigate('NewGroup')}
+          style={styles.noGroupsButton}
+        />
+        </View>
+      </View>
+    </View>
+  </>
+) : (
+  <>
+    <Header title="Create New Bet" showBackButton={true} />
           <View style={styles.form}>
             <Text style={styles.label}>Select Group</Text>
             <Dropdown
@@ -240,6 +261,8 @@ const NewBet = () => {
               style={styles.submitButton}
             />
           </View>
+          </>
+      )}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenWrapper>
@@ -253,6 +276,34 @@ const styles = StyleSheet.create({
   form: {
     padding: wp(4),
     flex: 1,
+  },
+  noGroups:{
+    flex: 1,
+    width: '100%',
+    paddingHorizontal: wp(4),
+  },
+  noGroupsContent:{
+    alignItems: 'center',
+    paddingTop: hp(4),
+    gap: hp(2),
+    width: '100%',
+  },
+  noGroupsTitle:{
+    fontSize: hp(2.4),
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: hp(0.2),
+  },
+  noGroupsSubHead:{
+    fontSize: hp(1.8),
+    color: theme.colors.textLight,
+    textAlign: 'center',
+    marginBottom: hp(1),
+  },
+  noGroupsButton:{
+    height: hp(7),
+    width: '100%',
+    marginTop: hp(2),
   },
   label: {
     fontSize: hp(2),
