@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Modal,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -31,6 +32,7 @@ import { db } from '../../src/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import { createSharedStyles } from '../styles/shared';
 import { useTheme } from '../context/ThemeContext';
+import OnboardingSwiper from '../../components/Onboarding';
 const DEFAULT_GROUP_IMAGE = require('../../assets/images/default-avatar.png');
 const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
@@ -46,6 +48,7 @@ const Home = () => {
   const [userGroups, setUserGroups] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notifications, setNotifications] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const loadNotificationsOnly = async () => {
     try {
@@ -174,6 +177,37 @@ const Home = () => {
     } catch (error) {
       console.error('Error loading data:', error);
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session === null) return;
+    if (session.hasOnboarded === true) {
+      setShowOnboarding(false);
+    } else if (!session?.hasOnboarded) {
+      checkFirstLogin(session);
+    }
+  }, [session]);
+
+  const checkFirstLogin = async (sessionData) => {
+    // Is this the first login?
+    try {
+      if (!sessionData?.hasOnboarded === true) {
+        setShowOnboarding(true);
+      }
+    } catch (error) {
+      console.error('Error checking if first login: ', error);
+    }
+  };
+
+  const handleDismissOnboarding = async () => {
+    try {
+      await AuthService.markOnboardingComplete(session.uid);
+      const updatedSession = await AuthService.getSession();
+      setSession(updatedSession);
+      setShowOnboarding(false);
+    } catch (error) {
+      console.error('Error setting onboarding status:', error);
     }
   };
 
@@ -945,6 +979,16 @@ const Home = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  if (showOnboarding) {
+    return (
+      <View style={{ flex: 1 }}>
+        <Modal visible={showOnboarding} animationType="slide">
+          <OnboardingSwiper onFinish={handleDismissOnboarding} />
+        </Modal>
       </View>
     );
   }

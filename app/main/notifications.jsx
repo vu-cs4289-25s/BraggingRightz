@@ -18,6 +18,8 @@ import { hp, wp } from '../../helpers/common';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
 import FriendService from '../../src/endpoints/friend.cjs';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../../src/firebase/config';
 
 const NotificationIcons = {
   new_bet: { name: 'plus-circle', color: theme.colors.primary },
@@ -91,10 +93,6 @@ const Notifications = () => {
       setNotifications(
         notifications.map((notif) => ({ ...notif, read: true })),
       );
-      // Navigate back to refresh the home page's notification count
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -103,7 +101,13 @@ const Notifications = () => {
   const handleNotificationPress = async (notification) => {
     await handleMarkAsRead(notification.id);
 
-    if (notification.data?.betId) {
+    // Handle navigation based on notification type
+    if (
+      notification.type === 'friend_request' ||
+      (notification.status === 'accepted' && notification.data?.requesterId)
+    ) {
+      navigation.navigate('Friends');
+    } else if (notification.data?.betId) {
       navigation.navigate('BetDetails', { betId: notification.data.betId });
     }
   };
@@ -114,11 +118,28 @@ const Notifications = () => {
         user2username: notification.data.requesterName,
       });
 
-      // Update local state to mark notification as read
+      // Update notification to show friendship is confirmed
+      const updatedContent = {
+        title: `You and ${notification.data.requesterName} are now friends`,
+        message: 'Tap to view your friends list',
+        read: true,
+        status: 'accepted',
+      };
+
+      await NotificationsService.updateNotificationContent(
+        notification.id,
+        updatedContent,
+      );
+
+      // Update local state with new notification content
       setNotifications(
         notifications.map((notif) =>
           notif.id === notification.id
-            ? { ...notif, read: true, status: 'accepted' }
+            ? {
+                ...notif,
+                ...updatedContent,
+                updatedAt: new Date(),
+              }
             : notif,
         ),
       );
@@ -280,7 +301,7 @@ const Notifications = () => {
                 color={theme.colors.primary}
                 style={styles.markAllReadIcon}
               />
-              <Text style={styles.markAllRead}>Mark all as read</Text>
+              <Text style={styles.markAllRead}>Mark all read</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -361,7 +382,7 @@ const styles = StyleSheet.create({
   },
   markAllRead: {
     color: theme.colors.primary,
-    fontSize: hp(1.6),
+    fontSize: hp(1.2),
     fontWeight: '600',
   },
   notificationsList: {

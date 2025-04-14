@@ -66,10 +66,12 @@ describe('AuthService', () => {
         username: 'testuser',
         password: 'password123',
         fullName: 'Test User',
+        birthdate: '2000-01-01',
       });
 
       expect(result).toEqual({
         uid: '123',
+        hasOnboarded: false,
         email: 'test@example.com',
         username: 'testuser',
         profilePicture: null,
@@ -93,6 +95,7 @@ describe('AuthService', () => {
           username: 'testuser',
           password: 'password123',
           fullName: 'Test User',
+          birthdate: '2000-01-01',
         }),
       ).rejects.toThrow('Username is already taken');
     });
@@ -108,6 +111,7 @@ describe('AuthService', () => {
           username: 'testuser',
           password: 'password123',
           fullName: 'Test User',
+          birthdate: '2000-01-01',
         }),
       ).rejects.toThrow('Email is already taken');
     });
@@ -123,6 +127,8 @@ describe('AuthService', () => {
           email: 'test@example.com',
           username: 'testuser123',
           password: 'password123',
+          fullName: 'Test User',
+          birthdate: '2000-01-01',
         }),
       ).rejects.toThrow('Registration Failed');
     });
@@ -138,6 +144,7 @@ describe('AuthService', () => {
           username: 'testuser',
           password: 'password123',
           fullName: 'Test User',
+          birthdate: '2000-01-01',
         }),
       ).rejects.toThrow('Invalid email address.');
     });

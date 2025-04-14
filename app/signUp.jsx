@@ -126,6 +126,15 @@ const SignUp = () => {
       return;
     }
 
+    if (!isAtLeast13(birthdate)) {
+      Alert.alert(
+        'Age Requirement',
+        'You must be at least 13 years old to create an account. Please enter your actual birthdate.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       // First register the user to get their UID
@@ -176,7 +185,37 @@ const SignUp = () => {
     }
   };
 
+  const isAtLeast13 = (birthDate) => {
+    const today = new Date();
+    const thirteenYearsAgo = new Date(
+      today.getFullYear() - 13,
+      today.getMonth(),
+      today.getDate(),
+    );
+
+    // Check if birthDate is today
+    const isToday = birthDate.toDateString() === today.toDateString();
+    if (isToday) {
+      return false;
+    }
+
+    return birthDate <= thirteenYearsAgo;
+  };
+
   const handleDateConfirm = (date) => {
+    if (!isAtLeast13(date)) {
+      Alert.alert(
+        'Age Requirement',
+        'You must be at least 13 years old to create an account.',
+        [
+          {
+            text: 'OK',
+            onPress: () => setShowDatePicker(false),
+          },
+        ],
+      );
+      return;
+    }
     setBirthdate(date);
     setShowDatePicker(false);
   };
@@ -252,6 +291,7 @@ const SignUp = () => {
                   mode="date"
                   onConfirm={handleDateConfirm}
                   onCancel={() => setShowDatePicker(false)}
+                  maximumDate={new Date()}
                 />
               )}
               <Input

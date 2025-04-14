@@ -40,6 +40,7 @@ class AuthService {
     fullName,
     birthdate,
     profilePicture = null,
+    hasOnboarded = false,
   }) {
     try {
       // make everything lowercase
@@ -55,6 +56,14 @@ class AuthService {
       const emailAvail = await this.checkEmail(email);
       if (!emailAvail) {
         this._handleError({ code: 'auth/email-already-in-use' });
+      }
+
+      // Check if birthdate is at least 13 years ago
+      const birthday = new Date(birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birthday.getFullYear();
+      if (age < 13) {
+        this._handleError({ code: 'auth/under-13' });
       }
 
       // Create auth user
@@ -80,6 +89,7 @@ class AuthService {
         friends: [],
         groups: [],
         profilePicture,
+        hasOnboarded,
       });
 
       // save session info
@@ -90,6 +100,7 @@ class AuthService {
         email: user.email,
         username,
         profilePicture,
+        hasOnboarded,
       };
     } catch (error) {
       this._handleError(error);
@@ -127,6 +138,7 @@ class AuthService {
         username: userData.username,
         fullName: userData.fullName,
         profilePicture: userData.profilePicture || null,
+        hasOnboarded: userData.hasOnboarded,
       };
     } catch (error) {
       console.log('Login error:', error);
@@ -172,6 +184,7 @@ class AuthService {
         numCoins: userData.numCoins,
         groups: userData.groups,
         friends: userData.friends,
+        hasOnboarded: userData.hasOnboarded,
       };
     } catch (error) {
       console.log('Get session error:', error);
@@ -285,6 +298,20 @@ class AuthService {
     }
   }
 
+  // Confirm user has completed onboarding flow after first login
+  async markOnboardingComplete(userId) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        hasOnboarded: true,
+        updatedAt: new Date().toISOString(),
+      });
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
   // Error handler
   _handleError(error) {
     let message = 'An error occurred.';
@@ -307,6 +334,9 @@ class AuthService {
         break;
       case 'auth/email-already-in-use':
         message = 'Email is already taken.';
+        break;
+      case 'auth/under-13':
+        message = 'You must be at least 13 years old to create an account.';
         break;
       default:
         message = error.message;

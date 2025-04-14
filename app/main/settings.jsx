@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  Modal,
   Animated,
   Switch,
   ActivityIndicator,
@@ -21,6 +22,7 @@ import SettingsService from '../../src/endpoints/settings.cjs';
 import UserService from '../../src/endpoints/user.cjs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../context/ThemeContext';
+import OnboardingSwiper from '../../components/Onboarding';
 
 const Settings = () => {
   const navigation = useNavigation();
@@ -32,6 +34,7 @@ const Settings = () => {
     darkMode: false,
   });
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -84,6 +87,14 @@ const Settings = () => {
         },
       },
     ]);
+  };
+
+  const handleHelp = () => {
+    setShowOnboarding(true);
+  };
+
+  const handleDismissOnboarding = () => {
+    setShowOnboarding(false);
   };
 
   const handleDeleteAccount = async () => {
@@ -240,9 +251,23 @@ const Settings = () => {
                 color={theme.colors.error}
               />
             </View>
+            <Text style={styles.sectionTitle}>Help</Text>
+            <View style={styles.section}>
+              <SettingOption
+                title="Help"
+                type="button"
+                onPress={handleHelp}
+                icon="question-mark"
+              />
+            </View>
           </View>
         </ScrollView>
       </View>
+      {showOnboarding && (
+        <Modal visible={showOnboarding} animationType="slide">
+          <OnboardingSwiper onFinish={handleDismissOnboarding} />
+        </Modal>
+      )}
     </SafeAreaView>
   );
 };
