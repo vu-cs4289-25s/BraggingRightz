@@ -368,6 +368,14 @@ const EditGroup = () => {
     setShowUserProfile(true);
   };
 
+  const toggleSelection = (userId) => {
+    if (selectedFriends.includes(userId)) {
+      setSelectedFriends(selectedFriends.filter((id) => id !== userId));
+    } else {
+      setSelectedFriends([...selectedFriends, userId]);
+    }
+  };
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -584,7 +592,7 @@ const EditGroup = () => {
                             size={hp(4)}
                             rounded={theme.radius.xl}
                           />
-                          <View style={styles.friendNameContainer}>
+                          <View style={styles.friendTextContainer}>
                             <Text
                               style={[
                                 styles.friendName,
@@ -593,21 +601,21 @@ const EditGroup = () => {
                             >
                               {friend.username}
                             </Text>
-                            {isAlreadyMember ? (
+                            {isAlreadyMember && (
                               <Text style={styles.alreadyMemberText}>
                                 Already in group
                               </Text>
-                            ) : (
-                              isSelected && (
-                                <Icon
-                                  name="checkmark-circle"
-                                  size={20}
-                                  color={theme.colors.primary}
-                                />
-                              )
                             )}
                           </View>
                         </View>
+                        {!isAlreadyMember && isSelected && (
+                          <Icon
+                            name="checkmark-circle"
+                            size={20}
+                            color={theme.colors.primary}
+                            style={styles.checkIcon}
+                          />
+                        )}
                       </TouchableOpacity>
                     );
                   })
@@ -640,12 +648,21 @@ const EditGroup = () => {
                   setActiveTab('friends');
                 }}
                 buttonStyle={styles.modalCancelButton}
+                buttonTextStyle={styles.modalCancelButtonText}
               />
-              <Button
-                title="Add Member"
-                onPress={handleAddMember}
-                buttonStyle={styles.modalAddButton}
-              />
+              {(activeTab === 'username' && newMemberUsername.trim()) ||
+              (activeTab === 'friends' && selectedFriends.length > 0) ? (
+                <Button
+                  title={
+                    activeTab === 'friends'
+                      ? `Add (${selectedFriends.length})`
+                      : 'Add'
+                  }
+                  onPress={handleAddMember}
+                  buttonStyle={[styles.modalAddButton]}
+                  buttonTextStyle={[styles.modalAddButtonText]}
+                />
+              ) : null}
             </View>
           </View>
         </View>
@@ -798,7 +815,6 @@ const styles = StyleSheet.create({
     fontSize: hp(2.2),
     fontWeight: '600',
     color: theme.colors.text,
-    marginBottom: hp(3),
   },
   modalInput: {
     width: '100%',
@@ -811,8 +827,10 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: wp(4),
-    marginTop: hp(1),
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: hp(2),
+    gap: wp(2),
   },
   modalHeader: {
     width: '100%',
@@ -835,20 +853,22 @@ const styles = StyleSheet.create({
     height: hp(6),
   },
   modalCancelButton: {
-    backgroundColor: theme.colors.primary,
     flex: 1,
-    marginRight: wp(2),
-    height: hp(7),
+    height: hp(6),
   },
   modalAddButton: {
-    backgroundColor: theme.colors.primary,
     flex: 1,
-    marginLeft: wp(2),
-    height: hp(7),
+    height: hp(6),
+    backgroundColor: theme.colors.primary,
   },
-  modalButtonText: {
+  modalCancelButtonText: {
     color: 'white',
-    fontSize: hp(2),
+    fontSize: hp(1.8),
+    fontWeight: '600',
+  },
+  modalAddButtonText: {
+    color: 'white',
+    fontSize: hp(1.8),
     fontWeight: '600',
   },
   tabContainer: {
@@ -863,6 +883,7 @@ const styles = StyleSheet.create({
     paddingVertical: hp(1),
     alignItems: 'center',
     borderRadius: theme.radius.lg,
+    marginTop: hp(-1),
   },
   activeTab: {
     backgroundColor: 'white',
@@ -877,19 +898,22 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
   },
   activeTabText: {
-    color: theme.colors.text,
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   friendsList: {
     maxHeight: hp(40),
+    width: '100%',
   },
   friendItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: wp(3),
     borderRadius: theme.radius.lg,
-    marginBottom: hp(1),
     backgroundColor: theme.colors.background,
+    marginBottom: hp(1),
+    width: '100%',
   },
   selectedFriendItem: {
     backgroundColor: `${theme.colors.primary}10`,
@@ -897,13 +921,19 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   friendInfo: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(3),
   },
+  friendTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   friendName: {
-    fontSize: hp(1.8),
+    fontSize: hp(2),
     color: theme.colors.text,
+    marginBottom: hp(0.5),
   },
   usernameContainer: {
     width: '100%',
@@ -932,17 +962,13 @@ const styles = StyleSheet.create({
   disabledText: {
     color: theme.colors.textLight,
   },
-  friendNameContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
   alreadyMemberText: {
     fontSize: hp(1.4),
     color: theme.colors.textLight,
     fontStyle: 'italic',
+    marginBottom: hp(-1),
   },
   checkIcon: {
-    position: 'absolute',
-    right: wp(2),
+    marginLeft: wp(2),
   },
 });

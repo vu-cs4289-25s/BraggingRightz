@@ -8,6 +8,10 @@ import {
   ActivityIndicator,
   ScrollView,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { theme } from '../constants/theme';
 import { hp, wp } from '../helpers/common';
@@ -27,6 +31,7 @@ const AddFriendModal = ({ visible, onClose, onAdd }) => {
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [friendsList, setFriendsList] = useState([]);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,6 +43,27 @@ const AddFriendModal = ({ visible, onClose, onAdd }) => {
       }
     };
     fetchData();
+
+    // Add keyboard listeners
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      },
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      },
+    );
+
+    // Clean up listeners
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+      if (searchTimeout) clearTimeout(searchTimeout);
+    };
   }, [visible]);
 
   const getFriendshipStatus = (userId) => {
@@ -151,76 +177,97 @@ const AddFriendModal = ({ visible, onClose, onAdd }) => {
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Add Friend</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Icon name="times" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
-          </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 20}
+        >
+          <View
+            style={[
+              styles.modalContent,
+              keyboardVisible && styles.modalContentWithKeyboard,
+            ]}
+          >
+            <View style={styles.header}>
+              <Text style={styles.title}>Add Friend</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Icon name="times" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
 
-          <Input
-            icon={
-              <Icon name="search" size={20} color={theme.colors.textLight} />
-            }
-            placeholder="Search by username"
-            value={username}
-            onChangeText={handleSearch}
-            autoCapitalize="none"
-          />
-
-          {loading ? (
-            <ActivityIndicator
-              style={styles.loading}
-              color={theme.colors.primary}
-              size="large"
+            <Input
+              icon={
+                <Icon name="search" size={20} color={theme.colors.textLight} />
+              }
+              placeholder="Search by username"
+              value={username}
+              onChangeText={handleSearch}
+              autoCapitalize="none"
             />
-          ) : (
-            <ScrollView style={styles.suggestionsContainer}>
-              {suggestions.map((user) => (
-                <TouchableOpacity
-                  key={user.userId}
-                  style={[
-                    styles.suggestionItem,
-                    !canAddFriend(user.userId) && styles.disabledItem,
-                  ]}
-                  onPress={() =>
-                    canAddFriend(user.userId) && handleSelectUser(user.username)
-                  }
-                  disabled={!canAddFriend(user.userId)}
-                >
-                  <View style={styles.userInfo}>
-                    <Avatar
-                      uri={
-                        user.profilePicture ||
-                        Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri
-                      }
-                      size={hp(6)}
-                      rounded={theme.radius.xl}
-                    />
-                    <View style={styles.userDetails}>
-                      <Text style={styles.username}>{user.username}</Text>
-                      <View style={styles.stats}>
-                        <Icon name="trophy" size={16} color="#FFD700" />
-                        <Text style={styles.statsText}>
-                          {user.trophies || 0}
-                        </Text>
+
+            {loading ? (
+              <ActivityIndicator
+                style={styles.loading}
+                color={theme.colors.primary}
+                size="large"
+              />
+            ) : (
+              <ScrollView
+                style={styles.suggestionsContainer}
+                keyboardShouldPersistTaps="handled"
+              >
+                {suggestions.map((user) => (
+                  <TouchableOpacity
+                    key={user.userId}
+                    style={[
+                      styles.suggestionItem,
+                      !canAddFriend(user.userId) && styles.disabledItem,
+                    ]}
+                    onPress={() =>
+                      canAddFriend(user.userId) &&
+                      handleSelectUser(user.username)
+                    }
+                    disabled={!canAddFriend(user.userId)}
+                  >
+                    <View style={styles.userInfo}>
+                      <Avatar
+                        uri={
+                          user.profilePicture ||
+                          Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri
+                        }
+                        size={hp(6)}
+                        rounded={theme.radius.xl}
+                      />
+                      <View style={styles.userDetails}>
+                        <Text style={styles.username}>{user.username}</Text>
+                        <View style={styles.stats}>
+                          <Icon name="trophy" size={16} color="#FFD700" />
+                          <Text style={styles.statsText}>
+                            {user.trophies || 0}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                  {renderFriendshipStatus(user.userId) || (
-                    <Icon name="plus" size={20} color={theme.colors.primary} />
+                    {renderFriendshipStatus(user.userId) || (
+                      <Icon
+                        name="plus"
+                        size={20}
+                        color={theme.colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))}
+                {username.length >= 2 &&
+                  suggestions.length === 0 &&
+                  !loading && (
+                    <Text style={styles.noResults}>No users found</Text>
                   )}
-                </TouchableOpacity>
-              ))}
-              {username.length >= 2 && suggestions.length === 0 && !loading && (
-                <Text style={styles.noResults}>No users found</Text>
-              )}
-            </ScrollView>
-          )}
-        </View>
-      </View>
+              </ScrollView>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };
@@ -238,6 +285,11 @@ const styles = StyleSheet.create({
     padding: wp(6),
     width: '90%',
     maxHeight: '80%',
+    position: 'relative',
+  },
+  modalContentWithKeyboard: {
+    maxHeight: '60%',
+    marginBottom: hp(5),
   },
   header: {
     flexDirection: 'row',
