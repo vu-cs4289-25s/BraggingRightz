@@ -145,65 +145,71 @@ const MyBets = () => {
 
         <Text style={styles.question}>{bet.question}</Text>
 
-        <View style={styles.betDetails}>
-          <View style={styles.detailRow}>
-            <Icon name="clock-o" size={hp(2)} color={theme.colors.textLight} />
-            {isExpired ? (
-              <Text style={styles.timeLeft}>
-                Expired on {new Date(bet.expiresAt).toLocaleDateString()}
-              </Text>
-            ) : (
-              <Text style={styles.timeLeft}>
-                {formatTimeLeft(bet.expiresAt)}
-              </Text>
+        <View style={styles.gridDetails}>
+          <View style={styles.gridRow}>
+            <View style={styles.gridItem}>
+              <View style={styles.detailRow}>
+                <Icon
+                  name="clock-o"
+                  size={hp(2)}
+                  color={theme.colors.textLight}
+                />
+                <Text style={styles.timeLeft}>
+                  {isExpired ? `Expired` : formatTimeLeft(bet.expiresAt)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.gridItem}>
+              <View style={styles.detailRow}>
+                <Icon
+                  name="users"
+                  size={hp(2)}
+                  color={theme.colors.textLight}
+                />
+                <Text style={styles.participants}>
+                  {totalParticipants} participant
+                  {totalParticipants !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.gridRow}>
+            <View style={styles.gridItem}>
+              <View style={styles.detailRow}>
+                <Icon
+                  name="money"
+                  size={hp(2)}
+                  color={theme.colors.textLight}
+                />
+                <Text style={styles.wager}>
+                  {bet.wagerAmount} coins per bet
+                </Text>
+              </View>
+            </View>
+
+            {userOption && (
+              <View style={styles.gridItem}>
+                <View style={styles.detailRow}>
+                  <View style={{ marginTop: -17 }}>
+                    <Icon
+                      name="check-circle"
+                      size={hp(2)}
+                      color={theme.colors.textLight}
+                    />
+                  </View>
+                  <Text
+                    style={styles.pickedContainer}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    Your pick: {userOption.text}
+                  </Text>
+                </View>
+              </View>
             )}
           </View>
-
-          <View style={styles.detailRow}>
-            <Icon name="money" size={hp(2)} color={theme.colors.textLight} />
-            <Text style={styles.wager}>{bet.wagerAmount} coins per bet</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Icon name="users" size={hp(2)} color={theme.colors.textLight} />
-            <Text style={styles.participants}>
-              {totalParticipants} participant
-              {totalParticipants !== 1 ? 's' : ''}
-            </Text>
-          </View>
-
-          {userOption && (
-            <View style={styles.detailRow}>
-              <Icon
-                name="check-circle"
-                size={hp(2)}
-                color={theme.colors.success}
-              />
-              <Text style={styles.selectedOption}>
-                Your pick: {userOption.text}
-              </Text>
-            </View>
-          )}
-
-          {bet.status === 'completed' && (
-            <View style={styles.resultRow}>
-              <Icon
-                name={hasWon ? 'trophy' : 'times-circle'}
-                size={hp(2.5)}
-                color={hasWon ? theme.colors.warning : theme.colors.error}
-              />
-              <Text
-                style={[
-                  styles.result,
-                  { color: hasWon ? theme.colors.success : theme.colors.error },
-                ]}
-              >
-                {hasWon
-                  ? `Won ${bet.winningsPerPerson} coins!`
-                  : 'Better luck next time!'}
-              </Text>
-            </View>
-          )}
         </View>
 
         <View style={styles.statsRow}>
@@ -403,6 +409,18 @@ const styles = StyleSheet.create({
   betDetails: {
     gap: hp(1),
   },
+  gridDetails: {
+    gap: hp(1.2),
+  },
+
+  gridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+
+  gridItem: {
+    width: '48%',
+  },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -423,7 +441,7 @@ const styles = StyleSheet.create({
   selectedOption: {
     fontSize: hp(1.8),
     color: theme.colors.success,
-    fontWeight: '500',
+    fontWeight: '400',
   },
   resultRow: {
     flexDirection: 'row',
@@ -483,6 +501,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: hp(1.8),
     fontWeight: '600',
+  },
+
+  pickedContainer: {
+    flex: 1,
+    fontSize: hp(1.8),
+    color: theme.colors.text,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
 });
 
