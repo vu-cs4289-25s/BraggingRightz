@@ -58,6 +58,14 @@ class AuthService {
         this._handleError({ code: 'auth/email-already-in-use' });
       }
 
+      // Check if birthdate is at least 13 years ago
+      const birthday = new Date(birthdate);
+      const today = new Date();
+      const age = today.getFullYear() - birthday.getFullYear();
+      if (age < 13) {
+        this._handleError({ code: 'auth/under-13' });
+      }
+
       // Create auth user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -326,6 +334,9 @@ class AuthService {
         break;
       case 'auth/email-already-in-use':
         message = 'Email is already taken.';
+        break;
+      case 'auth/under-13':
+        message = 'You must be at least 13 years old to create an account.';
         break;
       default:
         message = error.message;

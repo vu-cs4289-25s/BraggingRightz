@@ -210,11 +210,10 @@ const SignUp = () => {
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Welcome'),
+            onPress: () => setShowDatePicker(false),
           },
         ],
       );
-      setShowDatePicker(false);
       return;
     }
     setBirthdate(date);

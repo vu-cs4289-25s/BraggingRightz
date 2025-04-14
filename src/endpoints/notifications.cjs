@@ -166,6 +166,20 @@ class NotificationsService {
     }
   }
 
+  // Update notification content
+  async updateNotificationContent(notificationId, updates) {
+    try {
+      const notificationRef = doc(db, 'notifications', notificationId);
+      await updateDoc(notificationRef, {
+        ...updates,
+        updatedAt: Timestamp.now(),
+      });
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
   // Mark all notifications as read
   async markAllAsRead(userId) {
     try {
