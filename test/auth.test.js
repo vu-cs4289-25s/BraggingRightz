@@ -71,6 +71,7 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         uid: '123',
+        hasOnboarded: false,
         email: 'test@example.com',
         username: 'testuser',
         profilePicture: null,

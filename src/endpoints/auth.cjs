@@ -40,6 +40,7 @@ class AuthService {
     fullName,
     birthdate,
     profilePicture = null,
+    hasOnboarded = false,
   }) {
     try {
       // make everything lowercase
@@ -88,6 +89,7 @@ class AuthService {
         friends: [],
         groups: [],
         profilePicture,
+        hasOnboarded,
       });
 
       // save session info
@@ -98,6 +100,7 @@ class AuthService {
         email: user.email,
         username,
         profilePicture,
+        hasOnboarded,
       };
     } catch (error) {
       this._handleError(error);
@@ -135,6 +138,7 @@ class AuthService {
         username: userData.username,
         fullName: userData.fullName,
         profilePicture: userData.profilePicture || null,
+        hasOnboarded: userData.hasOnboarded,
       };
     } catch (error) {
       console.log('Login error:', error);
@@ -180,6 +184,7 @@ class AuthService {
         numCoins: userData.numCoins,
         groups: userData.groups,
         friends: userData.friends,
+        hasOnboarded: userData.hasOnboarded,
       };
     } catch (error) {
       console.log('Get session error:', error);
@@ -289,6 +294,20 @@ class AuthService {
       };
     } catch (error) {
       console.log('Update profile error:', error);
+      this._handleError(error);
+    }
+  }
+
+  // Confirm user has completed onboarding flow after first login
+  async markOnboardingComplete(userId) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        hasOnboarded: true,
+        updatedAt: new Date().toISOString(),
+      });
+      return true;
+    } catch (error) {
       this._handleError(error);
     }
   }
