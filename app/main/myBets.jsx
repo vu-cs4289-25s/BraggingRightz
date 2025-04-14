@@ -149,20 +149,27 @@ const MyBets = () => {
           <View style={styles.gridRow}>
             <View style={styles.gridItem}>
               <View style={styles.detailRow}>
-                <Icon name="clock-o" size={hp(2)} color={theme.colors.textLight} />
+                <Icon
+                  name="clock-o"
+                  size={hp(2)}
+                  color={theme.colors.textLight}
+                />
                 <Text style={styles.timeLeft}>
-                  {isExpired
-                    ? `Expired`
-                    : formatTimeLeft(bet.expiresAt)}
+                  {isExpired ? `Expired` : formatTimeLeft(bet.expiresAt)}
                 </Text>
               </View>
             </View>
 
             <View style={styles.gridItem}>
               <View style={styles.detailRow}>
-                <Icon name="users" size={hp(2)} color={theme.colors.textLight} />
+                <Icon
+                  name="users"
+                  size={hp(2)}
+                  color={theme.colors.textLight}
+                />
                 <Text style={styles.participants}>
-                  {totalParticipants} participant{totalParticipants !== 1 ? 's' : ''}
+                  {totalParticipants} participant
+                  {totalParticipants !== 1 ? 's' : ''}
                 </Text>
               </View>
             </View>
@@ -171,8 +178,14 @@ const MyBets = () => {
           <View style={styles.gridRow}>
             <View style={styles.gridItem}>
               <View style={styles.detailRow}>
-                <Icon name="money" size={hp(2)} color={theme.colors.textLight} />
-                <Text style={styles.wager}>{bet.wagerAmount} coins per bet</Text>
+                <Icon
+                  name="money"
+                  size={hp(2)}
+                  color={theme.colors.textLight}
+                />
+                <Text style={styles.wager}>
+                  {bet.wagerAmount} coins per bet
+                </Text>
               </View>
             </View>
 
@@ -180,7 +193,11 @@ const MyBets = () => {
               <View style={styles.gridItem}>
                 <View style={styles.detailRow}>
                   <View style={{ marginTop: -17 }}>
-                    <Icon name="check-circle" size={hp(2)} color={theme.colors.textLight} />
+                    <Icon
+                      name="check-circle"
+                      size={hp(2)}
+                      color={theme.colors.textLight}
+                    />
                   </View>
                   <Text
                     style={styles.pickedContainer}
@@ -194,7 +211,6 @@ const MyBets = () => {
             )}
           </View>
         </View>
-
 
         <View style={styles.statsRow}>
           <Text style={styles.statsText}>Pool: {bet.totalPool} coins</Text>
@@ -495,8 +511,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'flex-start',
   },
-
-
 });
 
 export default MyBets;
