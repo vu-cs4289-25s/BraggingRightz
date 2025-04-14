@@ -130,7 +130,7 @@ class AuthService {
         username: userData.username,
         fullName: userData.fullName,
         profilePicture: userData.profilePicture || null,
-        hasOnboarded: user.hasOnboarded,
+        hasOnboarded: userData.hasOnboarded,
       };
     } catch (error) {
       console.log('Login error:', error);

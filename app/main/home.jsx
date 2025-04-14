@@ -192,7 +192,6 @@ const Home = () => {
   const checkFirstLogin = async (sessionData) => {
     // Is this the first login?
     try {
-      console.log('in checkfirst: ', sessionData);
       if (!sessionData?.hasOnboarded === true) {
         setShowOnboarding(true);
       }
