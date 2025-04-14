@@ -383,9 +383,8 @@ class UserService {
         where('creatorId', '==', userId),
       );
       const betsSnapshot = await getDocs(betsQuery);
-      for (const betDoc of betsSnapshot.docs) {
-        await deleteDoc(betDoc.ref);
-      }
+      const betDeletions = betsSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(betDeletions);
 
       // 3. Delete user's notifications
       const notificationsQuery = query(
@@ -393,36 +392,56 @@ class UserService {
         where('userId', '==', userId),
       );
       const notificationsSnapshot = await getDocs(notificationsQuery);
-      for (const notifDoc of notificationsSnapshot.docs) {
-        await deleteDoc(notifDoc.ref);
-      }
+      const notificationDeletions = notificationsSnapshot.docs.map((doc) =>
+        deleteDoc(doc.ref),
+      );
+      await Promise.all(notificationDeletions);
 
-      // 4. Remove user from groups
+      // 4. Remove user from groups and update group data
       if (userData.groups) {
-        for (const groupId of userData.groups) {
+        const groupUpdates = userData.groups.map(async (groupId) => {
           const groupRef = doc(db, 'groups', groupId);
-          await updateDoc(groupRef, {
-            members: arrayRemove(userId),
-            admins: arrayRemove(userId),
-          });
-        }
+          const groupDoc = await getDoc(groupRef);
+          if (groupDoc.exists()) {
+            const groupData = groupDoc.data();
+            // Remove user from members and admins
+            const updatedMembers = groupData.members.filter(
+              (id) => id !== userId,
+            );
+            const updatedAdmins = groupData.admins
+              ? groupData.admins.filter((id) => id !== userId)
+              : [];
+
+            // If user was the last member, delete the group
+            if (updatedMembers.length === 0) {
+              await deleteDoc(groupRef);
+            } else {
+              await updateDoc(groupRef, {
+                members: updatedMembers,
+                admins: updatedAdmins,
+              });
+            }
+          }
+        });
+        await Promise.all(groupUpdates);
       }
 
       // 5. Delete auxiliary data
       await deleteDoc(doc(db, 'settings', userId));
       await deleteDoc(doc(db, 'points', userId));
 
-      // 6. Delete user document (do this second to last)
+      // 6. Delete user document from Firestore (second to last)
       await deleteDoc(doc(db, 'users', userId));
 
-      // 7. Delete user from authentication (do this last)
+      // 7. Delete user from Authentication (do this last)
       const user = auth.currentUser;
-      if (user) {
+      if (user && user.uid === userId) {
         await deleteUser(user);
       }
 
       return true;
     } catch (error) {
+      console.error('Error deleting account:', error);
       this._handleError(error);
     }
   }
