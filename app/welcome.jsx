@@ -74,7 +74,7 @@ const Welcome = () => {
         <View style={styles.footer}>
           <Button
             title="Get Started!"
-            buttonStyle={{ marginHorizontal: wp() }}
+            buttonStyle={{ marginHorizontal: wp(0.1) }}
             onPress={() => navigation.navigate('SignUp')}
           />
           <View style={styles.bottomTextContainer}>
