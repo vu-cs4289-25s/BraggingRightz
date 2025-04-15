@@ -7,8 +7,16 @@ import {
   StyleSheet,
   Image,
   RefreshControl,
+  Alert,
+  Pressable,
+  ImageBackground,
+  Modal,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from '@react-navigation/native';
 import BetsService from '../../src/endpoints/bets.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import AuthService from '../../src/endpoints/auth.cjs';
@@ -27,13 +35,59 @@ const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
 const GroupBets = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { groupId, fromNewGroup, refresh } = route.params;
   const [session, setSession] = useState(null);
   const [group, setGroup] = useState(null);
   const [groupName, setGroupName] = useState(null);
-  const route = useRoute();
-  const { groupId } = route.params;
   const [bets, setBets] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleBackPress = () => {
+    navigation.navigate('Main', {
+      screen: 'Home',
+      params: { refresh: Date.now() },
+    });
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchBets();
+    }, [groupId]),
+  );
+
+  useEffect(() => {
+    if (refresh) {
+      fetchBets();
+    }
+  }, [refresh]);
+
+  useEffect(() => {
+    if (fromNewGroup) {
+      navigation.setOptions({
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+              })
+            }
+          >
+            <Icon name="arrow-left" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        ),
+      });
+    }
+  }, [fromNewGroup]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchBets();
+    });
+
+    return unsubscribe;
+  }, [navigation, groupId]);
 
   const fetchBets = async () => {
     try {
@@ -55,6 +109,14 @@ const GroupBets = () => {
       const betsWithCreatorInfo = await Promise.all(
         groupBets.map(async (bet) => {
           try {
+            // Check if bet is expired and lock it if needed
+            const now = new Date();
+            const expiryDate = new Date(bet.expiresAt);
+            if (bet.status === 'open' && expiryDate <= now) {
+              await BetsService.lockBet(bet.id);
+              bet.status = 'locked';
+            }
+
             if (!bet.creatorId) {
               return {
                 ...bet,
@@ -112,10 +174,6 @@ const GroupBets = () => {
       console.error('Error fetching bets:', error);
     }
   };
-
-  useEffect(() => {
-    fetchBets();
-  }, [groupId]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -361,6 +419,7 @@ const GroupBets = () => {
           <Header
             title={groupName}
             showBackButton={true}
+            onBackPress={handleBackPress}
             rightComponent={
               <TouchableOpacity
                 onPress={() =>

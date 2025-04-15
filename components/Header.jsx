@@ -1,24 +1,47 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  Pressable,
+  TouchableOpacity,
+} from 'react-native';
 import React from 'react';
 import BackButton from './BackButton';
 import { useNavigation } from '@react-navigation/native';
 import { hp, wp } from '../helpers/common';
 import { useTheme } from '../app/context/ThemeContext';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-const Header = ({ title, showBackButton = false, rightComponent, mb = 10 }) => {
+const Header = ({
+  title,
+  showBackButton = false,
+  rightComponent,
+  onBackPress,
+}) => {
   const navigation = useNavigation();
   const { theme } = useTheme();
 
+  const handleBackPress = () => {
+    if (onBackPress) {
+      onBackPress();
+    } else if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Main', {
+        screen: 'Home',
+        params: { refresh: Date.now() },
+      });
+    }
+  };
+
   return (
-    <View style={[styles.container, { marginBottom: mb }]}>
+    <View style={styles.header}>
       {showBackButton && (
-        <View style={styles.backButton}>
-          <BackButton navigation={navigation} />
-        </View>
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <Icon name="chevron-back" size={24} color={theme.colors.text} />
+        </TouchableOpacity>
       )}
-      <Text style={[styles.title, { color: theme.colors.text }]}>
-        {title || ''}
-      </Text>
+      <Text style={styles.title}>{title}</Text>
       {rightComponent && (
         <View style={styles.rightComponent}>{rightComponent}</View>
       )}
@@ -29,7 +52,7 @@ const Header = ({ title, showBackButton = false, rightComponent, mb = 10 }) => {
 export default Header;
 
 const styles = StyleSheet.create({
-  container: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -45,6 +68,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     paddingHorizontal: wp(4),
+    paddingVertical: hp(1),
   },
   rightComponent: {
     position: 'absolute',
