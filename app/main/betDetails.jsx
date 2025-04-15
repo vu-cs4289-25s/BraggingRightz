@@ -663,7 +663,20 @@ const BetDetails = () => {
           />
         }
       >
-        <Header title="Bet Details" showBackButton={true} />
+        <Header
+          title="Bet Details"
+          showBackButton={true}
+          rightComponent={
+            session?.uid === betData.creatorId && !isExpired ? (
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => navigation.navigate('EditBet', { betId: betId })}
+              >
+                <Icon name="edit" size={30} color={theme.colors.primary} />
+              </TouchableOpacity>
+            ) : null
+          }
+        />
 
         <View style={styles.betInfo}>
           <View style={sharedStyles.groupHeader}>
@@ -985,46 +998,6 @@ const BetDetails = () => {
           </TouchableOpacity>
         </Modal>
       </ScrollView>
-      {/* Creator Controls */}
-      {session?.uid === betData.creatorId && (
-        <View style={styles.creatorControls}>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={() => navigation.navigate('EditBet', { betId: betId })}
-            disabled={isExpired}
-          >
-            <Icon
-              name="edit"
-              size={20}
-              color={isExpired ? theme.colors.textLight : theme.colors.primary}
-            />
-            <Text
-              style={[styles.controlText, isExpired && styles.disabledText]}
-            >
-              Edit Bet
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.controlButton, styles.deleteButton]}
-            onPress={() => setShowDeleteConfirm(true)}
-            disabled={isExpired}
-          >
-            <Icon
-              name="trash"
-              size={20}
-              color={isExpired ? theme.colors.textLight : '#FF0000'}
-            />
-            <Text
-              style={[
-                styles.controlText,
-                { color: isExpired ? theme.colors.textLight : '#FF0000' },
-              ]}
-            >
-              Delete Bet
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
       <UserProfileModal
         visible={showUserProfile}
         onClose={() => setShowUserProfile(false)}
@@ -1230,27 +1203,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
     marginTop: hp(0.5),
   },
-  creatorControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: hp(2),
-    backgroundColor: '#f8f8f8',
+  editButton: {
     padding: hp(1),
-    borderRadius: theme.radius.lg,
-  },
-  controlButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: hp(1),
-    borderRadius: theme.radius.lg,
-    gap: wp(2),
-  },
-  controlText: {
-    fontSize: hp(1.8),
-    color: theme.colors.primary,
-  },
-  deleteButton: {
-    backgroundColor: '#FFE5E5',
+    marginRight: wp(2),
   },
   modalOverlay: {
     flex: 1,

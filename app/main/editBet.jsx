@@ -141,6 +141,57 @@ const EditBet = () => {
     }
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Bet',
+      'Are you sure you want to delete this bet? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setSubmitting(true);
+              await BetsService.deleteBet(betId);
+              Alert.alert('Success', 'Bet deleted successfully', [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    // Reset navigation stack to prevent back-swiping
+                    navigation.reset({
+                      index: 0,
+                      routes: [
+                        {
+                          name: 'Main',
+                          state: {
+                            routes: [
+                              {
+                                name: 'Home',
+                              },
+                            ],
+                          },
+                        },
+                      ],
+                    });
+                  },
+                },
+              ]);
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to delete bet');
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
   if (loading) {
     return (
       <ScreenWrapper>
@@ -169,7 +220,19 @@ const EditBet = () => {
   return (
     <ScreenWrapper>
       <ScrollView style={styles.container}>
-        <Header title="Edit Bet" showBackButton={true} />
+        <Header
+          title="Edit Bet"
+          showBackButton={true}
+          rightComponent={
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+              disabled={submitting}
+            >
+              <Icon name="trash" size={30} color={theme.colors.red} />
+            </TouchableOpacity>
+          }
+        />
 
         <View style={styles.form}>
           <Text style={styles.label}>Question</Text>
@@ -280,6 +343,10 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: hp(2),
+  },
+  deleteButton: {
+    padding: hp(1),
+    marginRight: wp(2),
   },
 });
 
