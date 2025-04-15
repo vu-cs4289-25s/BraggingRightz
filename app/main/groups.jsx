@@ -12,6 +12,7 @@ import {
   ImageBackground,
   Modal,
   Image,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import GroupsService from '../../src/endpoints/groups.cjs';
@@ -28,10 +29,10 @@ const DEFAULT_GROUP_IMAGE = require('../../assets/images/default-avatar.png');
 const Groups = () => {
   const navigation = useNavigation();
   const [session, setSession] = useState(null);
-
   const [groups, setGroups] = useState([]);
   const [groupPics, setGroupPics] = useState({});
   const [groupStats, setGroupStats] = useState({});
+
   useEffect(() => {
     const fetchSession = async () => {
       try {
@@ -64,15 +65,7 @@ const Groups = () => {
 
   const formatDate = (date) => {
     if (!date) return 'Unknown Date';
-
-    let dateObj;
-
-    if (date.seconds) {
-      dateObj = new Date(date.seconds * 1000);
-    } else {
-      dateObj = new Date(date);
-    }
-
+    let dateObj = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
     if (isNaN(dateObj)) return 'Invalid Date';
 
     const today = new Date();
@@ -101,167 +94,420 @@ const Groups = () => {
 
   const fetchNumMembers = async (groupId) => {
     const group = await GroupsService.getGroup(groupId);
-    const numMembers = group.members.length;
-    return numMembers;
+    return group.members.length;
   };
 
   const fetchNumBets = async (groupId) => {
     const group = await GroupsService.getGroup(groupId);
-    const numBets = group.bets.length;
-    return numBets;
+    return group.bets.length;
   };
 
   return (
     <ScreenWrapper bg="white">
-      <ScrollView>
-        <View>
-          <Header
-            title="My Groups"
-            showBackButton={true}
-            rightComponent={
-              <TouchableOpacity
-                onPress={() => navigation.navigate('NewGroup')}
-                style={styles.header}
-                paddingRight={wp(4)}
-              >
-                <Icon
-                  name="plus"
-                  style={styles.addButton}
-                  strokeWidth={2}
-                  size={hp(2.5)}
-                  color={theme.colors.text}
-                />
-              </TouchableOpacity>
-            }
-          />
-          <View style={styles.sectionDivider} />
-          {groups.length == 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>You have no groups yet.</Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('NewGroup')}
-                style={styles.createButton}
-              >
-                <Text style={styles.createButtonText}>Create a New Group</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-          {groups.map((group, index) => (
-            <Pressable
-              key={index}
-              onPress={() =>
-                navigation.navigate('GroupBets', { groupId: group.id })
-              }
-              style={styles.groupContainer}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Header
+          title="My Groups"
+          showBackButton
+          rightComponent={
+            <TouchableOpacity
+              onPress={() => navigation.navigate('NewGroup')}
+              style={styles.addGroupButton}
             >
-              <View style={styles.groupInfo}>
+              <Icon name="plus" size={hp(2.4)} color={theme.colors.text} />
+            </TouchableOpacity>
+          }
+        />
+
+        <View style={styles.topSpacer} />
+
+        {groups.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>You have no groups yet.</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('NewGroup')}
+              style={styles.createButton}
+            >
+              <Text style={styles.createButtonText}>Create a New Group</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.groupList}>
+            {groups.map((group, index) => (
+              <Pressable
+                key={index}
+                onPress={() =>
+                  navigation.navigate('GroupBets', { groupId: group.id })
+                }
+                style={styles.groupCard}
+              >
                 <Avatar
                   uri={
                     groupPics[group.id] ||
                     Image.resolveAssetSource(DEFAULT_GROUP_IMAGE).uri
                   }
-                  size={hp(5)}
+                  size={hp(5.5)}
                   rounded={theme.radius.xl}
                 />
-                <View style={styles.groupTextContainer}>
+                <View style={styles.groupDetails}>
                   <Text style={styles.groupName}>{group.name}</Text>
-                  <View style={styles.groupStatsContainer}>
-                    <Text style={styles.groupPreview}>
-                      {`${groupStats[group.id]?.numMembers || 0} ${
-                        groupStats[group.id]?.numMembers === 1
-                          ? 'Member'
-                          : 'Members'
-                      }`}
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaText}>
+                      {groupStats[group.id]?.numMembers || 0}{' '}
+                      {groupStats[group.id]?.numMembers === 1
+                        ? 'Member'
+                        : 'Members'}
                     </Text>
-                    <Text
-                      style={styles.groupPreview}
-                    >{`${groupStats[group.id]?.numBets || 0} Bets`}</Text>
+                    <Text style={styles.metaText}>
+                      {groupStats[group.id]?.numBets || 0} Bets
+                    </Text>
                   </View>
                 </View>
-                <Text style={styles.groupLastMessage}>
-                  {formatDate(group.updatedAt)}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+                <View style={styles.dateChevron}>
+                  <Text style={styles.groupDate}>
+                    {formatDate(group.updatedAt)}{' '}
+                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={hp(1.8)}
+                    color="#bbb"
+                  />
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
+  topSpacer: {
+    marginTop: hp(2.5),
+  },
+
+  dateChevron: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: wp(1),
+  },
+
+  addGroupButton: {
     marginRight: wp(4),
-  },
-  addButton: {
     padding: hp(1),
-  },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 10,
-    marginHorizontal: 10,
-  },
-  groupContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: hp(2),
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.darkLight,
-  },
-  groupInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  groupTextContainer: {
-    marginLeft: wp(3),
-    flex: 1,
-  },
-  groupStatsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    marginTop: hp(0.5),
-  },
-  groupName: {
-    fontSize: hp(2.2),
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
-  groupPreview: {
-    fontSize: hp(1.8),
-    color: theme.colors.textLight,
-    marginRight: wp(8),
-    fontStyle: 'italic',
-  },
-  groupLastMessage: {
-    fontSize: hp(1.8),
-    color: theme.colors.textLight,
-    textAlign: 'right',
+    backgroundColor: '#f2f2f2',
+    borderRadius: 10,
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: hp(10),
   },
   emptyText: {
     fontSize: hp(2),
+    fontWeight: '500',
     color: theme.colors.text,
     marginBottom: hp(2),
   },
   createButton: {
     backgroundColor: theme.colors.primary,
     paddingVertical: hp(1.5),
-    paddingHorizontal: wp(5),
-    borderRadius: 5,
+    paddingHorizontal: wp(6),
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   createButtonText: {
     color: 'white',
     fontSize: hp(2),
+    fontWeight: '600',
+  },
+  groupList: {
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(3),
+  },
+  groupCard: {
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: hp(2),
+    marginBottom: hp(1.5),
+    borderRadius: 14,
+    borderColor: '#eee',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  groupDetails: {
+    marginLeft: wp(3),
+    flex: 1,
+  },
+  groupName: {
+    fontSize: hp(2.2),
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    marginTop: hp(0.5),
+  },
+  metaText: {
+    fontSize: hp(1.7),
+    color: theme.colors.textLight,
+    marginRight: wp(4),
+    fontStyle: 'italic',
+  },
+  groupDate: {
+    fontSize: hp(1.6),
+    color: '#aaa',
   },
 });
 
 export default Groups;
+
+// const Groups = () => {
+//   const navigation = useNavigation();
+//   const [session, setSession] = useState(null);
+//
+//   const [groups, setGroups] = useState([]);
+//   const [groupPics, setGroupPics] = useState({});
+//   const [groupStats, setGroupStats] = useState({});
+//   useEffect(() => {
+//     const fetchSession = async () => {
+//       try {
+//         const sessionData = await AuthService.getSession();
+//         setSession(sessionData);
+//
+//         const groups = await GroupsService.getUserGroups(sessionData.uid);
+//         const sortedGroups = groups.sort(
+//           (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
+//         );
+//         setGroups(sortedGroups);
+//
+//         const pics = {};
+//         const stats = {};
+//         for (const group of sortedGroups) {
+//           pics[group.id] = await fetchGroupPic(group.id);
+//           stats[group.id] = {
+//             numMembers: await fetchNumMembers(group.id),
+//             numBets: await fetchNumBets(group.id),
+//           };
+//         }
+//         setGroupPics(pics);
+//         setGroupStats(stats);
+//       } catch (error) {
+//         console.log('Error fetching session:', error);
+//       }
+//     };
+//     fetchSession();
+//   }, []);
+//
+//   const formatDate = (date) => {
+//     if (!date) return 'Unknown Date';
+//
+//     let dateObj;
+//
+//     if (date.seconds) {
+//       dateObj = new Date(date.seconds * 1000);
+//     } else {
+//       dateObj = new Date(date);
+//     }
+//
+//     if (isNaN(dateObj)) return 'Invalid Date';
+//
+//     const today = new Date();
+//     const yesterday = new Date(today);
+//     yesterday.setDate(today.getDate() - 1);
+//
+//     const options = { hour: 'numeric', minute: 'numeric', hour12: true };
+//     const dayOptions = { weekday: 'long' };
+//     const fullDateOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+//
+//     if (dateObj.toDateString() === today.toDateString()) {
+//       return new Intl.DateTimeFormat('en-US', options).format(dateObj);
+//     } else if (dateObj.toDateString() === yesterday.toDateString()) {
+//       return 'Yesterday';
+//     } else if (dateObj > new Date(today.setDate(today.getDate() - 7))) {
+//       return new Intl.DateTimeFormat('en-US', dayOptions).format(dateObj);
+//     } else {
+//       return new Intl.DateTimeFormat('en-US', fullDateOptions).format(dateObj);
+//     }
+//   };
+//
+//   const fetchGroupPic = async (groupId) => {
+//     const group = await GroupsService.getGroup(groupId);
+//     return group.photoUrl;
+//   };
+//
+//   const fetchNumMembers = async (groupId) => {
+//     const group = await GroupsService.getGroup(groupId);
+//     const numMembers = group.members.length;
+//     return numMembers;
+//   };
+//
+//   const fetchNumBets = async (groupId) => {
+//     const group = await GroupsService.getGroup(groupId);
+//     const numBets = group.bets.length;
+//     return numBets;
+//   };
+//
+//   return (
+//     <ScreenWrapper bg="white">
+//       <ScrollView>
+//         <View>
+//           <Header
+//             title="My Groups"
+//             showBackButton={true}
+//             rightComponent={
+//               <TouchableOpacity
+//                 onPress={() => navigation.navigate('NewGroup')}
+//                 style={styles.header}
+//                 paddingRight={wp(4)}
+//               >
+//                 <Icon
+//                   name="plus"
+//                   style={styles.addButton}
+//                   strokeWidth={2}
+//                   size={hp(2.5)}
+//                   color={theme.colors.text}
+//                 />
+//               </TouchableOpacity>
+//             }
+//           />
+//           <View style={styles.sectionDivider} />
+//           {groups.length == 0 ? (
+//             <View style={styles.emptyContainer}>
+//               <Text style={styles.emptyText}>You have no groups yet.</Text>
+//               <TouchableOpacity
+//                 onPress={() => navigation.navigate('NewGroup')}
+//                 style={styles.createButton}
+//               >
+//                 <Text style={styles.createButtonText}>Create a New Group</Text>
+//               </TouchableOpacity>
+//             </View>
+//           ) : null}
+//           {groups.map((group, index) => (
+//             <Pressable
+//               key={index}
+//               onPress={() =>
+//                 navigation.navigate('GroupBets', { groupId: group.id })
+//               }
+//               style={styles.groupContainer}
+//             >
+//               <View style={styles.groupInfo}>
+//                 <Avatar
+//                   uri={
+//                     groupPics[group.id] ||
+//                     Image.resolveAssetSource(DEFAULT_GROUP_IMAGE).uri
+//                   }
+//                   size={hp(5)}
+//                   rounded={theme.radius.xl}
+//                 />
+//                 <View style={styles.groupTextContainer}>
+//                   <Text style={styles.groupName}>{group.name}</Text>
+//                   <View style={styles.groupStatsContainer}>
+//                     <Text style={styles.groupPreview}>
+//                       {`${groupStats[group.id]?.numMembers || 0} ${
+//                         groupStats[group.id]?.numMembers === 1
+//                           ? 'Member'
+//                           : 'Members'
+//                       }`}
+//                     </Text>
+//                     <Text
+//                       style={styles.groupPreview}
+//                     >{`${groupStats[group.id]?.numBets || 0} Bets`}</Text>
+//                   </View>
+//                 </View>
+//                 <Text style={styles.groupLastMessage}>
+//                   {formatDate(group.updatedAt)}
+//                 </Text>
+//               </View>
+//             </Pressable>
+//           ))}
+//         </View>
+//       </ScrollView>
+//     </ScreenWrapper>
+//   );
+// };
+//
+// const styles = StyleSheet.create({
+//   header: {
+//     marginRight: wp(4),
+//   },
+//   addButton: {
+//     padding: hp(1),
+//   },
+//   sectionDivider: {
+//     height: 1,
+//     backgroundColor: '#e0e0e0',
+//     marginVertical: 10,
+//     marginHorizontal: 10,
+//   },
+//   groupContainer: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     padding: hp(2),
+//     borderBottomWidth: 1,
+//     borderBottomColor: theme.colors.darkLight,
+//   },
+//   groupInfo: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     justifyContent: 'space-between',
+//     width: '100%',
+//   },
+//   groupTextContainer: {
+//     marginLeft: wp(3),
+//     flex: 1,
+//   },
+//   groupStatsContainer: {
+//     flexDirection: 'row',
+//     justifyContent: 'flex-start',
+//     alignItems: 'center',
+//     marginTop: hp(0.5),
+//   },
+//   groupName: {
+//     fontSize: hp(2.2),
+//     fontWeight: 'bold',
+//     color: theme.colors.text,
+//   },
+//   groupPreview: {
+//     fontSize: hp(1.8),
+//     color: theme.colors.textLight,
+//     marginRight: wp(8),
+//     fontStyle: 'italic',
+//   },
+//   groupLastMessage: {
+//     fontSize: hp(1.8),
+//     color: theme.colors.textLight,
+//     textAlign: 'right',
+//   },
+//   emptyContainer: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//   },
+//   emptyText: {
+//     fontSize: hp(2),
+//     color: theme.colors.text,
+//     marginBottom: hp(2),
+//   },
+//   createButton: {
+//     backgroundColor: theme.colors.primary,
+//     paddingVertical: hp(1.5),
+//     paddingHorizontal: wp(5),
+//     borderRadius: 5,
+//   },
+//   createButtonText: {
+//     color: 'white',
+//     fontSize: hp(2),
+//   },
+// });
+//
+// export default Groups;
