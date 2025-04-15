@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
   RefreshControl,
+  BackHandler,
 } from 'react-native';
 import {
   useRoute,
@@ -63,51 +64,74 @@ const BetDetails = () => {
     y: 0,
   });
 
+  // Handle initial data loading
   useEffect(() => {
-    loadData();
-    checkExpiredBet();
-  }, [betId]);
-
-  useEffect(() => {
-    if (fromNewBet) {
-      navigation.setOptions({
-        gestureEnabled: false,
-        headerLeft: null,
-      });
-    }
-  }, [fromNewBet, navigation]);
-
-  useEffect(() => {
-    const backHandler = navigation.addListener('beforeRemove', (e) => {
-      if (e.data.action.type === 'GO_BACK') {
-        e.preventDefault();
-        handleBackPress();
-      }
-    });
-
-    return () => backHandler.remove();
-  }, [navigation]);
-
-  // Add refresh on focus
-  useFocusEffect(
-    React.useCallback(() => {
-      const refresh = async () => {
+    const initialLoad = async () => {
+      try {
         await loadData();
         await checkExpiredBet();
-      };
-      refresh();
-    }, [betId]),
-  );
+      } catch (error) {
+        console.error('Error in initial load:', error);
+      }
+    };
+    initialLoad();
+  }, [betId]); // Only run on betId change
+
+  // Single useEffect for all navigation setup
+  useEffect(() => {
+    const handleBack = () => {
+      if (fromNewBet) {
+        navigation.navigate('Main', {
+          screen: 'Home',
+          params: { refresh: Date.now() },
+        });
+        return true;
+      } else if (route.params?.fromGroup) {
+        navigation.navigate('GroupBets', {
+          groupId: route.params.groupId,
+          refresh: Date.now(),
+        });
+        return true;
+      } else {
+        navigation.goBack();
+        return true;
+      }
+    };
+
+    navigation.setOptions({
+      gestureEnabled: !fromNewBet,
+      headerLeft: fromNewBet
+        ? null
+        : () => (
+            <TouchableOpacity onPress={handleBack} style={{ marginLeft: 16 }}>
+              <Icon name="arrow-left" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          ),
+    });
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBack,
+    );
+
+    return () => {
+      backHandler.remove();
+    };
+  }, [navigation, fromNewBet, route.params]);
 
   const onRefresh = React.useCallback(async () => {
+    if (refreshing) return; // Prevent multiple simultaneous refreshes
+
     setRefreshing(true);
     try {
       await loadData();
       await checkExpiredBet();
+    } catch (error) {
+      console.error('Error in manual refresh:', error);
     } finally {
       setRefreshing(false);
     }
-  }, [betId]);
+  }, [betId, refreshing]);
 
   const loadData = async () => {
     try {
@@ -474,25 +498,6 @@ const BetDetails = () => {
       Alert.alert('Error', error.message || 'Failed to add reaction');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleBackPress = () => {
-    if (route.params?.fromGroup) {
-      // If we came from a group, go back to GroupBets
-      navigation.navigate('GroupBets', {
-        groupId: route.params.groupId,
-        refresh: Date.now(),
-      });
-    } else if (route.params?.fromBottomNav) {
-      // If we came from bottom nav, go back to Home
-      navigation.navigate('Main', {
-        screen: 'Home',
-        params: { refresh: Date.now() },
-      });
-    } else {
-      // Default back behavior
-      navigation.goBack();
     }
   };
 
