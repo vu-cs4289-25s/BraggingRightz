@@ -37,7 +37,7 @@ const sharedStyles = createSharedStyles(theme);
 const BetDetails = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { betId } = route.params;
+  const { betId, fromNewBet, fromBottomNav } = route.params;
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -67,6 +67,26 @@ const BetDetails = () => {
     loadData();
     checkExpiredBet();
   }, [betId]);
+
+  useEffect(() => {
+    if (fromNewBet) {
+      navigation.setOptions({
+        gestureEnabled: false,
+        headerLeft: null,
+      });
+    }
+  }, [fromNewBet, navigation]);
+
+  useEffect(() => {
+    const backHandler = navigation.addListener('beforeRemove', (e) => {
+      if (e.data.action.type === 'GO_BACK') {
+        e.preventDefault();
+        handleBackPress();
+      }
+    });
+
+    return () => backHandler.remove();
+  }, [navigation]);
 
   // Add refresh on focus
   useFocusEffect(
@@ -454,6 +474,25 @@ const BetDetails = () => {
       Alert.alert('Error', error.message || 'Failed to add reaction');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleBackPress = () => {
+    if (route.params?.fromGroup) {
+      // If we came from a group, go back to GroupBets
+      navigation.navigate('GroupBets', {
+        groupId: route.params.groupId,
+        refresh: Date.now(),
+      });
+    } else if (route.params?.fromBottomNav) {
+      // If we came from bottom nav, go back to Home
+      navigation.navigate('Main', {
+        screen: 'Home',
+        params: { refresh: Date.now() },
+      });
+    } else {
+      // Default back behavior
+      navigation.goBack();
     }
   };
 

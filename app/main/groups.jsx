@@ -62,6 +62,15 @@ const Groups = () => {
     fetchSession();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      // Trigger a refresh of the home screen when navigating back
+      navigation.navigate('Main', { screen: 'Home', refresh: Date.now() });
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   const formatDate = (date) => {
     if (!date) return 'Unknown Date';
 

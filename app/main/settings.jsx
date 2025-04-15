@@ -11,6 +11,7 @@ import {
   Switch,
   ActivityIndicator,
   SafeAreaView,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../constants/theme';
@@ -158,6 +159,29 @@ const Settings = () => {
     }
   };
 
+  const handleContactUs = async () => {
+    const email = 'braggingrightzapp@gmail.com';
+    const subject = 'Contact BraggingRightz Support';
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+      } else {
+        Alert.alert(
+          'Error',
+          'Could not open email client. Please email us directly at braggingrightzapp@gmail.com',
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Could not open email client. Please email us directly at braggingrightzapp@gmail.com',
+      );
+    }
+  };
+
   const SettingOption = ({
     title,
     value,
@@ -234,6 +258,22 @@ const Settings = () => {
               />
             </View>
 
+            <Text style={styles.sectionTitle}>Help & Support</Text>
+            <View style={styles.section}>
+              <SettingOption
+                title="Help"
+                type="button"
+                onPress={handleHelp}
+                icon="help"
+              />
+              <SettingOption
+                title="Contact Us"
+                type="button"
+                onPress={handleContactUs}
+                icon="mail"
+              />
+            </View>
+
             <Text style={styles.sectionTitle}>Account</Text>
             <View style={styles.section}>
               <SettingOption
@@ -249,15 +289,6 @@ const Settings = () => {
                 onPress={handleDeleteAccount}
                 icon="delete-forever"
                 color={theme.colors.error}
-              />
-            </View>
-            <Text style={styles.sectionTitle}>Help</Text>
-            <View style={styles.section}>
-              <SettingOption
-                title="Help"
-                type="button"
-                onPress={handleHelp}
-                icon="question-mark"
               />
             </View>
           </View>

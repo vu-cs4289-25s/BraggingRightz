@@ -9,6 +9,11 @@ import {
   Image,
   Modal,
   TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import Header from '../../components/Header';
@@ -24,7 +29,7 @@ import Input from '../../components/Input';
 import AuthService from '../../src/endpoints/auth.cjs';
 import UserService from '../../src/endpoints/user.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../src/firebase/config';
 import UserProfileModal from '../../components/UserProfileModal';
@@ -53,6 +58,9 @@ const EditGroup = () => {
   const [friends, setFriends] = useState([]);
   const [activeTab, setActiveTab] = useState('friends');
   const [selectedFriends, setSelectedFriends] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -142,6 +150,48 @@ const EditGroup = () => {
     }
   }, [modalVisible]);
 
+  useEffect(() => {
+    // Clean up search timeout on unmount
+    return () => {
+      if (searchTimeout) clearTimeout(searchTimeout);
+    };
+  }, []);
+
+  const handleUserSearch = async (text) => {
+    setNewMemberUsername(text);
+
+    // Clear previous timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout to search after user stops typing
+    const timeout = setTimeout(async () => {
+      if (text.length >= 2) {
+        setLoading(true);
+        try {
+          const results = await UserService.searchUsers(text);
+          // Filter out current user and existing members
+          const filtered = results.filter(
+            (user) =>
+              user.userId !== session.uid &&
+              !members.some((member) => member.userId === user.userId),
+          );
+          setSuggestions(filtered);
+        } catch (error) {
+          console.error('Error searching users:', error);
+          setSuggestions([]);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setSuggestions([]);
+      }
+    }, 200);
+
+    setSearchTimeout(timeout);
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -218,7 +268,7 @@ const EditGroup = () => {
     }
   };
 
-  const handleAddMember = async () => {
+  const handleAddMember = async (userId) => {
     try {
       if (activeTab === 'friends') {
         if (selectedFriends.length === 0) {
@@ -268,12 +318,46 @@ const EditGroup = () => {
         setModalVisible(false);
         setSelectedFriends([]);
       } else {
-        // Existing username logic
-        if (!newMemberUsername) {
-          Alert.alert('Error', 'Please enter a username');
-          return;
+        // Validate user exists and get their profile
+        try {
+          const userProfile = await UserService.getUserProfile(userId);
+          if (!userProfile) {
+            Alert.alert('Error', 'User not found');
+            return;
+          }
+
+          // Check if user is already a member
+          if (members.some((member) => member.userId === userId)) {
+            Alert.alert('Error', 'User is already a member of this group');
+            return;
+          }
+
+          // Add member to group
+          const actualGroupId =
+            typeof groupId === 'object' ? groupId.id : groupId;
+          await GroupsService.addMember(actualGroupId, userId, inviteCode);
+
+          // Add member to local state with their actual profile data
+          setMembers([
+            ...members,
+            {
+              userId: userId,
+              username: userProfile.username,
+              profilePicture: userProfile.profilePicture || DEFAULT_USER_IMAGE,
+              isAdmin: false,
+              coins: userProfile.numCoins || 0,
+              trophies: userProfile.trophies || 0,
+            },
+          ]);
+
+          Alert.alert('Success', 'Member added successfully');
+          setModalVisible(false);
+          setNewMemberUsername('');
+          setSuggestions([]);
+        } catch (error) {
+          console.error('Error adding member:', error);
+          Alert.alert('Error', 'Failed to add member. Please try again.');
         }
-        // ... rest of the existing username logic
       }
     } catch (error) {
       console.error('Error adding members:', error);
@@ -499,173 +583,231 @@ const EditGroup = () => {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalText}>Add New Member</Text>
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                style={styles.closeButton}
-              >
-                <Icon name="close" size={24} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.tab,
-                  activeTab === 'friends' && styles.activeTab,
-                ]}
-                onPress={() => setActiveTab('friends')}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === 'friends' && styles.activeTabText,
-                  ]}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.centeredView}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 20}
+          >
+            <View
+              style={[
+                styles.modalView,
+                keyboardVisible && styles.modalViewWithKeyboard,
+              ]}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalText}>Add New Member</Text>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
                 >
-                  Friends
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.tab,
-                  activeTab === 'username' && styles.activeTab,
-                ]}
-                onPress={() => setActiveTab('username')}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === 'username' && styles.activeTabText,
-                  ]}
-                >
-                  Username
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {activeTab === 'friends' ? (
-              <ScrollView style={styles.friendsList}>
-                {friends.length === 0 ? (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No friends yet</Text>
-                  </View>
-                ) : (
-                  friends.map((friend) => {
-                    const isAlreadyMember = members.some(
-                      (member) => member.userId === friend.userId,
-                    );
-                    const isSelected = selectedFriends.some(
-                      (f) => f.userId === friend.userId,
-                    );
-
-                    return (
-                      <TouchableOpacity
-                        key={friend.userId}
-                        style={[
-                          styles.friendItem,
-                          isSelected && styles.selectedFriendItem,
-                          isAlreadyMember && styles.disabledFriendItem,
-                        ]}
-                        onPress={() => {
-                          if (isAlreadyMember) return;
-                          if (isSelected) {
-                            setSelectedFriends(
-                              selectedFriends.filter(
-                                (f) => f.userId !== friend.userId,
-                              ),
-                            );
-                          } else {
-                            setSelectedFriends([...selectedFriends, friend]);
-                          }
-                        }}
-                        disabled={isAlreadyMember}
-                      >
-                        <View style={styles.friendInfo}>
-                          <Avatar
-                            uri={
-                              friend.profilePicture ||
-                              Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri
-                            }
-                            size={hp(4)}
-                            rounded={theme.radius.xl}
-                          />
-                          <View style={styles.friendTextContainer}>
-                            <Text
-                              style={[
-                                styles.friendName,
-                                isAlreadyMember && styles.disabledText,
-                              ]}
-                            >
-                              {friend.username}
-                            </Text>
-                            {isAlreadyMember && (
-                              <Text style={styles.alreadyMemberText}>
-                                Already in group
-                              </Text>
-                            )}
-                          </View>
-                        </View>
-                        {!isAlreadyMember && isSelected && (
-                          <Icon
-                            name="checkmark-circle"
-                            size={20}
-                            color={theme.colors.primary}
-                            style={styles.checkIcon}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })
-                )}
-              </ScrollView>
-            ) : (
-              <View style={styles.usernameContainer}>
-                <Text style={styles.modalDescription}>
-                  Enter the username of the person you want to add
-                </Text>
-                <TextInput
-                  style={styles.modalInput}
-                  placeholder="Enter username"
-                  placeholderTextColor={theme.colors.textLight}
-                  value={newMemberUsername}
-                  onChangeText={setNewMemberUsername}
-                  autoCapitalize={'none'}
-                  autoCorrect={false}
-                />
+                  <Icon name="close" size={24} color={theme.colors.text} />
+                </TouchableOpacity>
               </View>
-            )}
 
-            <View style={styles.modalButtons}>
-              <Button
-                title="Cancel"
-                onPress={() => {
-                  setModalVisible(false);
-                  setNewMemberUsername('');
-                  setSelectedFriends([]);
-                  setActiveTab('friends');
-                }}
-                buttonStyle={styles.modalCancelButton}
-                buttonTextStyle={styles.modalCancelButtonText}
-              />
-              {(activeTab === 'username' && newMemberUsername.trim()) ||
-              (activeTab === 'friends' && selectedFriends.length > 0) ? (
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === 'friends' && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab('friends')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === 'friends' && styles.activeTabText,
+                    ]}
+                  >
+                    Friends
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.tab,
+                    activeTab === 'username' && styles.activeTab,
+                  ]}
+                  onPress={() => setActiveTab('username')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === 'username' && styles.activeTabText,
+                    ]}
+                  >
+                    Username
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {activeTab === 'friends' ? (
+                <ScrollView
+                  style={styles.friendsList}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {friends.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                      <Text style={styles.emptyText}>No friends yet</Text>
+                    </View>
+                  ) : (
+                    friends.map((friend) => {
+                      const isAlreadyMember = members.some(
+                        (member) => member.userId === friend.userId,
+                      );
+                      const isSelected = selectedFriends.some(
+                        (f) => f.userId === friend.userId,
+                      );
+
+                      return (
+                        <TouchableOpacity
+                          key={friend.userId}
+                          style={[
+                            styles.friendItem,
+                            isSelected && styles.selectedFriendItem,
+                            isAlreadyMember && styles.disabledFriendItem,
+                          ]}
+                          onPress={() => {
+                            if (isAlreadyMember) return;
+                            if (isSelected) {
+                              setSelectedFriends(
+                                selectedFriends.filter(
+                                  (f) => f.userId !== friend.userId,
+                                ),
+                              );
+                            } else {
+                              setSelectedFriends([...selectedFriends, friend]);
+                            }
+                          }}
+                          disabled={isAlreadyMember}
+                        >
+                          <View style={styles.friendInfo}>
+                            <Avatar
+                              uri={
+                                friend.profilePicture ||
+                                Image.resolveAssetSource(DEFAULT_USER_IMAGE).uri
+                              }
+                              size={hp(4)}
+                              rounded={theme.radius.xl}
+                            />
+                            <View style={styles.friendTextContainer}>
+                              <Text
+                                style={[
+                                  styles.friendName,
+                                  isAlreadyMember && styles.disabledText,
+                                ]}
+                              >
+                                {friend.username}
+                              </Text>
+                              {isAlreadyMember && (
+                                <Text style={styles.alreadyMemberText}>
+                                  Already in group
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                          {!isAlreadyMember && isSelected && (
+                            <Icon
+                              name="check-circle"
+                              size={20}
+                              color={theme.colors.primary}
+                              style={styles.checkIcon}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })
+                  )}
+                </ScrollView>
+              ) : (
+                <View style={styles.usernameContainer}>
+                  <Input
+                    placeholder="Search by username"
+                    value={newMemberUsername}
+                    onChangeText={handleUserSearch}
+                    autoCapitalize="none"
+                  />
+                  {loading ? (
+                    <ActivityIndicator
+                      style={styles.loading}
+                      color={theme.colors.primary}
+                      size="large"
+                    />
+                  ) : (
+                    <ScrollView
+                      style={styles.suggestionsContainer}
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {suggestions.map((user) => (
+                        <View key={user.userId} style={styles.suggestionItem}>
+                          <View style={styles.userInfo}>
+                            <Avatar
+                              uri={user.profilePicture || DEFAULT_USER_IMAGE}
+                              size={hp(6)}
+                              rounded={theme.radius.xl}
+                            />
+                            <View style={styles.userDetails}>
+                              <Text style={styles.username}>
+                                {user.username}
+                              </Text>
+                              <View style={styles.stats}>
+                                <Icon name="trophy" size={16} color="#FFD700" />
+                                <Text style={styles.statsText}>
+                                  {user.trophies || 0}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.addUserButton}
+                            onPress={() => handleAddMember(user.userId)}
+                          >
+                            <Icon
+                              name="plus"
+                              size={20}
+                              color={theme.colors.primary}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+
+                      {newMemberUsername.length >= 2 &&
+                        suggestions.length === 0 &&
+                        !loading && (
+                          <Text style={styles.noResults}>No users found</Text>
+                        )}
+                    </ScrollView>
+                  )}
+                </View>
+              )}
+
+              <View style={styles.modalButtons}>
                 <Button
-                  title={
-                    activeTab === 'friends'
-                      ? `Add (${selectedFriends.length})`
-                      : 'Add'
-                  }
-                  onPress={handleAddMember}
-                  buttonStyle={[styles.modalAddButton]}
-                  buttonTextStyle={[styles.modalAddButtonText]}
+                  title="Cancel"
+                  onPress={() => {
+                    setModalVisible(false);
+                    setNewMemberUsername('');
+                    setSelectedFriends([]);
+                    setActiveTab('friends');
+                  }}
+                  buttonStyle={styles.modalCancelButton}
+                  buttonTextStyle={styles.modalCancelButtonText}
                 />
-              ) : null}
+                {selectedFriends.length > 0 && (
+                  <Button
+                    title={
+                      selectedFriends.length > 0
+                        ? `Add (${selectedFriends.length})`
+                        : 'Add'
+                    }
+                    onPress={() => handleAddMember()}
+                    buttonStyle={styles.modalAddButton}
+                    buttonTextStyle={styles.modalAddButtonText}
+                  />
+                )}
+              </View>
             </View>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
 
       <UserProfileModal
@@ -798,6 +940,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: wp(4),
   },
   modalView: {
     width: '90%',
@@ -810,6 +953,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    maxHeight: '80%',
+  },
+  modalViewWithKeyboard: {
+    maxHeight: '60%',
+    marginBottom: hp(10),
   },
   modalText: {
     fontSize: hp(2.2),
@@ -970,5 +1118,54 @@ const styles = StyleSheet.create({
   },
   checkIcon: {
     marginLeft: wp(2),
+  },
+  suggestionsContainer: {
+    marginTop: hp(2),
+    maxHeight: hp(40),
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: wp(3),
+    borderRadius: theme.radius.lg,
+    marginBottom: hp(1),
+    backgroundColor: theme.colors.background,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  userDetails: {
+    marginLeft: wp(3),
+    flex: 1,
+  },
+  username: {
+    fontSize: hp(2),
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: hp(0.5),
+  },
+  stats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statsText: {
+    fontSize: hp(1.6),
+    color: theme.colors.textLight,
+    marginLeft: wp(1),
+  },
+  noResults: {
+    textAlign: 'center',
+    color: theme.colors.textLight,
+    marginTop: hp(2),
+    fontStyle: 'italic',
+  },
+  loading: {
+    marginTop: hp(3),
+  },
+  addUserButton: {
+    padding: wp(2),
   },
 });
