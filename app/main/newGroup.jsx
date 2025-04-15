@@ -104,7 +104,7 @@ const NewGroup = () => {
     setLoading(true);
 
     try {
-      await GroupsService.createGroup({
+      const groupData = await GroupsService.createGroup({
         creatorId: session.uid,
         name: groupName.current,
         description: description.current,
@@ -112,14 +112,20 @@ const NewGroup = () => {
         photoUrl: groupPhoto,
       });
 
-      Alert.alert('Group Successfully Created!', 'Create Some Bets!', [
+      Alert.alert('Success', 'Group created successfully!', [
         {
           text: 'OK',
-          onPress: () => navigation.replace('Main', { screen: 'Groups' }),
+          onPress: () => {
+            navigation.navigate('Main', {
+              screen: 'Home',
+              params: { refresh: Date.now() },
+            });
+          },
         },
       ]);
     } catch (error) {
-      Alert.alert('Group Creation Failed', error.message);
+      console.error('Error creating group:', error);
+      Alert.alert('Error', error.message || 'Failed to create group');
     } finally {
       setLoading(false);
     }
@@ -207,10 +213,21 @@ const NewGroup = () => {
     }
   };
 
+  const handleBackPress = () => {
+    navigation.navigate('Main', {
+      screen: 'Home',
+      params: { refresh: Date.now() },
+    });
+  };
+
   return (
     <ScreenWrapper bg="white">
       <View style={styles.container}>
-        <Header title="Groups" showBackButton={true} />
+        <Header
+          title="Create New Group"
+          showBackButton={true}
+          onBackPress={handleBackPress}
+        />
 
         <View style={styles.tabContainer}>
           <TouchableOpacity

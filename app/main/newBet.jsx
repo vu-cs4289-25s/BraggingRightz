@@ -24,11 +24,14 @@ import GroupsService from '../../src/endpoints/groups.cjs';
 import { Dropdown } from 'react-native-element-dropdown';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import NewGroup from './newGroup';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const NewBet = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { groupId } = route.params || {}; // TODO -- fix
+  const { groupId } = route.params || {};
+
+  const isFromMainPage = !groupId;
 
   const [loading, setLoading] = useState(false);
   const [question, setQuestion] = useState('');
@@ -40,6 +43,17 @@ const NewBet = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [session, setSession] = useState(null);
 
+  const handleBackPress = () => {
+    if (isFromMainPage) {
+      navigation.navigate('Main', {
+        screen: 'Home',
+        params: { refresh: Date.now() },
+      });
+    } else {
+      navigation.goBack();
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -47,19 +61,18 @@ const NewBet = () => {
         setSession(sessionData);
 
         const userGroups = await GroupsService.getUserGroups(sessionData.uid);
-
         const groupOptions = userGroups.map((group) => ({
           label: group.name,
           value: group.id,
         }));
         setGroups(groupOptions);
 
-        // Auto-select group if provided in navigation params
         if (groupId) {
           setSelectedGroup(groupId);
         }
       } catch (error) {
         console.error('Error loading data:', error);
+        Alert.alert('Error', 'Failed to load data. Please try again.');
       }
     };
     loadData();
@@ -107,9 +120,24 @@ const NewBet = () => {
         return;
       }
 
+      // Check for duplicate options
+      const uniqueOptions = new Set(
+        validOptions.map((opt) => opt.toLowerCase()),
+      );
+      if (uniqueOptions.size !== validOptions.length) {
+        Alert.alert('Error', 'Please ensure all options are unique');
+        return;
+      }
+
       const wager = parseInt(wagerAmount);
       if (isNaN(wager) || wager <= 0) {
         Alert.alert('Error', 'Please enter a valid wager amount');
+        return;
+      }
+
+      // Check if user has enough coins
+      if (session.numCoins < wager) {
+        Alert.alert('Error', 'You do not have enough coins for this wager');
         return;
       }
 
@@ -131,11 +159,32 @@ const NewBet = () => {
       };
 
       const result = await BetsService.createBet(betData);
-      // navigate to bet details
-      navigation.navigate('BetDetails', { betId: result.id });
+
+      // Navigate to BetDetails with appropriate parameters
+      if (isFromMainPage) {
+        navigation.replace('BetDetails', {
+          betId: result.id,
+          fromNewBet: true,
+          fromBottomNav: true,
+        });
+      } else {
+        // When coming from a group, navigate to BetDetails with group context
+        navigation.replace('BetDetails', {
+          betId: result.id,
+          fromNewBet: true,
+          fromGroup: true,
+          groupId: selectedGroup,
+        });
+      }
     } catch (error) {
       console.error('Error creating bet:', error);
-      Alert.alert('Error', error.message || 'Failed to create bet');
+      if (error.code === 'insufficient-coins') {
+        Alert.alert('Error', 'You do not have enough coins for this wager');
+      } else if (error.code === 'invalid-group') {
+        Alert.alert('Error', 'The selected group is no longer available');
+      } else {
+        Alert.alert('Error', 'Failed to create bet. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -157,28 +206,29 @@ const NewBet = () => {
         >
           {groups.length === 0 ? (
             <>
-              <Header title="Create New Bet" showBackButton={true} />
-              <View style={styles.noGroups}>
-                <View style={styles.noGroupsContent}>
-                  <Text style={styles.noGroupsTitle}>
-                    You have no groups yet.
-                  </Text>
-                  <Text style={styles.noGroupsSubHead}>
-                    Create a group or join a group to bet!
-                  </Text>
-                  <View style={{ width: '100%' }}>
-                    <Button
-                      title="Create or Join Group"
-                      onPress={() => navigation.navigate('NewGroup')}
-                      style={styles.noGroupsButton}
-                    />
-                  </View>
-                </View>
+              <Header
+                title="Create New Bet"
+                showBackButton={true}
+                onBackPress={handleBackPress}
+              />
+              <View style={styles.noGroupsContainer}>
+                <Text style={styles.noGroupsText}>
+                  You need to be in a group to create bets.
+                </Text>
+                <Button
+                  title="Create a Group"
+                  onPress={() => navigation.navigate('NewGroup')}
+                  style={styles.createGroupButton}
+                />
               </View>
             </>
           ) : (
             <>
-              <Header title="Create New Bet" showBackButton={true} />
+              <Header
+                title="Create New Bet"
+                showBackButton={true}
+                onBackPress={handleBackPress}
+              />
               <View style={styles.form}>
                 <Text style={styles.label}>Select Group</Text>
                 <Dropdown
@@ -281,30 +331,20 @@ const styles = StyleSheet.create({
     padding: wp(4),
     flex: 1,
   },
-  noGroups: {
+  noGroupsContainer: {
     flex: 1,
     width: '100%',
     paddingHorizontal: wp(4),
-  },
-  noGroupsContent: {
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: hp(4),
-    gap: hp(2),
-    width: '100%',
   },
-  noGroupsTitle: {
+  noGroupsText: {
     fontSize: hp(2.4),
     fontWeight: '600',
     color: theme.colors.text,
-    marginBottom: hp(0.2),
-  },
-  noGroupsSubHead: {
-    fontSize: hp(1.8),
-    color: theme.colors.textLight,
-    textAlign: 'center',
     marginBottom: hp(1),
   },
-  noGroupsButton: {
+  createGroupButton: {
     height: hp(7),
     width: '100%',
     marginTop: hp(2),
@@ -338,7 +378,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   removeButtonText: {
-    color: theme.colors.red,
+    color: theme.colors.white,
     fontSize: hp(2),
     fontWeight: 'bold',
   },
@@ -366,7 +406,7 @@ const styles = StyleSheet.create({
     padding: wp(4),
     paddingTop: hp(4),
     paddingBottom: Platform.OS === 'ios' ? hp(8) : hp(4),
-    backgroundColor: 'light gray',
+    backgroundColor: theme.colors.background,
   },
   submitButton: {
     height: hp(7),
