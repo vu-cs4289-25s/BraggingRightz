@@ -40,7 +40,10 @@ const Login = () => {
         username: usernameRef.current,
         password: passwordRef.current,
       });
-      navigation.navigate('Main');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      });
     } catch (error) {
       Alert.alert('Login Failed: ', error.message);
       navigation.navigate('Login');

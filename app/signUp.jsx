@@ -167,18 +167,30 @@ const SignUp = () => {
         }
       }
 
+      await AuthService.signUp({
+        username: usernameRef.current,
+        password: passwordRef.current,
+        email: emailRef.current,
+      });
+
       Alert.alert(
         'Registration Successful',
-        `Welcome, ${user.username}! Ready to Bet?`,
+        `Welcome, ${usernameRef.current}! Ready to Bet?`,
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Main'),
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+              });
+            },
           },
         ],
       );
     } catch (error) {
-      Alert.alert('Registration Failed: ', error.message);
+      Alert.alert('Sign Up Failed: ', error.message);
+      navigation.navigate('SignUp');
     } finally {
       setLoading(false);
       setUploadingImage(false);
