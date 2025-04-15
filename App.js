@@ -6,6 +6,7 @@ import Welcome from './app/welcome';
 import SignUp from './app/signUp';
 import Login from './app/login';
 import ForgotPassword from './app/forgotPassword';
+import EmailVerification from './app/emailVerification';
 import Notifications from './app/main/notifications';
 import NewGroup from './app/main/newGroup';
 import EditProfile from './app/main/editProfile';
@@ -36,6 +37,7 @@ export default function App() {
               <Stack.Screen name="SignUp" component={SignUp} />
               <Stack.Screen name="Login" component={Login} />
               <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+              <Stack.Screen name="EmailVerification" component={EmailVerification} />
               {/* replaced Home, NewBet screens with our bottom tab navigator */}
               <Stack.Screen name="Main" component={BottomTabNavigator} />
               <Stack.Screen name="Notifications" component={Notifications} />

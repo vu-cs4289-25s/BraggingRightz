@@ -41,6 +41,7 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const pickImage = async () => {
     try {
@@ -110,96 +111,133 @@ const SignUp = () => {
   };
 
   const onSubmit = async () => {
-    if (
-      !emailRef.current ||
-      !passwordRef.current ||
-      !nameRef.current ||
-      !usernameRef.current ||
-      !birthdate
-    ) {
-      Alert.alert('Error', 'Please fill out all fields!');
+    // Trim the values to check for empty strings
+    const email = emailRef.current?.trim() || '';
+    const username = usernameRef.current?.trim() || '';
+    const password = passwordRef.current?.trim() || '';
+    const name = nameRef.current?.trim() || '';
+
+    if (!email || !username || !password || !name) {
+      Alert.alert('Sign Up', 'Please fill all fields!');
       return;
     }
 
-    if (usernameRef.current.length < 4) {
+    if (username.length < 4) {
       Alert.alert('Error', 'Username must be at least 4 characters long!');
       return;
     }
 
     if (!isAtLeast13(birthdate)) {
-      Alert.alert(
-        'Age Requirement',
-        'You must be at least 13 years old to create an account. Please enter your actual birthdate.',
-        [{ text: 'OK' }],
-      );
+      Alert.alert('Age Restriction', 'You must be at least 13 years old to sign up.');
       return;
     }
 
     setLoading(true);
     try {
-      // First register the user to get their UID
-      const user = await AuthService.register({
-        username: usernameRef.current,
-        password: passwordRef.current,
-        email: emailRef.current,
-        fullName: nameRef.current,
-        birthdate: birthdate.toISOString(),
-      });
-
-      let profilePictureUrl = null;
-
-      // Upload profile picture using the user's UID if image is selected
-      if (profileImage) {
-        setUploadingImage(true);
-        try {
-          profilePictureUrl = await uploadImage(user.uid);
-
-          // Update the user's profile with the image URL
-          await AuthService.updateProfile(user.uid, {
-            profilePicture: profilePictureUrl,
-          });
-        } catch (error) {
-          console.log('Error uploading profile picture:', error);
-          Alert.alert(
-            'Warning',
-            'Failed to upload profile picture, but registration was successful.',
-          );
-        }
+      // Check if email is already in use before sending verification
+      const emailAvailable = await AuthService.checkEmail(email);
+      if (!emailAvailable) {
+        Alert.alert('Error', 'This email is already in use.');
+        return;
       }
 
-      Alert.alert(
-        'Registration Successful',
-        `Welcome, ${user.username}! Ready to Bet?`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Main'),
-          },
-        ],
-      );
+      // Check if username is available
+      const usernameAvailable = await AuthService.checkUsername(username);
+      if (!usernameAvailable) {
+        Alert.alert('Error', 'This username is already taken.');
+        return;
+      }
+
+      // Send verification email
+      await AuthService.sendInitialVerificationEmail(email);
+
+      // Store registration data to be used after verification
+      const registrationData = {
+        email,
+        username,
+        password,
+        fullName: name,
+        birthdate: birthdate.toISOString(),
+        profileImage: profileImage,
+      };
+
+      // Navigate to email verification screen with registration data
+      navigation.navigate('EmailVerification', {
+        email,
+        registrationData
+      });
     } catch (error) {
-      Alert.alert('Registration Failed: ', error.message);
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
-      setUploadingImage(false);
+    }
+  };
+
+  const checkEmailVerification = async (userId) => {
+    try {
+      const isVerified = await AuthService.isEmailVerified();
+      if (isVerified) {
+        await AuthService.updateEmailVerificationStatus();
+        Alert.alert(
+          'Registration Successful',
+          'Your email has been verified. Welcome to BraggingRightz!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Main'),
+            },
+          ],
+        );
+      } else {
+        Alert.alert(
+          'Email Not Verified',
+          'Please verify your email to continue. Check your inbox and spam folder.',
+          [
+            {
+              text: 'Check Again',
+              onPress: () => checkEmailVerification(userId),
+            },
+            {
+              text: 'Resend Email',
+              onPress: () => resendVerificationEmail(),
+            },
+          ],
+        );
+      }
+    } catch (error) {
+      console.error('Error checking email verification:', error);
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    try {
+      await AuthService.resendVerificationEmail();
+      Alert.alert(
+        'Email Sent',
+        'Verification email has been resent. Please check your inbox.',
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to resend verification email. Please try again.');
     }
   };
 
   const isAtLeast13 = (birthDate) => {
     const today = new Date();
-    const thirteenYearsAgo = new Date(
-      today.getFullYear() - 13,
-      today.getMonth(),
-      today.getDate(),
-    );
-
+    
     // Check if birthDate is today
     const isToday = birthDate.toDateString() === today.toDateString();
     if (isToday) {
       return false;
     }
 
-    return birthDate <= thirteenYearsAgo;
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age >= 13;
   };
 
   const handleDateConfirm = (date) => {
@@ -207,16 +245,10 @@ const SignUp = () => {
       Alert.alert(
         'Age Requirement',
         'You must be at least 13 years old to create an account.',
-        [
-          {
-            text: 'OK',
-            onPress: () => setShowDatePicker(false),
-          },
-        ],
       );
-      return;
+    } else {
+      setBirthdate(date);
     }
-    setBirthdate(date);
     setShowDatePicker(false);
   };
 
@@ -424,3 +456,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+

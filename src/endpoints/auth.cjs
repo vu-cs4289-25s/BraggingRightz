@@ -18,6 +18,7 @@ const {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
+  sendEmailVerification,
 } = require('firebase/auth');
 const {
   doc,
@@ -61,7 +62,13 @@ class AuthService {
       // Check if birthdate is at least 13 years ago
       const birthday = new Date(birthdate);
       const today = new Date();
-      const age = today.getFullYear() - birthday.getFullYear();
+      let age = today.getFullYear() - birthday.getFullYear();
+      const monthDiff = today.getMonth() - birthday.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthday.getDate())) {
+        age--;
+      }
+      
       if (age < 13) {
         this._handleError({ code: 'auth/under-13' });
       }
@@ -73,6 +80,9 @@ class AuthService {
         password,
       );
       const user = userCredential.user;
+
+      // Send verification email
+      await sendEmailVerification(user);
 
       // Store additional user data in Firestore
       await setDoc(doc(db, 'users', user.uid), {
@@ -90,6 +100,7 @@ class AuthService {
         groups: [],
         profilePicture,
         hasOnboarded,
+        emailVerified: false,
       });
 
       // save session info
@@ -101,6 +112,7 @@ class AuthService {
         username,
         profilePicture,
         hasOnboarded,
+        emailVerified: false,
       };
     } catch (error) {
       this._handleError(error);
@@ -308,6 +320,78 @@ class AuthService {
       });
       return true;
     } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Check if email is verified
+  async isEmailVerified() {
+    try {
+      const user = auth.currentUser;
+      if (!user) return false;
+      
+      // Reload user to get latest email verification status
+      await user.reload();
+      return user.emailVerified;
+    } catch (error) {
+      console.error('Error checking email verification:', error);
+      return false;
+    }
+  }
+
+  // Resend verification email
+  async resendVerificationEmail() {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('No user logged in');
+      
+      await sendEmailVerification(user);
+      return true;
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  // Update email verification status in Firestore
+  async updateEmailVerificationStatus() {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('No user logged in');
+
+      const isVerified = await this.isEmailVerified();
+      if (isVerified) {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          emailVerified: true,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      return isVerified;
+    } catch (error) {
+      console.error('Error updating email verification status:', error);
+      return false;
+    }
+  }
+
+  // Add new method for initial email verification
+  async sendInitialVerificationEmail(email) {
+    try {
+      // Create a temporary user to send verification email
+      const tempUserCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        // Create a temporary random password
+        Math.random().toString(36).slice(-8)
+      );
+      
+      await sendEmailVerification(tempUserCredential.user);
+      
+      // Store the temporary user for later use
+      auth.currentUser = tempUserCredential.user;
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending verification email:', error);
       this._handleError(error);
     }
   }
