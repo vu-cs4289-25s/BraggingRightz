@@ -93,12 +93,34 @@ const Home = () => {
       const userGroups = await GroupsService.getUserGroups(sessionData.uid);
       setUserGroups(userGroups);
 
-      // Load user's bets
+      // Load all bets from user's groups and bets they've participated in
+      const groupBetsPromises = userGroups.map((group) =>
+        BetsService.getGroupBets(group.id),
+      );
       const userBets = await BetsService.getUserBets(sessionData.uid);
 
-      // Fetch creator info and group names for each bet
+      // Combine group bets and user bets
+      const allGroupBets = await Promise.all(groupBetsPromises);
+      const flattenedGroupBets = allGroupBets.flat();
+
+      // Combine and deduplicate bets
+      const betsMap = new Map();
+
+      // Add user's direct bets first
+      userBets.forEach((bet) => {
+        betsMap.set(bet.id, bet);
+      });
+
+      // Add group bets if not already included
+      flattenedGroupBets.forEach((bet) => {
+        if (!betsMap.has(bet.id)) {
+          betsMap.set(bet.id, bet);
+        }
+      });
+
+      // Convert to array and fetch additional info
       const betsWithInfo = await Promise.all(
-        userBets.map(async (bet) => {
+        Array.from(betsMap.values()).map(async (bet) => {
           try {
             // Check if bet is expired and lock it if needed
             const now = new Date();
@@ -155,7 +177,14 @@ const Home = () => {
       const now = new Date();
       const activeBets = betsWithInfo.filter((bet) => {
         const expiryDate = new Date(bet.expiresAt);
-        return expiryDate > now && bet.status !== 'completed';
+        const isActive = expiryDate > now && bet.status !== 'completed';
+        const isInUserGroup = userGroups.some(
+          (group) => group.id === bet.groupId,
+        );
+        const isParticipant = bet.answerOptions.some((opt) =>
+          opt.participants.includes(sessionData.uid),
+        );
+        return isActive && (isInUserGroup || isParticipant);
       });
 
       // Sort active bets by expiry date (soonest first)
@@ -289,10 +318,17 @@ const Home = () => {
   // Update the group name display in the bet card
   const renderBetCard = (bet) => {
     const betResult = calculateBetResult(bet);
+    const hasUserJoined = bet.answerOptions.some((opt) =>
+      opt.participants.includes(session?.uid),
+    );
+    const userOption = bet.answerOptions.find((opt) =>
+      opt.participants.includes(session?.uid),
+    );
+
     return (
       <TouchableOpacity
         key={bet.id}
-        style={styles.betCard}
+        style={[styles.betCard, hasUserJoined && styles.joinedBetCard]}
         onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
       >
         <View style={styles.betHeader}>
@@ -413,7 +449,40 @@ const Home = () => {
             />
             <Text style={styles.statsText}>{bet.wagerAmount || 0}</Text>
           </View>
+          {hasUserJoined ? (
+            <View style={[styles.statBadge, styles.joinedBadge]}>
+              <Icon
+                name="check"
+                size={12}
+                color="#4CAF50"
+                style={styles.statIcon}
+              />
+              <Text style={[styles.statsText, { color: '#4CAF50' }]}>
+                Joined
+              </Text>
+            </View>
+          ) : (
+            <View style={[styles.statBadge, styles.notJoinedBadge]}>
+              <Icon
+                name="circle-o"
+                size={12}
+                color={theme.colors.textLight}
+                style={styles.statIcon}
+              />
+              <Text
+                style={[styles.statsText, { color: theme.colors.textLight }]}
+              >
+                Not Joined
+              </Text>
+            </View>
+          )}
         </View>
+
+        {userOption && (
+          <View style={styles.betFooter}>
+            <Text style={styles.yourVote}>Your vote: {userOption.text}</Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -972,6 +1041,16 @@ const Home = () => {
       color: 'white',
       fontSize: hp(1.8),
       fontWeight: '600',
+    },
+    joinedBetCard: {
+      borderColor: theme.colors.success,
+      borderWidth: 2,
+    },
+    joinedBadge: {
+      backgroundColor: theme.colors.success + '20',
+    },
+    notJoinedBadge: {
+      backgroundColor: theme.colors.error + '20',
     },
   });
 
