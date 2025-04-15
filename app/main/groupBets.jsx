@@ -248,6 +248,9 @@ const GroupBets = () => {
 
   const renderBetCard = (bet) => {
     const betResult = calculateBetResult(bet);
+    const hasUserJoined = bet.answerOptions.some((opt) =>
+      opt.participants.includes(session?.uid),
+    );
     const userOption = bet.answerOptions.find((opt) =>
       opt.participants.includes(session?.uid),
     );
@@ -255,24 +258,11 @@ const GroupBets = () => {
     return (
       <TouchableOpacity
         key={bet.id}
-        style={styles.betCard}
+        style={[styles.betCard, hasUserJoined && styles.joinedBetCard]}
         onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
       >
-        <View style={styles.betCreator}>
-          <Avatar
-            uri={bet.creatorProfilePicture}
-            size={hp(4)}
-            rounded={theme.radius.xl}
-          />
-          <Text style={styles.creatorName}>{bet.creatorUsername}</Text>
-        </View>
-
         <View style={styles.betHeader}>
-          <Text
-            style={styles.betQuestion}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
+          <Text style={styles.betQuestion} numberOfLines={2}>
             {bet.question}
           </Text>
           <View
@@ -294,73 +284,35 @@ const GroupBets = () => {
 
         <View style={styles.betDetails}>
           <View style={styles.betInfoRow}>
-            <View style={styles.dateGroupContainer}>
-              <View style={styles.dateContainer}>
-                <Icon
-                  name="calendar"
-                  size={14}
-                  color={theme.colors.textLight}
-                  style={styles.infoIcon}
-                />
-                <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
-              </View>
-              <View style={styles.timeContainer}>
-                <Icon
-                  name="clock-o"
-                  size={14}
-                  color={theme.colors.textLight}
-                  style={styles.infoIcon}
-                />
-                <Text style={styles.timeLeft}>
-                  {formatTimeLeft(bet.expiresAt)}
-                </Text>
-              </View>
+            <View style={styles.creatorInfo}>
+              <Icon
+                name="user"
+                size={14}
+                color={theme.colors.textLight}
+                style={styles.infoIcon}
+              />
+              <Text style={styles.creatorName}>
+                {bet.creatorUsername || 'Unknown User'}
+              </Text>
             </View>
-            <View style={styles.wagerContainer}>
-              <Text style={styles.wagerText}>Wager: {bet.wagerAmount} 🪙</Text>
-              <Text style={styles.wagerText}>
-                Pool: {bet.totalWager || 0} 🪙
+            <View style={styles.dateInfo}>
+              <Icon
+                name="calendar"
+                size={14}
+                color={theme.colors.textLight}
+                style={styles.infoIcon}
+              />
+              <Text style={styles.betDate}>
+                {formatTimeLeft(bet.expiresAt)}
               </Text>
             </View>
           </View>
         </View>
 
-        {betResult && (
-          <View
-            style={[
-              styles.resultBadge,
-              {
-                backgroundColor:
-                  betResult.result === 'win'
-                    ? 'rgba(76, 175, 80, 0.1)'
-                    : 'rgba(255, 0, 0, 0.1)',
-              },
-            ]}
-          >
-            <Icon
-              name={betResult.result === 'win' ? 'trophy' : 'times-circle'}
-              size={14}
-              color={betResult.result === 'win' ? '#4CAF50' : '#FF0000'}
-              style={styles.resultIcon}
-            />
-            <Text
-              style={[
-                styles.betCoins,
-                {
-                  color: betResult.result === 'win' ? '#4CAF50' : '#FF0000',
-                },
-              ]}
-            >
-              {betResult.result === 'win' ? '+' : ''}
-              {betResult.coins}
-            </Text>
-          </View>
-        )}
-
         <View style={styles.betStats}>
           <View style={styles.statBadge}>
             <Icon
-              name="user"
+              name="users"
               size={12}
               color={theme.colors.primary}
               style={styles.statIcon}
@@ -374,15 +326,6 @@ const GroupBets = () => {
           </View>
           <View style={styles.statBadge}>
             <Icon
-              name="comment"
-              size={12}
-              color={theme.colors.primary}
-              style={styles.statIcon}
-            />
-            <Text style={styles.statsText}>{bet.commentCount || 0}</Text>
-          </View>
-          <View style={styles.statBadge}>
-            <Icon
               name="money"
               size={12}
               color={theme.colors.primary}
@@ -390,6 +333,33 @@ const GroupBets = () => {
             />
             <Text style={styles.statsText}>{bet.wagerAmount || 0}</Text>
           </View>
+          {hasUserJoined ? (
+            <View style={[styles.statBadge, styles.joinedBadge]}>
+              <Icon
+                name="check"
+                size={12}
+                color="#4CAF50"
+                style={styles.statIcon}
+              />
+              <Text style={[styles.statsText, { color: '#4CAF50' }]}>
+                Joined
+              </Text>
+            </View>
+          ) : bet.status === 'open' ? (
+            <View style={[styles.statBadge, styles.notJoinedBadge]}>
+              <Icon
+                name="circle-o"
+                size={12}
+                color={theme.colors.textLight}
+                style={styles.statIcon}
+              />
+              <Text
+                style={[styles.statsText, { color: theme.colors.textLight }]}
+              >
+                Not Joined
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {userOption && (
@@ -671,16 +641,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   betFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
     marginTop: hp(1),
     paddingTop: hp(1),
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   yourVote: {
-    fontSize: hp(1.4),
+    fontSize: hp(1.6),
     color: theme.colors.primary,
     fontWeight: '500',
   },
@@ -758,6 +725,19 @@ const styles = StyleSheet.create({
     fontSize: hp(1.4),
     color: theme.colors.text,
     marginBottom: hp(0.5),
+  },
+  joinedBetCard: {
+    borderColor: theme.colors.success,
+    borderWidth: 2,
+  },
+  joinedBadge: {
+    backgroundColor: theme.colors.success + '20',
+  },
+  notJoinedBadge: {
+    backgroundColor: theme.colors.error + '20',
+  },
+  header: {
+    paddingRight: wp(4),
   },
 });
 export default GroupBets;
