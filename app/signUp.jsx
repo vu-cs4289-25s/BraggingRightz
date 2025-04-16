@@ -208,7 +208,6 @@ const SignUp = () => {
       console.error('Error checking email verification:', error);
     }
   };
-
   const resendVerificationEmail = async () => {
     try {
       await AuthService.resendVerificationEmail();
@@ -218,6 +217,33 @@ const SignUp = () => {
       );
     } catch (error) {
       Alert.alert('Error', 'Failed to resend verification email. Please try again.');
+      await AuthService.signUp({
+        username: usernameRef.current,
+        password: passwordRef.current,
+        email: emailRef.current,
+      });
+
+      Alert.alert(
+        'Registration Successful',
+        `Welcome, ${usernameRef.current}! Ready to Bet?`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+              });
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      Alert.alert('Sign Up Failed: ', error.message);
+      navigation.navigate('SignUp');
+    } finally {
+      setLoading(false);
+      setUploadingImage(false);
     }
   };
 

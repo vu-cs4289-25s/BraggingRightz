@@ -192,7 +192,7 @@ const MyBets = () => {
             {userOption && (
               <View style={styles.gridItem}>
                 <View style={styles.detailRow}>
-                  <View style={{ marginTop: -17 }}>
+                  <View style={{ marginTop: -2 }}>
                     <Icon
                       name="check-circle"
                       size={hp(2)}
@@ -243,7 +243,8 @@ const MyBets = () => {
       <View style={styles.container}>
         <Header
           title="My Bets"
-          showBackButton={false}
+          showBackButton={true}
+          onBack={() => navigation.goBack()}
           rightComponent={
             <View style={styles.pointsContainer}>
               <Text style={styles.points}>🪙 {session?.numCoins || 0}</Text>
@@ -341,6 +342,7 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: hp(1.5),
     marginBottom: hp(2),
     backgroundColor: '#f0f0f0',
     borderRadius: theme.radius.lg,

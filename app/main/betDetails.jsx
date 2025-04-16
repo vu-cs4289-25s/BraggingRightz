@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
   RefreshControl,
+  BackHandler,
 } from 'react-native';
 import {
   useRoute,
@@ -37,7 +38,7 @@ const sharedStyles = createSharedStyles(theme);
 const BetDetails = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { betId } = route.params;
+  const { betId, fromNewBet, fromBottomNav } = route.params;
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,31 +64,74 @@ const BetDetails = () => {
     y: 0,
   });
 
+  // Handle initial data loading
   useEffect(() => {
-    loadData();
-    checkExpiredBet();
-  }, [betId]);
-
-  // Add refresh on focus
-  useFocusEffect(
-    React.useCallback(() => {
-      const refresh = async () => {
+    const initialLoad = async () => {
+      try {
         await loadData();
         await checkExpiredBet();
-      };
-      refresh();
-    }, [betId]),
-  );
+      } catch (error) {
+        console.error('Error in initial load:', error);
+      }
+    };
+    initialLoad();
+  }, [betId]); // Only run on betId change
+
+  // Single useEffect for all navigation setup
+  useEffect(() => {
+    const handleBack = () => {
+      if (fromNewBet) {
+        navigation.navigate('Main', {
+          screen: 'Home',
+          params: { refresh: Date.now() },
+        });
+        return true;
+      } else if (route.params?.fromGroup) {
+        navigation.navigate('GroupBets', {
+          groupId: route.params.groupId,
+          refresh: Date.now(),
+        });
+        return true;
+      } else {
+        navigation.goBack();
+        return true;
+      }
+    };
+
+    navigation.setOptions({
+      gestureEnabled: !fromNewBet,
+      headerLeft: fromNewBet
+        ? null
+        : () => (
+            <TouchableOpacity onPress={handleBack} style={{ marginLeft: 16 }}>
+              <Icon name="arrow-left" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          ),
+    });
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBack,
+    );
+
+    return () => {
+      backHandler.remove();
+    };
+  }, [navigation, fromNewBet, route.params]);
 
   const onRefresh = React.useCallback(async () => {
+    if (refreshing) return; // Prevent multiple simultaneous refreshes
+
     setRefreshing(true);
     try {
       await loadData();
       await checkExpiredBet();
+    } catch (error) {
+      console.error('Error in manual refresh:', error);
     } finally {
       setRefreshing(false);
     }
-  }, [betId]);
+  }, [betId, refreshing]);
 
   const loadData = async () => {
     try {
@@ -624,7 +668,20 @@ const BetDetails = () => {
           />
         }
       >
-        <Header title="Bet Details" showBackButton={true} />
+        <Header
+          title="Bet Details"
+          showBackButton={true}
+          rightComponent={
+            session?.uid === betData.creatorId && !isExpired ? (
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => navigation.navigate('EditBet', { betId: betId })}
+              >
+                <Icon name="edit" size={30} color={theme.colors.primary} />
+              </TouchableOpacity>
+            ) : null
+          }
+        />
 
         <View style={styles.betInfo}>
           <View style={sharedStyles.groupHeader}>
@@ -946,46 +1003,6 @@ const BetDetails = () => {
           </TouchableOpacity>
         </Modal>
       </ScrollView>
-      {/* Creator Controls */}
-      {session?.uid === betData.creatorId && (
-        <View style={styles.creatorControls}>
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={() => navigation.navigate('EditBet', { betId: betId })}
-            disabled={isExpired}
-          >
-            <Icon
-              name="edit"
-              size={20}
-              color={isExpired ? theme.colors.textLight : theme.colors.primary}
-            />
-            <Text
-              style={[styles.controlText, isExpired && styles.disabledText]}
-            >
-              Edit Bet
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.controlButton, styles.deleteButton]}
-            onPress={() => setShowDeleteConfirm(true)}
-            disabled={isExpired}
-          >
-            <Icon
-              name="trash"
-              size={20}
-              color={isExpired ? theme.colors.textLight : '#FF0000'}
-            />
-            <Text
-              style={[
-                styles.controlText,
-                { color: isExpired ? theme.colors.textLight : '#FF0000' },
-              ]}
-            >
-              Delete Bet
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
       <UserProfileModal
         visible={showUserProfile}
         onClose={() => setShowUserProfile(false)}
@@ -1191,27 +1208,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
     marginTop: hp(0.5),
   },
-  creatorControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: hp(2),
-    backgroundColor: '#f8f8f8',
+  editButton: {
     padding: hp(1),
-    borderRadius: theme.radius.lg,
-  },
-  controlButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: hp(1),
-    borderRadius: theme.radius.lg,
-    gap: wp(2),
-  },
-  controlText: {
-    fontSize: hp(1.8),
-    color: theme.colors.primary,
-  },
-  deleteButton: {
-    backgroundColor: '#FFE5E5',
+    marginRight: wp(2),
   },
   modalOverlay: {
     flex: 1,
