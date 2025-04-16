@@ -138,11 +138,14 @@ class GroupsService {
     try {
       console.log('Adding member to group:', { groupId, userId });
 
-      const groupRef = doc(db, 'groups', groupId);
+      // Get the actual group ID string if groupId is an object
+      const actualGroupId = typeof groupId === 'object' ? groupId.id : groupId;
+
+      const groupRef = doc(db, 'groups', actualGroupId);
       const groupDoc = await getDoc(groupRef);
 
       if (!groupDoc.exists()) {
-        console.log('Group not found:', groupId);
+        console.log('Group not found:', actualGroupId);
         throw new Error('Group not found');
       }
 
@@ -170,7 +173,7 @@ class GroupsService {
       // Add group to user's groups
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
-        groups: arrayUnion(groupId),
+        groups: arrayUnion(actualGroupId),
         updatedAt: timestamp,
       });
 
@@ -178,7 +181,7 @@ class GroupsService {
       return true;
     } catch (error) {
       console.error('Error in addMember:', error);
-      this._handleError(error);
+      throw error;
     }
   }
 
@@ -434,7 +437,10 @@ class GroupsService {
   // Leave group
   async leaveGroup(groupId, userId) {
     try {
-      const groupRef = doc(db, 'groups', groupId);
+      // Get the actual group ID string if groupId is an object
+      const actualGroupId = typeof groupId === 'object' ? groupId.id : groupId;
+
+      const groupRef = doc(db, 'groups', actualGroupId);
       const groupDoc = await getDoc(groupRef);
 
       if (!groupDoc.exists()) {
@@ -461,6 +467,13 @@ class GroupsService {
         updatedAt: new Date().toISOString(),
       });
 
+      // Remove group from user's groups array
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        groups: arrayRemove(actualGroupId),
+        updatedAt: new Date().toISOString(),
+      });
+
       // Notify remaining members
       for (const memberId of groupData.members) {
         if (memberId !== userId) {
@@ -469,14 +482,15 @@ class GroupsService {
             type: 'groups',
             title: `${userName} left ${groupData.name}`,
             message: 'A member has left your group',
-            data: { groupId },
+            data: { groupId: actualGroupId },
           });
         }
       }
 
       return true;
     } catch (error) {
-      this._handleError(error);
+      console.error('Error in leaveGroup:', error);
+      throw error;
     }
   }
 

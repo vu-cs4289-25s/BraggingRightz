@@ -314,7 +314,7 @@ const Notifications = () => {
         >
           {notifications.length === 0 ? (
             <View style={styles.emptyState}>
-              <Icon name="bell-slash" size={50} color={theme.colors.gray} />
+              <Icon name="bell-slash" size={50} color={theme.colors.black} />
               <Text style={styles.emptyStateText}>No notifications</Text>
             </View>
           ) : (
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: hp(2),
-    color: theme.colors.gray,
+    color: theme.colors.black,
     marginTop: hp(2),
   },
   friendRequestActions: {

@@ -16,6 +16,7 @@ import {
   REACT_APP_MESSAGING_SENDER_ID,
   REACT_APP_APP_ID,
   REACT_APP_MEASUREMENT_ID,
+  ENVIRONMENT,
 } from '@env';
 
 const firebaseConfig = {
@@ -28,16 +29,7 @@ const firebaseConfig = {
   measurementId: REACT_APP_MEASUREMENT_ID,
 };
 
-// For debugging - remove in production
-console.log('Firebase Config:', {
-  apiKey: REACT_APP_API_KEY ? '***' : 'missing',
-  authDomain: REACT_APP_AUTH_DOMAIN ? '***' : 'missing',
-  projectId: REACT_APP_PROJECT_ID ? '***' : 'missing',
-  storageBucket: REACT_APP_STORAGE_BUCKET ? '***' : 'missing',
-  messagingSenderId: REACT_APP_MESSAGING_SENDER_ID ? '***' : 'missing',
-  appId: REACT_APP_APP_ID ? '***' : 'missing',
-  measurementId: REACT_APP_MEASUREMENT_ID ? '***' : 'missing',
-});
+console.log(`Using ${ENVIRONMENT} environment for Firebase configuration`);
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

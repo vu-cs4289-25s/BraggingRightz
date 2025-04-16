@@ -97,17 +97,9 @@ class NotificationsService {
     creatorName,
     betTitle,
     groupId,
+    groupName = 'Group',
   ) {
     try {
-      let groupName = 'Group';
-      if (groupId) {
-        try {
-          groupName = (await GroupsService.getGroupName(groupId)) || 'Group';
-        } catch (error) {
-          console.error('Error fetching group name:', error);
-        }
-      }
-
       return this.createNotification({
         userId,
         type: 'new_bet',

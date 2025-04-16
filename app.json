@@ -1,26 +1,70 @@
 {
   "expo": {
-    "name": "Bragging Rightz App",
-    "slug": "bragging-rightz-app",
+    "name": "BraggingRightz",
+    "slug": "bragging-rightz",
     "platforms": ["ios", "android", "web"],
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/trophy.png",
+    "icon": "./assets/images/bragging-rightz-app-icon.png",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/trophy.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/0f4f9b57-d1bc-46fb-8ec5-2bf21045dcfb"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.braggingrightz.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow BraggingRightz to access your photos to set your profile picture.",
+        "NSCameraUsageDescription": "Allow BraggingRightz to access your camera to take profile pictures.",
+        "NSMicrophoneUsageDescription": "Allow BraggingRightz to access your microphone",
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
-    "description": "Betting app with friends",
+    "android": {
+      "package": "com.braggingrightz.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/bragging-rightz-app-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "description": "Social betting app with friends",
     "githubUrl": "https://github.com/vu-cs4289-25s/BraggingRightz",
     "newArchEnabled": true,
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow BraggingRightz to access your photos to set your profile picture.",
+          "cameraPermission": "Allow BraggingRightz to access your camera to take profile pictures."
+        }
+      ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "0f4f9b57-d1bc-46fb-8ec5-2bf21045dcfb"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

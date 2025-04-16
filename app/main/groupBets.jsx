@@ -7,8 +7,16 @@ import {
   StyleSheet,
   Image,
   RefreshControl,
+  Alert,
+  Pressable,
+  ImageBackground,
+  Modal,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from '@react-navigation/native';
 import BetsService from '../../src/endpoints/bets.cjs';
 import GroupsService from '../../src/endpoints/groups.cjs';
 import AuthService from '../../src/endpoints/auth.cjs';
@@ -27,13 +35,59 @@ const DEFAULT_USER_IMAGE = require('../../assets/images/default-avatar.png');
 
 const GroupBets = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { groupId, fromNewGroup, refresh } = route.params;
   const [session, setSession] = useState(null);
   const [group, setGroup] = useState(null);
   const [groupName, setGroupName] = useState(null);
-  const route = useRoute();
-  const { groupId } = route.params;
   const [bets, setBets] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleBackPress = () => {
+    navigation.navigate('Main', {
+      screen: 'Home',
+      params: { refresh: Date.now() },
+    });
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchBets();
+    }, [groupId]),
+  );
+
+  useEffect(() => {
+    if (refresh) {
+      fetchBets();
+    }
+  }, [refresh]);
+
+  useEffect(() => {
+    if (fromNewGroup) {
+      navigation.setOptions({
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={() =>
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+              })
+            }
+          >
+            <Icon name="arrow-left" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        ),
+      });
+    }
+  }, [fromNewGroup]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchBets();
+    });
+
+    return unsubscribe;
+  }, [navigation, groupId]);
 
   const fetchBets = async () => {
     try {
@@ -55,6 +109,14 @@ const GroupBets = () => {
       const betsWithCreatorInfo = await Promise.all(
         groupBets.map(async (bet) => {
           try {
+            // Check if bet is expired and lock it if needed
+            const now = new Date();
+            const expiryDate = new Date(bet.expiresAt);
+            if (bet.status === 'open' && expiryDate <= now) {
+              await BetsService.lockBet(bet.id);
+              bet.status = 'locked';
+            }
+
             if (!bet.creatorId) {
               return {
                 ...bet,
@@ -112,10 +174,6 @@ const GroupBets = () => {
       console.error('Error fetching bets:', error);
     }
   };
-
-  useEffect(() => {
-    fetchBets();
-  }, [groupId]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -190,6 +248,9 @@ const GroupBets = () => {
 
   const renderBetCard = (bet) => {
     const betResult = calculateBetResult(bet);
+    const hasUserJoined = bet.answerOptions.some((opt) =>
+      opt.participants.includes(session?.uid),
+    );
     const userOption = bet.answerOptions.find((opt) =>
       opt.participants.includes(session?.uid),
     );
@@ -197,24 +258,11 @@ const GroupBets = () => {
     return (
       <TouchableOpacity
         key={bet.id}
-        style={styles.betCard}
+        style={[styles.betCard, hasUserJoined && styles.joinedBetCard]}
         onPress={() => navigation.navigate('BetDetails', { betId: bet.id })}
       >
-        <View style={styles.betCreator}>
-          <Avatar
-            uri={bet.creatorProfilePicture}
-            size={hp(4)}
-            rounded={theme.radius.xl}
-          />
-          <Text style={styles.creatorName}>{bet.creatorUsername}</Text>
-        </View>
-
         <View style={styles.betHeader}>
-          <Text
-            style={styles.betQuestion}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-          >
+          <Text style={styles.betQuestion} numberOfLines={2}>
             {bet.question}
           </Text>
           <View
@@ -236,73 +284,35 @@ const GroupBets = () => {
 
         <View style={styles.betDetails}>
           <View style={styles.betInfoRow}>
-            <View style={styles.dateGroupContainer}>
-              <View style={styles.dateContainer}>
-                <Icon
-                  name="calendar"
-                  size={14}
-                  color={theme.colors.textLight}
-                  style={styles.infoIcon}
-                />
-                <Text style={styles.betDate}>{formatDate(bet.createdAt)}</Text>
-              </View>
-              <View style={styles.timeContainer}>
-                <Icon
-                  name="clock-o"
-                  size={14}
-                  color={theme.colors.textLight}
-                  style={styles.infoIcon}
-                />
-                <Text style={styles.timeLeft}>
-                  {formatTimeLeft(bet.expiresAt)}
-                </Text>
-              </View>
+            <View style={styles.creatorInfo}>
+              <Icon
+                name="user"
+                size={14}
+                color={theme.colors.textLight}
+                style={styles.infoIcon}
+              />
+              <Text style={styles.creatorName}>
+                {bet.creatorUsername || 'Unknown User'}
+              </Text>
             </View>
-            <View style={styles.wagerContainer}>
-              <Text style={styles.wagerText}>Wager: {bet.wagerAmount} 🪙</Text>
-              <Text style={styles.wagerText}>
-                Pool: {bet.totalWager || 0} 🪙
+            <View style={styles.dateInfo}>
+              <Icon
+                name="calendar"
+                size={14}
+                color={theme.colors.textLight}
+                style={styles.infoIcon}
+              />
+              <Text style={styles.betDate}>
+                {formatTimeLeft(bet.expiresAt)}
               </Text>
             </View>
           </View>
         </View>
 
-        {betResult && (
-          <View
-            style={[
-              styles.resultBadge,
-              {
-                backgroundColor:
-                  betResult.result === 'win'
-                    ? 'rgba(76, 175, 80, 0.1)'
-                    : 'rgba(255, 0, 0, 0.1)',
-              },
-            ]}
-          >
-            <Icon
-              name={betResult.result === 'win' ? 'trophy' : 'times-circle'}
-              size={14}
-              color={betResult.result === 'win' ? '#4CAF50' : '#FF0000'}
-              style={styles.resultIcon}
-            />
-            <Text
-              style={[
-                styles.betCoins,
-                {
-                  color: betResult.result === 'win' ? '#4CAF50' : '#FF0000',
-                },
-              ]}
-            >
-              {betResult.result === 'win' ? '+' : ''}
-              {betResult.coins}
-            </Text>
-          </View>
-        )}
-
         <View style={styles.betStats}>
           <View style={styles.statBadge}>
             <Icon
-              name="user"
+              name="users"
               size={12}
               color={theme.colors.primary}
               style={styles.statIcon}
@@ -316,15 +326,6 @@ const GroupBets = () => {
           </View>
           <View style={styles.statBadge}>
             <Icon
-              name="comment"
-              size={12}
-              color={theme.colors.primary}
-              style={styles.statIcon}
-            />
-            <Text style={styles.statsText}>{bet.commentCount || 0}</Text>
-          </View>
-          <View style={styles.statBadge}>
-            <Icon
               name="money"
               size={12}
               color={theme.colors.primary}
@@ -332,6 +333,33 @@ const GroupBets = () => {
             />
             <Text style={styles.statsText}>{bet.wagerAmount || 0}</Text>
           </View>
+          {hasUserJoined ? (
+            <View style={[styles.statBadge, styles.joinedBadge]}>
+              <Icon
+                name="check"
+                size={12}
+                color="#4CAF50"
+                style={styles.statIcon}
+              />
+              <Text style={[styles.statsText, { color: '#4CAF50' }]}>
+                Joined
+              </Text>
+            </View>
+          ) : bet.status === 'open' ? (
+            <View style={[styles.statBadge, styles.notJoinedBadge]}>
+              <Icon
+                name="circle-o"
+                size={12}
+                color={theme.colors.textLight}
+                style={styles.statIcon}
+              />
+              <Text
+                style={[styles.statsText, { color: theme.colors.textLight }]}
+              >
+                Not Joined
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {userOption && (
@@ -391,6 +419,7 @@ const GroupBets = () => {
           <Header
             title={groupName}
             showBackButton={true}
+            onBackPress={handleBackPress}
             rightComponent={
               <TouchableOpacity
                 onPress={() =>
@@ -612,16 +641,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   betFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
     marginTop: hp(1),
     paddingTop: hp(1),
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   yourVote: {
-    fontSize: hp(1.4),
+    fontSize: hp(1.6),
     color: theme.colors.primary,
     fontWeight: '500',
   },
@@ -699,6 +725,19 @@ const styles = StyleSheet.create({
     fontSize: hp(1.4),
     color: theme.colors.text,
     marginBottom: hp(0.5),
+  },
+  joinedBetCard: {
+    borderColor: theme.colors.success,
+    borderWidth: 2,
+  },
+  joinedBadge: {
+    backgroundColor: theme.colors.success + '20',
+  },
+  notJoinedBadge: {
+    backgroundColor: theme.colors.error + '20',
+  },
+  header: {
+    paddingRight: wp(4),
   },
 });
 export default GroupBets;
