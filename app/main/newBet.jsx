@@ -24,7 +24,7 @@ import GroupsService from '../../src/endpoints/groups.cjs';
 import { Dropdown } from 'react-native-element-dropdown';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import NewGroup from './newGroup';
-import Icon from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const NewBet = () => {
   const navigation = useNavigation();
@@ -215,11 +215,18 @@ const NewBet = () => {
                 <Text style={styles.noGroupsText}>
                   You need to be in a group to create bets.
                 </Text>
-                <Button
-                  title="Create a Group"
-                  onPress={() => navigation.navigate('NewGroup')}
+                <TouchableOpacity
                   style={styles.createGroupButton}
-                />
+                  onPress={() => navigation.navigate('NewGroup')}
+                >
+                  <Icon
+                    name="plus"
+                    size={hp(2)}
+                    color="white"
+                    style={styles.createGroupIcon}
+                  />
+                  <Text style={styles.createGroupText}>Create New Bet</Text>
+                </TouchableOpacity>
               </View>
             </>
           ) : (
@@ -334,7 +341,7 @@ const styles = StyleSheet.create({
   noGroupsContainer: {
     flex: 1,
     width: '100%',
-    paddingHorizontal: wp(4),
+    paddingHorizontal: wp(2),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -343,11 +350,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.text,
     marginBottom: hp(1),
+    textAlign: 'center',
   },
   createGroupButton: {
-    height: hp(7),
-    width: '100%',
-    marginTop: hp(2),
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(1.5),
+    borderRadius: theme.radius.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  createGroupText: {
+    fontSize: hp(2),
+    fontWeight: '600',
+    color: theme.colors.white,
+    textAlign: 'center',
+  },
+  createGroupIcon: {
+    marginRight: wp(2),
   },
   label: {
     fontSize: hp(2),
