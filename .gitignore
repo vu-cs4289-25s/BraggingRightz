@@ -156,11 +156,16 @@ build/
 .gradle
 local.properties
 *.iml
+*.hprof
+.cxx/
+*.keystore
+!debug.keystore
 
 # node.js
 #
 node_modules/
 npm-debug.log
+yarn-debug.log
 yarn-error.log
 
 # BUCK
@@ -188,4 +193,37 @@ buck-out/
 # Expo
 .expo/*
 web-build/
-.qodo
+dist/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# Local Netlify folder
+.netlify
+
+# Testing
+coverage/
+
+# Production
+build/
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Misc
+*.log
+*.orig
