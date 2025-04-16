@@ -8,14 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "ENVIRONMENT": "development",
-        "REACT_APP_API_KEY": "AIzaSyCSixS0TPhJ8AplsJG-YCjK7pkPzTK8iIg",
-        "REACT_APP_AUTH_DOMAIN": "bragging-rightz.firebaseapp.com",
-        "REACT_APP_PROJECT_ID": "bragging-rightz",
-        "REACT_APP_STORAGE_BUCKET": "bragging-rightz.firebasestorage.app",
-        "REACT_APP_MESSAGING_SENDER_ID": "983478005100",
-        "REACT_APP_APP_ID": "1:983478005100:web:53d6b5a42a6c92c4795749",
-        "REACT_APP_MEASUREMENT_ID": "G-E1C4ELL8D0"
+        "ENVIRONMENT": "development"
       }
     },
     "preview": {
@@ -27,14 +20,7 @@
         "simulator": true
       },
       "env": {
-        "ENVIRONMENT": "development",
-        "REACT_APP_API_KEY": "AIzaSyCSixS0TPhJ8AplsJG-YCjK7pkPzTK8iIg",
-        "REACT_APP_AUTH_DOMAIN": "bragging-rightz.firebaseapp.com",
-        "REACT_APP_PROJECT_ID": "bragging-rightz",
-        "REACT_APP_STORAGE_BUCKET": "bragging-rightz.firebasestorage.app",
-        "REACT_APP_MESSAGING_SENDER_ID": "983478005100",
-        "REACT_APP_APP_ID": "1:983478005100:web:53d6b5a42a6c92c4795749",
-        "REACT_APP_MEASUREMENT_ID": "G-E1C4ELL8D0"
+        "ENVIRONMENT": "development"
       }
     },
     "production": {
@@ -43,14 +29,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "ENVIRONMENT": "production",
-        "REACT_APP_API_KEY": "AIzaSyA-03sLAWH42kbkXUPExIYQxek_qTGVTMs",
-        "REACT_APP_AUTH_DOMAIN": "braggingrightzprod.firebaseapp.com",
-        "REACT_APP_PROJECT_ID": "braggingrightzprod",
-        "REACT_APP_STORAGE_BUCKET": "braggingrightzprod.firebasestorage.app",
-        "REACT_APP_MESSAGING_SENDER_ID": "543505604889",
-        "REACT_APP_APP_ID": "1:543505604889:web:1658a761a019c76c57e588",
-        "REACT_APP_MEASUREMENT_ID": "G-J6Z4T1NWBP"
+        "ENVIRONMENT": "production"
       }
     }
   },
@@ -60,6 +39,10 @@
         "appleId": "${APPLE_ID}",
         "ascAppId": "${ASC_APP_ID}",
         "appleTeamId": "${APPLE_TEAM_ID}"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "production"
       }
     }
   }
