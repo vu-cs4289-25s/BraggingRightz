@@ -64,11 +64,14 @@ class AuthService {
       const today = new Date();
       let age = today.getFullYear() - birthday.getFullYear();
       const monthDiff = today.getMonth() - birthday.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthday.getDate())) {
+
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthday.getDate())
+      ) {
         age--;
       }
-      
+
       if (age < 13) {
         this._handleError({ code: 'auth/under-13' });
       }
@@ -329,7 +332,7 @@ class AuthService {
     try {
       const user = auth.currentUser;
       if (!user) return false;
-      
+
       // Reload user to get latest email verification status
       await user.reload();
       return user.emailVerified;
@@ -344,7 +347,7 @@ class AuthService {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('No user logged in');
-      
+
       await sendEmailVerification(user);
       return true;
     } catch (error) {
@@ -381,14 +384,14 @@ class AuthService {
         auth,
         email,
         // Create a temporary random password
-        Math.random().toString(36).slice(-8)
+        Math.random().toString(36).slice(-8),
       );
-      
+
       await sendEmailVerification(tempUserCredential.user);
-      
+
       // Store the temporary user for later use
       auth.currentUser = tempUserCredential.user;
-      
+
       return true;
     } catch (error) {
       console.error('Error sending verification email:', error);

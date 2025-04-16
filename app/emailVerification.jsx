@@ -27,14 +27,14 @@ const EmailVerification = () => {
 
   useEffect(() => {
     let mounted = true;
-    
+
     // Return cleanup function
     return () => {
       mounted = false;
       // Attempt to clean up any temporary user on unmount
       const user = auth.currentUser;
       if (user && !user.emailVerified) {
-        user.delete().catch(error => {
+        user.delete().catch((error) => {
           console.error('Error cleaning up temporary user on unmount:', error);
         });
       }
@@ -45,7 +45,7 @@ const EmailVerification = () => {
     try {
       setRegistering(true);
       const user = auth.currentUser;
-      
+
       if (!user) {
         throw new Error('No user found');
       }
@@ -59,7 +59,7 @@ const EmailVerification = () => {
           onboardingCompleted: false,
           numCoins: 1000,
           trophies: 0,
-          friends: []
+          friends: [],
         });
       } catch (error) {
         // If error is not about existing user, rethrow it
@@ -71,7 +71,7 @@ const EmailVerification = () => {
 
       // Now that we're sure the user document exists, update verification status
       await AuthService.updateEmailVerificationStatus();
-      
+
       // Navigate to main app (onboarding will be handled by Home component)
       navigation.reset({
         index: 0,
@@ -89,7 +89,7 @@ const EmailVerification = () => {
     try {
       setChecking(true);
       const isVerified = await AuthService.isEmailVerified();
-      
+
       if (isVerified) {
         await completeRegistration();
       } else {
@@ -164,7 +164,11 @@ const EmailVerification = () => {
 
           <View style={styles.buttonContainer}>
             <Button
-              title={checking || registering ? 'Verifying...' : 'Check Verification Status'}
+              title={
+                checking || registering
+                  ? 'Verifying...'
+                  : 'Check Verification Status'
+              }
               onPress={checkVerification}
               loading={checking || registering}
               style={styles.button}
@@ -179,10 +183,7 @@ const EmailVerification = () => {
             />
           </View>
 
-          <Pressable 
-            onPress={handleGoBack}
-            style={styles.wrongEmailContainer}
-          >
+          <Pressable onPress={handleGoBack} style={styles.wrongEmailContainer}>
             <Text style={styles.wrongEmailText}>
               Entered the wrong email? Click here to go back
             </Text>

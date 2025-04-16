@@ -128,19 +128,15 @@ const SignUp = () => {
     }
 
     if (!isAtLeast13(birthdate)) {
-      Alert.alert('Age Restriction', 'You must be at least 13 years old to sign up.');
+      Alert.alert(
+        'Age Restriction',
+        'You must be at least 13 years old to sign up.',
+      );
       return;
     }
 
     setLoading(true);
     try {
-      // Check if email is already in use before sending verification
-      const emailAvailable = await AuthService.checkEmail(email);
-      if (!emailAvailable) {
-        Alert.alert('Error', 'This email is already in use.');
-        return;
-      }
-
       // Check if username is available
       const usernameAvailable = await AuthService.checkUsername(username);
       if (!usernameAvailable) {
@@ -148,10 +144,14 @@ const SignUp = () => {
         return;
       }
 
-      // Send verification email
-      await AuthService.sendInitialVerificationEmail(email);
+      // Check if email is available
+      const emailAvailable = await AuthService.checkEmail(email);
+      if (!emailAvailable) {
+        Alert.alert('Error', 'This email is already in use.');
+        return;
+      }
 
-      // Store registration data to be used after verification
+      // Create the registration data
       const registrationData = {
         email,
         username,
@@ -161,30 +161,67 @@ const SignUp = () => {
         profileImage: profileImage,
       };
 
-      // Navigate to email verification screen with registration data
+      // Create the account first
+      const userCredential = await AuthService.register(registrationData);
+
+      if (!userCredential?.uid) {
+        throw new Error('Failed to create account');
+      }
+
+      // Navigate to email verification screen
       navigation.navigate('EmailVerification', {
         email,
-        registrationData
+        registrationData,
+        userId: userCredential.uid,
       });
     } catch (error) {
-      Alert.alert('Error', error.message);
+      console.error('Error during signup:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to create account. Please try again.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const checkEmailVerification = async (userId) => {
+  const checkEmailVerification = async (registrationData, userId) => {
     try {
+      setLoading(true);
+
+      // Check if email is verified
       const isVerified = await AuthService.isEmailVerified();
+
       if (isVerified) {
+        // Upload profile image if one was selected
+        let profileImageUrl = null;
+        if (registrationData.profileImage) {
+          setUploadingImage(true);
+          profileImageUrl = await uploadImage(userId);
+          setUploadingImage(false);
+        }
+
+        // Update profile with the uploaded image and mark email as verified
+        await AuthService.updateProfile(userId, {
+          profilePicture: profileImageUrl,
+          emailVerified: true,
+        });
+
+        // Update email verification status in Firestore
         await AuthService.updateEmailVerificationStatus();
+
         Alert.alert(
           'Registration Successful',
-          'Your email has been verified. Welcome to BraggingRightz!',
+          `Welcome, ${registrationData.username}! Ready to Bet?`,
           [
             {
               text: 'OK',
-              onPress: () => navigation.navigate('Main'),
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Main' }],
+                });
+              },
             },
           ],
         );
@@ -195,19 +232,39 @@ const SignUp = () => {
           [
             {
               text: 'Check Again',
-              onPress: () => checkEmailVerification(userId),
+              onPress: () => checkEmailVerification(registrationData, userId),
             },
             {
               text: 'Resend Email',
               onPress: () => resendVerificationEmail(),
             },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => {
+                // Clean up the unverified account
+                AuthService.logout();
+                navigation.navigate('SignUp');
+              },
+            },
           ],
         );
       }
     } catch (error) {
-      console.error('Error checking email verification:', error);
+      console.error('Error during verification:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to verify email. Please try again.',
+      );
+      // Clean up and return to signup
+      await AuthService.logout();
+      navigation.navigate('SignUp');
+    } finally {
+      setLoading(false);
+      setUploadingImage(false);
     }
   };
+
   const resendVerificationEmail = async () => {
     try {
       await AuthService.resendVerificationEmail();
@@ -216,40 +273,16 @@ const SignUp = () => {
         'Verification email has been resent. Please check your inbox.',
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend verification email. Please try again.');
-      await AuthService.signUp({
-        username: usernameRef.current,
-        password: passwordRef.current,
-        email: emailRef.current,
-      });
-
       Alert.alert(
-        'Registration Successful',
-        `Welcome, ${usernameRef.current}! Ready to Bet?`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Main' }],
-              });
-            },
-          },
-        ],
+        'Error',
+        'Failed to resend verification email. Please try again.',
       );
-    } catch (error) {
-      Alert.alert('Sign Up Failed: ', error.message);
-      navigation.navigate('SignUp');
-    } finally {
-      setLoading(false);
-      setUploadingImage(false);
     }
   };
 
   const isAtLeast13 = (birthDate) => {
     const today = new Date();
-    
+
     // Check if birthDate is today
     const isToday = birthDate.toDateString() === today.toDateString();
     if (isToday) {
@@ -258,11 +291,14 @@ const SignUp = () => {
 
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
-    
+
     return age >= 13;
   };
 
@@ -482,4 +518,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-

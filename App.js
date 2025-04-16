@@ -96,6 +96,10 @@ export default function App() {
                 />
                 <Stack.Screen name="EditGroup" component={EditGroup} />
                 <Stack.Screen name="EditBet" component={EditBet} />
+                <Stack.Screen
+                  name="EmailVerification"
+                  component={EmailVerification}
+                />
               </Stack.Group>
             </Stack.Navigator>
           </NavigationContainer>
