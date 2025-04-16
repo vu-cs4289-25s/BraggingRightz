@@ -38,7 +38,7 @@ console.log(`Using ${ENVIRONMENT} environment for Firebase configuration`);
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth with AsyncStorage persistence and better caching
+// Initialize Auth with AsyncStorage persistence
 const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
@@ -46,8 +46,7 @@ const auth = initializeAuth(app, {
 // Initialize Firestore with optimized settings for mobile
 const db = initializeFirestore(app, {
   cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-  experimentalForceLongPolling: true, // This helps with mobile connections
-  experimentalAutoDetectLongPolling: true,
+  experimentalAutoDetectLongPolling: true, // This will automatically choose the best polling method
 });
 
 const storage = getStorage(app);
