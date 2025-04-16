@@ -16,7 +16,9 @@
       "fallbackToCacheTimeout": 0,
       "url": "https://u.expo.dev/0f4f9b57-d1bc-46fb-8ec5-2bf21045dcfb"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.braggingrightz.app",
