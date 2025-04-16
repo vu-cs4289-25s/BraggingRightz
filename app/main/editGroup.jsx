@@ -460,6 +460,38 @@ const EditGroup = () => {
     }
   };
 
+  const handleLeaveGroup = () => {
+    Alert.alert('Leave Group', 'Are you sure you want to leave this group?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Leave',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await GroupsService.leaveGroup(groupId, session.uid);
+            Alert.alert('Success', 'You have successfully left the group', [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Main' }],
+                  });
+                },
+              },
+            ]);
+          } catch (error) {
+            console.error('Error leaving group:', error);
+            Alert.alert('Error', 'Failed to leave group. Please try again.');
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -571,6 +603,14 @@ const EditGroup = () => {
                 onPress={handleDeleteGroup}
                 buttonStyle={styles.deleteButton}
                 textStyle={styles.deleteButtonText}
+              />
+            )}
+            {!isAdmin && (
+              <Button
+                title="Leave Group"
+                onPress={handleLeaveGroup}
+                buttonStyle={styles.leaveButton}
+                textStyle={styles.leaveButtonText}
               />
             )}
           </View>
@@ -1167,5 +1207,14 @@ const styles = StyleSheet.create({
   },
   addUserButton: {
     padding: wp(2),
+  },
+  leaveButton: {
+    backgroundColor: theme.colors.red,
+    marginTop: hp(0.5),
+    marginBottom: hp(4),
+  },
+  leaveButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });
