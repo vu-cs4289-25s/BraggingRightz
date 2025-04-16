@@ -8,6 +8,7 @@ const {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
+  sendEmailVerification,
 } = require('firebase/auth');
 const {
   doc,
@@ -17,6 +18,7 @@ const {
   collection,
   where,
   getDocs,
+  updateDoc,
 } = require('firebase/firestore');
 
 jest.mock('firebase/auth', () => ({
@@ -29,6 +31,7 @@ jest.mock('firebase/auth', () => ({
     credential: jest.fn(),
   },
   reauthenticateWithCredential: jest.fn(),
+  sendEmailVerification: jest.fn(),
 }));
 
 jest.mock('firebase/firestore', () => ({
@@ -39,6 +42,7 @@ jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
   where: jest.fn(),
   getDocs: jest.fn(),
+  updateDoc: jest.fn(),
 }));
 
 jest.mock('../src/firebase/config', () => ({
@@ -55,9 +59,11 @@ describe('AuthService', () => {
 
   describe('register', () => {
     it('should register a new user successfully', async () => {
+      const mockUser = { uid: '123', email: 'test@example.com' };
       createUserWithEmailAndPassword.mockResolvedValue({
-        user: { uid: '123', email: 'test@example.com' },
+        user: mockUser,
       });
+      sendEmailVerification.mockResolvedValue();
       getDocs.mockResolvedValue({ empty: true }); // Username is available
       setDoc.mockResolvedValue();
 
@@ -71,16 +77,18 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         uid: '123',
-        hasOnboarded: false,
         email: 'test@example.com',
         username: 'testuser',
         profilePicture: null,
+        emailVerified: false,
+        hasOnboarded: false,
       });
       expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
         auth,
         'test@example.com',
         'password123',
       );
+      expect(sendEmailVerification).toHaveBeenCalledWith(mockUser);
       expect(setDoc).toHaveBeenCalled();
     });
 
@@ -321,6 +329,66 @@ describe('AuthService', () => {
       const result = await AuthService.checkUsername('existinguser');
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('email verification', () => {
+    it('should send verification email successfully', async () => {
+      auth.currentUser = { email: 'test@example.com' };
+      sendEmailVerification.mockResolvedValue();
+
+      const result = await AuthService.resendVerificationEmail();
+      expect(result).toBe(true);
+      expect(sendEmailVerification).toHaveBeenCalledWith(auth.currentUser);
+    });
+
+    it('should throw error when no user is logged in for resend', async () => {
+      auth.currentUser = null;
+      await expect(AuthService.resendVerificationEmail()).rejects.toThrow(
+        'No user logged in',
+      );
+    });
+
+    it('should update email verification status successfully', async () => {
+      // Mock the current user with reload method
+      auth.currentUser = {
+        uid: '123',
+        email: 'test@example.com',
+        emailVerified: true,
+        reload: jest.fn().mockResolvedValue(),
+      };
+
+      // Mock Firestore document reference and update
+      const mockDocRef = {};
+      doc.mockReturnValue(mockDocRef);
+      updateDoc.mockResolvedValue();
+
+      const result = await AuthService.updateEmailVerificationStatus();
+
+      expect(result).toBe(true);
+      expect(updateDoc).toHaveBeenCalledWith(mockDocRef, {
+        emailVerified: true,
+        updatedAt: expect.any(String),
+      });
+    });
+
+    it('should return false when updating verification status with no user', async () => {
+      auth.currentUser = null;
+      const result = await AuthService.updateEmailVerificationStatus();
+      expect(result).toBe(false);
+    });
+
+    it('should return false when user email is not verified', async () => {
+      auth.currentUser = {
+        uid: '123',
+        email: 'test@example.com',
+        emailVerified: false,
+        reload: jest.fn().mockResolvedValue(),
+      };
+
+      const result = await AuthService.updateEmailVerificationStatus();
+      expect(result).toBe(false);
+      expect(updateDoc).not.toHaveBeenCalled();
     });
   });
 });

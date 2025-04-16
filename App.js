@@ -6,6 +6,7 @@ import Welcome from './app/welcome';
 import SignUp from './app/signUp';
 import Login from './app/login';
 import ForgotPassword from './app/forgotPassword';
+import EmailVerification from './app/emailVerification';
 import Notifications from './app/main/notifications';
 import NewGroup from './app/main/newGroup';
 import EditProfile from './app/main/editProfile';
@@ -95,6 +96,10 @@ export default function App() {
                 />
                 <Stack.Screen name="EditGroup" component={EditGroup} />
                 <Stack.Screen name="EditBet" component={EditBet} />
+                <Stack.Screen
+                  name="EmailVerification"
+                  component={EmailVerification}
+                />
               </Stack.Group>
             </Stack.Navigator>
           </NavigationContainer>
