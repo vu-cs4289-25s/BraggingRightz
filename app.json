@@ -2,11 +2,7 @@
   "expo": {
     "name": "BraggingRightz",
     "slug": "bragging-rightz",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ],
+    "platforms": ["ios", "android", "web"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/bragging-rightz-app-icon.png",
@@ -20,9 +16,7 @@
       "fallbackToCacheTimeout": 0,
       "url": "https://u.expo.dev/0f4f9b57-d1bc-46fb-8ec5-2bf21045dcfb"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.braggingrightz.app",
