@@ -6,7 +6,7 @@ const {
   initializeAuth,
   getReactNativePersistence,
 } = require('firebase/auth');
-const { getFirestore } = require('firebase/firestore');
+const { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } = require('firebase/firestore');
 const { getStorage } = require('firebase/storage');
 import {
   REACT_APP_API_KEY,
@@ -34,12 +34,18 @@ console.log(`Using ${ENVIRONMENT} environment for Firebase configuration`);
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth with AsyncStorage persistence
+// Initialize Auth with AsyncStorage persistence and better caching
 const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
 
-const db = getFirestore(app);
+// Initialize Firestore with optimized settings for mobile
+const db = initializeFirestore(app, {
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  experimentalForceLongPolling: true, // This helps with mobile connections
+  experimentalAutoDetectLongPolling: true,
+});
+
 const storage = getStorage(app);
 
 module.exports = { app, auth, db, storage };
