@@ -6,7 +6,11 @@ const {
   initializeAuth,
   getReactNativePersistence,
 } = require('firebase/auth');
-const { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } = require('firebase/firestore');
+const {
+  getFirestore,
+  initializeFirestore,
+  CACHE_SIZE_UNLIMITED,
+} = require('firebase/firestore');
 const { getStorage } = require('firebase/storage');
 import {
   REACT_APP_API_KEY,
