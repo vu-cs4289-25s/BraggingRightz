@@ -10,6 +10,7 @@ const {
   getFirestore,
   initializeFirestore,
   connectFirestoreEmulator,
+  enableIndexedDbPersistence,
 } = require('firebase/firestore');
 const { getStorage } = require('firebase/storage');
 import {
@@ -34,32 +35,44 @@ const firebaseConfig = {
 };
 
 console.log(`Using ${ENVIRONMENT} environment for Firebase configuration`);
+console.log(`Project ID: ${firebaseConfig.projectId}`);
+console.log('Firebase Config:', JSON.stringify(firebaseConfig, null, 2));
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+try {
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
 
-// Initialize Auth with AsyncStorage persistence
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+  // Initialize Auth with AsyncStorage persistence
+  const auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
 
-// Initialize Firestore with environment-specific settings
-const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-  experimentalAutoDetectLongPolling: false,
-  // Only use SSL in production
-  ...(ENVIRONMENT === 'production' && {
-    ssl: true,
-    host: 'firestore.googleapis.com',
-  }),
-});
+  // Initialize Firestore with environment-specific settings
+  const firestoreSettings = {
+    experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: false,
+    cacheSizeBytes: 40000000, // Set to 40MB
+    ignoreUndefinedProperties: true,
+  };
 
-// Connect to Firestore emulator in development
-if (ENVIRONMENT === 'development') {
-  connectFirestoreEmulator(db, 'localhost', 8080);
-  console.log('Connected to Firestore emulator');
+  const db = initializeFirestore(app, firestoreSettings);
+
+  // Connect to Firestore emulator in development
+  if (ENVIRONMENT === 'development') {
+    try {
+      connectFirestoreEmulator(db, 'localhost', 8080);
+      console.log('Connected to Firestore emulator');
+    } catch (error) {
+      console.error('Failed to connect to Firestore emulator:', error);
+    }
+  }
+
+  const storage = getStorage(app);
+
+  module.exports = { app, auth, db, storage };
+} catch (error) {
+  console.error('Error initializing Firebase:', error);
+  console.error('Error details:', error.message);
+  console.error('Error code:', error.code);
+  throw error;
 }
-
-const storage = getStorage(app);
-
-module.exports = { app, auth, db, storage };
