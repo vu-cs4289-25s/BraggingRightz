@@ -9,7 +9,7 @@ const {
 const {
   getFirestore,
   initializeFirestore,
-  CACHE_SIZE_UNLIMITED,
+  connectFirestoreEmulator,
 } = require('firebase/firestore');
 const { getStorage } = require('firebase/storage');
 import {
@@ -43,11 +43,22 @@ const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
 
-// Initialize Firestore with optimized settings for mobile
+// Initialize Firestore with environment-specific settings
 const db = initializeFirestore(app, {
-  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-  experimentalAutoDetectLongPolling: true, // This will automatically choose the best polling method
+  experimentalForceLongPolling: true,
+  experimentalAutoDetectLongPolling: false,
+  // Only use SSL in production
+  ...(ENVIRONMENT === 'production' && {
+    ssl: true,
+    host: 'firestore.googleapis.com',
+  }),
 });
+
+// Connect to Firestore emulator in development
+if (ENVIRONMENT === 'development') {
+  connectFirestoreEmulator(db, 'localhost', 8080);
+  console.log('Connected to Firestore emulator');
+}
 
 const storage = getStorage(app);
 

@@ -386,6 +386,7 @@ const SignUp = () => {
                   onConfirm={handleDateConfirm}
                   onCancel={() => setShowDatePicker(false)}
                   maximumDate={new Date()}
+                  textColor={theme.colors.text}
                 />
               )}
               <Input
