@@ -272,6 +272,12 @@ const Settings = () => {
                 onPress={handleContactUs}
                 icon="mail"
               />
+              <SettingOption
+                title="Privacy Policy"
+                type="button"
+                onPress={() => navigation.navigate('PrivacyPolicy')}
+                icon="policy"
+              />
             </View>
 
             <Text style={styles.sectionTitle}>Account</Text>

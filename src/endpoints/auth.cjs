@@ -72,8 +72,8 @@ class AuthService {
         age--;
       }
 
-      if (age < 13) {
-        this._handleError({ code: 'auth/under-13' });
+      if (age < 17) {
+        this._handleError({ code: 'auth/under-17' });
       }
 
       // Create auth user
@@ -422,8 +422,8 @@ class AuthService {
       case 'auth/email-already-in-use':
         message = 'Email is already taken.';
         break;
-      case 'auth/under-13':
-        message = 'You must be at least 13 years old to create an account.';
+      case 'auth/under-17':
+        message = 'You must be at least 17 years old to create an account.';
         break;
       default:
         message = error.message;

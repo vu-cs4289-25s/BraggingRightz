@@ -23,6 +23,7 @@ import GroupBets from './app/main/groupBets';
 import EditGroup from './app/main/editGroup';
 import EditBet from './app/main/editBet';
 import { ThemeProvider } from './app/context/ThemeContext';
+import PrivacyPolicyScreen from './app/main/privacyPolicy';
 
 const Stack = createStackNavigator();
 
@@ -99,6 +100,10 @@ export default function App() {
                 <Stack.Screen
                   name="EmailVerification"
                   component={EmailVerification}
+                />
+                <Stack.Screen
+                  name="PrivacyPolicy"
+                  component={PrivacyPolicyScreen}
                 />
               </Stack.Group>
             </Stack.Navigator>

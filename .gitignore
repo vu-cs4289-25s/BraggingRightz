@@ -229,3 +229,4 @@ yarn-error.log*
 *.orig
 
 eas.json
+.firebaserc

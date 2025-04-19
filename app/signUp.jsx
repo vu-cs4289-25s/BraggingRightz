@@ -127,10 +127,10 @@ const SignUp = () => {
       return;
     }
 
-    if (!isAtLeast13(birthdate)) {
+    if (!isAtLeast17(birthdate)) {
       Alert.alert(
         'Age Restriction',
-        'You must be at least 13 years old to sign up.',
+        'You must be at least 17 years old to sign up.',
       );
       return;
     }
@@ -280,7 +280,7 @@ const SignUp = () => {
     }
   };
 
-  const isAtLeast13 = (birthDate) => {
+  const isAtLeast17 = (birthDate) => {
     const today = new Date();
 
     // Check if birthDate is today
@@ -299,14 +299,14 @@ const SignUp = () => {
       age--;
     }
 
-    return age >= 13;
+    return age >= 17;
   };
 
   const handleDateConfirm = (date) => {
-    if (!isAtLeast13(date)) {
+    if (!isAtLeast17(date)) {
       Alert.alert(
         'Age Requirement',
-        'You must be at least 13 years old to create an account.',
+        'You must be at least 17 years old to create an account.',
       );
     } else {
       setBirthdate(date);
